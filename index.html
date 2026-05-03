@@ -183,6 +183,40 @@
     .spinner { width: 40px; height: 40px; border: 3px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
     .loading-text { font-weight: 700; color: var(--muted); font-size: 15px; }
+    /* COMMENT */
+    .comment-section { padding: 0 24px 20px; }
+    .comment-textarea { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:var(--r); font-family:'Nunito',sans-serif; font-size:14px; color:var(--text); background:var(--bg); outline:none; resize:none; transition:border-color 0.2s; min-height:72px; }
+    .comment-textarea:focus { border-color:var(--purple); background:white; }
+    .comment-textarea::placeholder { color:#C0BEDD; }
+
+    /* VOTE INLINE */
+    .vote-inline { padding:0 24px 20px; }
+    .vote-inline-title { font-weight:800; font-size:15px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .vote-inline-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .vote-inline-btn { padding:10px 8px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; font-size:13px; color:var(--text); text-align:center; transition:all 0.2s; }
+    .vote-inline-btn:hover { border-color:var(--amber); }
+    .vote-inline-btn.selected { border-color:var(--amber); background:var(--amber-light); color:#C47F00; }
+    .vote-inline-btn .vi-emoji { font-size:22px; display:block; margin-bottom:3px; }
+
+    /* STATS */
+    .stats-wrap { flex:1; padding:0 16px 100px; }
+    .stat-card { background:white; border-radius:var(--r); border:1.5px solid var(--border); padding:16px; margin-bottom:12px; }
+    .stat-card-title { font-weight:800; font-size:14px; margin-bottom:12px; color:var(--text); display:flex; align-items:center; gap:6px; }
+    .stat-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .stat-name { font-size:13px; font-weight:700; width:60px; flex-shrink:0; color:var(--text); }
+    .stat-bar-wrap { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .stat-bar { height:8px; border-radius:4px; transition:width 0.6s ease; }
+    .stat-val { font-size:12px; font-weight:700; width:28px; text-align:right; color:var(--muted); flex-shrink:0; }
+    .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .stat-metric { background:var(--purple-light); border-radius:var(--r); padding:14px; text-align:center; }
+    .stat-metric-val { font-weight:900; font-size:28px; color:var(--purple); display:block; }
+    .stat-metric-lbl { font-size:11px; color:var(--muted); font-weight:700; margin-top:2px; text-transform:uppercase; letter-spacing:0.04em; }
+    .stat-ai-box { background:linear-gradient(135deg,var(--purple) 0%,#9B8FF9 100%); border-radius:var(--r); padding:20px; color:white; margin-bottom:12px; }
+    .stat-ai-label { font-size:11px; font-weight:700; opacity:0.8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
+    .stat-ai-text { font-weight:700; font-size:15px; line-height:1.5; }
+    .stat-ai-soon { font-size:12px; opacity:0.7; margin-top:8px; }
+    .score-dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0; }
+
   </style>
 </head>
 <body>
@@ -306,6 +340,7 @@
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">📋</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')"><span class="nav-icon">🗳️</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">🍽️</span><span class="nav-label">Maaltijden</span></button>
+    <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
   </nav>
 </div>
 
@@ -325,6 +360,17 @@
         <button class="drink-btn" id="drink-juice" onclick="selectDrink('juice')"><span class="drink-emoji">🧃</span>Sap</button>
         <button class="drink-btn" id="drink-soda" onclick="selectDrink('soda')"><span class="drink-emoji">🥤</span>Frisdrank</button>
       </div>
+    </div>
+    <!-- Comment sectie -->
+    <div id="comment-section" class="comment-section hidden">
+      <div class="drink-title" id="comment-label">Wil je nog iets zeggen? <span class="optional">optioneel</span></div>
+      <textarea class="comment-textarea" id="checkin-comment" placeholder="bijv. te zout, lekker met kaassaus..." maxlength="200"></textarea>
+    </div>
+    <!-- Inline stem sectie -->
+    <div id="vote-inline-section" class="vote-inline hidden">
+      <div class="vote-inline-title">Stem voor volgende week <span class="optional">optioneel</span></div>
+      <div class="vote-inline-grid" id="vote-inline-grid"></div>
+      <p id="vote-inline-info" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></p>
     </div>
     <div id="checkin-actions" class="actions hidden">
       <button class="btn btn-primary" onclick="doCheckin()" id="checkin-btn">Opslaan ✓</button>
@@ -395,6 +441,38 @@
   </div>
 </div>
 
+<div id="s-stats" class="screen">
+  <div class="topbar">
+    <div class="logo">Lekker<span>stemmen</span></div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div class="stats-wrap">
+    <div class="stat-ai-box">
+      <div class="stat-ai-label">📊 AI analyse</div>
+      <div class="stat-ai-text" id="stats-ai-text">Verzamel meer data voor een persoonlijke analyse van je gezin.</div>
+      <div class="stat-ai-soon">Uitgebreide AI-analyse beschikbaar na 2 weken gebruik.</div>
+    </div>
+    <div class="stat-grid" style="margin-bottom:12px">
+      <div class="stat-metric"><span class="stat-metric-val" id="stats-total-checkins">0</span><span class="stat-metric-lbl">Check-ins</span></div>
+      <div class="stat-metric"><span class="stat-metric-val" id="stats-avg-score">-</span><span class="stat-metric-lbl">Gem. score</span></div>
+      <div class="stat-metric" style="background:var(--teal-light)"><span class="stat-metric-val" style="color:var(--teal)" id="stats-together-avg">-</span><span class="stat-metric-lbl">Samen eten</span></div>
+      <div class="stat-metric" style="background:var(--amber-light)"><span class="stat-metric-val" style="color:#C47F00" id="stats-sport-avg">-</span><span class="stat-metric-lbl">Sportdag</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">👨‍👩‍👧 Scores per gezinslid</div>
+      <div id="stats-per-person"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">🍽️ Populairste maaltijden</div>
+      <div id="stats-per-meal"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">💬 Laatste opmerkingen</div>
+      <div id="stats-comments"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const sb = supabase.createClient(
   'https://wzdxkyclnwpopbfembpp.supabase.co',
@@ -404,9 +482,9 @@ const sb = supabase.createClient(
 // ── STATE ──────────────────────────────────────────────────────
 let currentUser = null, currentProfile = null;
 let todayMeal = null, checkins = [], customMeals = [];
-let selectedScore = null, selectedDrink = null, selectedMeal = null;
+let selectedScore = null, selectedDrink = null, selectedMeal = null, selectedComment = '';
 let togTogether = true, togSport = false, selectedRole = null;
-let voteChoices = [], currentAuthTab = 'login';
+let voteChoices = [], inlineVoteChoices = [], currentAuthTab = 'login';
 let selectedEmoji = '🍽️';
 
 // ── TEST MODE ──────────────────────────────────────────────────
@@ -659,6 +737,7 @@ function goScreen(name) {
   else if (name==='log') { selectedMeal=null; resetLog(); buildLogGrid(); show('log'); }
   else if (name==='vote') { voteChoices=[]; renderVoteOptions(); show('vote'); }
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
+  else if (name==='stats') { renderStats(); show('stats'); }
   else show(name);
 }
 
@@ -683,11 +762,13 @@ function refreshHome() {
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = '';
     document.getElementById('nav-meals').style.display = '';
+    document.getElementById('nav-stats').style.display = '';
   } else {
     document.getElementById('nav-action-icon').textContent = '😋';
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-meals').style.display = 'none';
+    document.getElementById('nav-stats').style.display = 'none';
   }
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
@@ -929,14 +1010,57 @@ function resetCheckin() {
   hide(document.getElementById('checkin-actions'));
   unhide(document.getElementById('checkin-skip'));
   if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
+  selectedComment=''; inlineVoteChoices=[];
+  const commentEl=document.getElementById('checkin-comment');
+  if(commentEl) commentEl.value='';
+  hide(document.getElementById('comment-section'));
+  hide(document.getElementById('vote-inline-section'));
 }
 
 function selectSmiley(score) {
   selectedScore=score;
   [1,2,3].forEach(i=>document.getElementById('sm-'+i).className='smiley'+(i===score?' sel-'+score:''));
   unhide(document.getElementById('drink-section'));
+  // Comment sectie
+  const commentLabel = document.getElementById('comment-label');
+  if (currentProfile&&currentProfile.role==='parent') {
+    commentLabel.innerHTML = 'Opmerking <span class="optional">optioneel</span>';
+    document.getElementById('checkin-comment').placeholder = 'bijv. te zout, volgende keer minder knoflook...';
+  } else {
+    commentLabel.innerHTML = 'Wil je nog iets zeggen? <span class="optional">optioneel</span>';
+    document.getElementById('checkin-comment').placeholder = 'bijv. lekker! of: de saus was te zuur...';
+  }
+  unhide(document.getElementById('comment-section'));
+  // Inline stemmen
+  renderInlineVote();
+  unhide(document.getElementById('vote-inline-section'));
   unhide(document.getElementById('checkin-actions'));
   hide(document.getElementById('checkin-skip'));
+}
+
+
+function renderInlineVote() {
+  const grid = document.getElementById('vote-inline-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  getAllMeals().slice(0,6).forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'vote-inline-btn'+(inlineVoteChoices.includes(m.id)?' selected':'');
+    btn.innerHTML = '<span class="vi-emoji">'+m.emoji+'</span>'+m.label;
+    btn.onclick = () => {
+      if (inlineVoteChoices.includes(m.id)) {
+        inlineVoteChoices = inlineVoteChoices.filter(x=>x!==m.id);
+      } else if (inlineVoteChoices.length < 2) {
+        inlineVoteChoices.push(m.id);
+      }
+      renderInlineVote();
+    };
+    grid.appendChild(btn);
+  });
+  const info = document.getElementById('vote-inline-info');
+  if (inlineVoteChoices.length===0) info.textContent='Kies tot 2 maaltijden voor volgende week';
+  else if (inlineVoteChoices.length===1) info.textContent='Nog 1 keuze mogelijk';
+  else info.textContent='✓ '+inlineVoteChoices.length+' maaltijden gekozen';
 }
 
 function selectDrink(d) {
@@ -947,10 +1071,22 @@ function selectDrink(d) {
 async function doCheckin() {
   if (!selectedScore||!todayMeal) return;
   document.getElementById('checkin-btn').textContent='Opslaan...';
+  const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
   await sb.from('checkins').upsert({
     profile_id:currentProfile.id, meal_id:todayMeal.id,
     score:selectedScore, drink:selectedDrink,
+    comment: commentVal||null,
   },{onConflict:'profile_id,meal_id'});
+  // Inline stem opslaan als gekozen
+  if (inlineVoteChoices.length>0) {
+    const choices = [...inlineVoteChoices];
+    while(choices.length<2) choices.push(choices[0]);
+    await sb.from('votes').upsert({
+      profile_id:currentProfile.id, family_id:currentProfile.family_id,
+      week_of:testMondayOfWeek(),
+      meal_choice_1:choices[0], meal_choice_2:choices[1],
+    },{onConflict:'profile_id,week_of'});
+  }
   await loadData();
   const msgs = {3:['😋','Geweldig!','Fijn dat het smaakte!'],2:['😐','Oké dan!','Goed dat je het hebt doorgegeven.'],1:['😕','Noteer!','Vrijdag mag jij kiezen wat er volgende week op tafel komt.']};
   const m = msgs[selectedScore];
@@ -992,6 +1128,94 @@ async function doVote() {
   document.getElementById('success-title').textContent='Stem uitgebracht!';
   document.getElementById('success-sub').textContent='Jouw keuzes worden meegenomen in het menu van volgende week.';
   show('success');
+}
+
+
+async function renderStats() {
+  if (!currentProfile) return;
+  const familyId = currentProfile.family_id;
+
+  // Haal alle checkins van het gezin op via een bredere query
+  const since = new Date(); since.setDate(since.getDate()-30);
+  const {data:allCis} = await sb.from('checkins_with_context')
+    .select('*').eq('family_id', familyId)
+    .gte('eaten_at', since.toISOString().split('T')[0])
+    .order('eaten_at',{ascending:false});
+  const cis = allCis||[];
+
+  // Totalen
+  document.getElementById('stats-total-checkins').textContent = cis.length;
+  const avgScore = cis.length ? (cis.reduce((a,b)=>a+b.score,0)/cis.length).toFixed(1) : '-';
+  document.getElementById('stats-avg-score').textContent = avgScore;
+
+  const togCis = cis.filter(c=>c.ate_together);
+  const sportCis = cis.filter(c=>c.had_sport);
+  document.getElementById('stats-together-avg').textContent = togCis.length
+    ? (togCis.reduce((a,b)=>a+b.score,0)/togCis.length).toFixed(1) : '-';
+  document.getElementById('stats-sport-avg').textContent = sportCis.length
+    ? (sportCis.reduce((a,b)=>a+b.score,0)/sportCis.length).toFixed(1) : '-';
+
+  // Per persoon
+  const perPerson = document.getElementById('stats-per-person');
+  perPerson.innerHTML = '';
+  const persons = [...new Set(cis.map(c=>c.child_name))];
+  if (persons.length===0) {
+    perPerson.innerHTML='<p style="font-size:13px;color:var(--muted)">Nog geen data beschikbaar.</p>';
+  }
+  persons.forEach(name => {
+    const pCis = cis.filter(c=>c.child_name===name);
+    const avg = (pCis.reduce((a,b)=>a+b.score,0)/pCis.length);
+    const pct = (avg/3*100).toFixed(0);
+    const color = avg>=2.5?'#22C9A0':avg>=1.8?'#FFB830':'#FF6B6B';
+    perPerson.innerHTML += '<div class="stat-row"><div class="stat-name">'+name+'</div><div class="stat-bar-wrap"><div class="stat-bar" style="width:'+pct+'%;background:'+color+'"></div></div><div class="stat-val">'+avg.toFixed(1)+'</div></div>';
+  });
+
+  // Per maaltijd
+  const perMeal = document.getElementById('stats-per-meal');
+  perMeal.innerHTML = '';
+  const mealMap = {};
+  cis.forEach(c => {
+    if (!mealMap[c.meal_type]) mealMap[c.meal_type]={total:0,count:0};
+    mealMap[c.meal_type].total+=c.score;
+    mealMap[c.meal_type].count++;
+  });
+  const sortedMeals = Object.entries(mealMap).sort((a,b)=>(b[1].total/b[1].count)-(a[1].total/a[1].count)).slice(0,6);
+  if (sortedMeals.length===0) perMeal.innerHTML='<p style="font-size:13px;color:var(--muted)">Nog geen data beschikbaar.</p>';
+  sortedMeals.forEach(([meal,d]) => {
+    const avg = d.total/d.count;
+    const pct = (avg/3*100).toFixed(0);
+    const color = avg>=2.5?'#22C9A0':avg>=1.8?'#FFB830':'#FF6B6B';
+    const m = getAllMeals().find(x=>x.id===meal)||{emoji:'🍽️',label:meal};
+    perMeal.innerHTML += '<div class="stat-row"><div class="stat-name" style="width:80px">'+m.emoji+' '+m.label+'</div><div class="stat-bar-wrap"><div class="stat-bar" style="width:'+pct+'%;background:'+color+'"></div></div><div class="stat-val">'+avg.toFixed(1)+'</div></div>';
+  });
+
+  // Comments
+  const commentsEl = document.getElementById('stats-comments');
+  commentsEl.innerHTML = '';
+  const withComments = cis.filter(c=>c.comment).slice(0,5);
+  if (withComments.length===0) {
+    commentsEl.innerHTML='<p style="font-size:13px;color:var(--muted)">Nog geen opmerkingen.</p>';
+  } else {
+    withComments.forEach(c => {
+      commentsEl.innerHTML += '<div style="padding:8px 0;border-bottom:0.5px solid var(--border)"><div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:2px">'+c.child_name+' · '+c.eaten_at+' · '+getMealDisplay(c.meal_type)+'</div><div style="font-size:14px;color:var(--text)">'+c.comment+'</div></div>';
+    });
+  }
+
+  // AI tekst
+  const aiEl = document.getElementById('stats-ai-text');
+  if (cis.length>=5) {
+    const togAvg = togCis.length ? togCis.reduce((a,b)=>a+b.score,0)/togCis.length : 0;
+    const apaAvg = cis.filter(c=>!c.ate_together).length ?
+      cis.filter(c=>!c.ate_together).reduce((a,b)=>a+b.score,0)/cis.filter(c=>!c.ate_together).length : 0;
+    if (togCis.length>0 && cis.filter(c=>!c.ate_together).length>0) {
+      aiEl.textContent = togAvg>apaAvg
+        ? 'Jullie gezin scoort samen eten gemiddeld '+togAvg.toFixed(1)+' vs '+apaAvg.toFixed(1)+' apart — samen aan tafel maakt het eten lekkerder.'
+        : 'Samen of apart eten heeft weinig invloed op de scores in jullie gezin.';
+    } else if (sortedMeals.length>0) {
+      const best = getAllMeals().find(x=>x.id===sortedMeals[0][0]);
+      aiEl.textContent = best ? best.emoji+' '+best.label+' is jullie meest gewaardeerde maaltijd met een gemiddelde van '+(sortedMeals[0][1].total/sortedMeals[0][1].count).toFixed(1)+' uit 3.' : 'Meer data verzamelen voor AI inzichten.';
+    }
+  }
 }
 
 // ── TEST TOGGLE ────────────────────────────────────────────────
