@@ -412,7 +412,7 @@ let selectedEmoji = '🍽️';
 // ── TEST MODE ──────────────────────────────────────────────────
 const TEST_MODE = true;
 let testDayOffset = 0;
-const TEST_FAMILY_ID = 'test-family-brentjens-001';
+const TEST_FAMILY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 const TEST_PERSONS = [
   { id:'paul',   name:'Paul',   role:'parent', emoji:'👨' },
@@ -510,7 +510,7 @@ function updateTestDayDisplay() {
 async function switchTestPerson(id) {
   testPersonId = id;
   const p = TEST_PERSONS.find(x=>x.id===id);
-  currentProfile = { id:'test-'+id, name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
+  currentProfile = { id:'00000000-0000-0000-0000-'+id.padStart(12,'0'), name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
   renderTestPersons();
   await loadData();
   refreshHome();
@@ -553,7 +553,7 @@ async function simulateWeek() {
     for (const kid of kids) {
       const idx = weekData.indexOf(w);
       await sb.from('checkins').upsert({
-        profile_id: 'test-'+kid,
+        profile_id: '00000000-0000-0000-0000-'+kid.padStart(12,'0'),
         meal_id: meal.id,
         score: kidScores[kid][idx],
         drink: drinks[Math.floor(Math.random()*drinks.length)],
@@ -1008,7 +1008,7 @@ function toggleTestMode() {
   if (testModeActive) {
     // Switch naar testmodus
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
-    currentProfile = {id:'test-'+testPersonId, name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    currentProfile = {id:'00000000-0000-0000-0000-'+testPersonId.padStart(12,'0'), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
     loadData().then(()=>{ refreshHome(); show('home'); });
   } else {
     // Switch naar echte account
@@ -1032,7 +1032,7 @@ async function boot() {
   if (testModeActive) {
     // Start in testmodus
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
-    currentProfile = {id:'test-'+testPersonId, name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    currentProfile = {id:'00000000-0000-0000-0000-'+testPersonId.padStart(12,'0'), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
     await loadData();
     refreshHome();
     show('home');
