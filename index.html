@@ -183,6 +183,24 @@
     .spinner { width: 40px; height: 40px; border: 3px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
     .loading-text { font-weight: 700; color: var(--muted); font-size: 15px; }
+    .picker-modal { background:rgba(0,0,0,0.4); min-height:500px; display:flex; align-items:flex-end; justify-content:center; }
+    .picker-sheet { background:white; border-radius:20px 20px 0 0; padding:20px; width:100%; max-width:420px; }
+    .picker-sheet-title { font-weight:900; font-size:18px; margin-bottom:16px; }
+    .person-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+    .person-btn { padding:10px 6px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; text-align:center; transition:all 0.2s; }
+    .person-btn:hover { border-color:var(--purple); }
+    .person-btn.selected { border-color:var(--purple); background:var(--purple-light); color:var(--purple); }
+    .person-btn.selected-teal { border-color:var(--teal); background:var(--teal-light); color:#0F6E56; }
+    .person-emoji-big { font-size:24px; display:block; margin-bottom:3px; }
+    .special-btn { padding:10px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; font-size:13px; transition:all 0.2s; display:flex; align-items:center; gap:8px; margin-bottom:8px; width:100%; }
+    .special-btn:hover { border-color:var(--amber); }
+    .special-btn.selected { border-color:var(--amber); background:var(--amber-light); }
+    .menu-day-detail { font-size:11px; color:var(--muted); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; }
+    .detail-pill { background:var(--bg); border-radius:99px; padding:1px 7px; font-size:10px; font-weight:600; border:0.5px solid var(--border); }
+    .detail-pill.cook { background:#EEF0FF; color:var(--purple); border-color:#D8D4FF; }
+    .detail-pill.corvee { background:var(--teal-light); color:#0F6E56; border-color:#9FE1CB; }
+    .detail-pill.special { background:var(--amber-light); color:#C47F00; border-color:#FFD97A; }
+    .detail-pill.me { background:var(--coral-light); color:var(--coral); border-color:#FFB5B5; font-weight:800; }
     .menu-day-row { background:white; border-radius:var(--r); border:1.5px solid var(--border); padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:12px; }
     .menu-day-row:hover { border-color:var(--purple); }
     .menu-day-row.has-meal { border-color:var(--teal); }
@@ -500,17 +518,35 @@
     <button class="avatar" onclick="goScreen('menu')" style="font-size:18px">✕</button>
   </div>
   <div style="padding:0 16px 100px">
-    <p style="font-size:13px;color:var(--muted);padding:0 8px 16px" id="meal-picker-sub"></p>
+    <p style="font-size:13px;color:var(--muted);padding:0 8px 12px" id="meal-picker-sub"></p>
+
+    <div class="label" style="margin-bottom:8px">Wat eten we?</div>
     <div class="meal-grid" id="meal-picker-grid"></div>
+    <div style="margin-top:8px;margin-bottom:16px">
+      <input type="text" id="meal-picker-custom" placeholder="Of typ een eigen gerecht..." maxlength="40" />
+    </div>
+
+    <div class="label" style="margin-bottom:8px">Wie kookt er? 👨‍🍳</div>
+    <div class="person-grid" id="cook-person-grid"></div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
+      <button class="special-btn" id="cook-afhaal" onclick="selectCook('afhaal')">
+        <span style="font-size:20px">🛵</span><div><div style="font-weight:800">Afhaal</div><div style="font-size:11px;color:var(--muted);font-weight:400">Bezorging of ophalen</div></div>
+      </button>
+      <button class="special-btn" id="cook-uiteten" onclick="selectCook('uiteten')">
+        <span style="font-size:20px">🍽️</span><div><div style="font-weight:800">Uit eten</div><div style="font-size:11px;color:var(--muted);font-weight:400">Restaurant of bij familie</div></div>
+      </button>
+    </div>
+
+    <div id="corvee-section">
+      <div class="label" style="margin-bottom:6px">Wie heeft corvee? 🧹 <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(meerdere mogelijk)</span></div>
+      <div class="person-grid" id="corvee-person-grid"></div>
+    </div>
+
     <div style="margin-top:12px">
-      <div class="label" style="margin-bottom:6px">Of typ een gerecht</div>
-      <input type="text" id="meal-picker-custom" placeholder="bijv. stamppot boerenkool..." maxlength="40" />
-    </div>
-    <div style="margin-top:8px">
       <div class="label" style="margin-bottom:6px">Notitie (optioneel)</div>
-      <input type="text" id="meal-picker-note" placeholder="bijv. met gehaktballen" maxlength="60" />
+      <input type="text" id="meal-picker-note" placeholder="bijv. met gehaktballen, vroeg eten ivm sport" maxlength="80" />
     </div>
-    <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Maaltijd kiezen ✓</button>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Opslaan ✓</button>
   </div>
 </div>
 <div id="s-vote" class="screen">
@@ -570,6 +606,8 @@ let voteChoices = [], inlineVoteChoices = [], currentAuthTab = 'login';
 let selectedEmoji = '🍽️';
 let weeklyMenu = [];
 let currentPickDay = null;
+let selectedCook = null;
+let selectedCorvee = [];
 
 // ── TEST MODE ──────────────────────────────────────────────────
 const TEST_MODE = true;
@@ -1366,6 +1404,75 @@ async function renderStats() {
 }
 
 
+
+function getFamilyMembers() {
+  if (typeof TEST_PERSONS !== 'undefined' && testModeActive) {
+    return TEST_PERSONS.map(p => ({id: 'test-'+p.id, name: p.name, emoji: p.emoji, role: p.role}));
+  }
+  return [{id: currentProfile.id, name: currentProfile.name, emoji: '👤', role: currentProfile.role}];
+}
+
+function renderPersonGrid(containerId, selectedId, onClickFn, highlightClass='selected') {
+  const grid = document.getElementById(containerId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  getFamilyMembers().forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'person-btn' + (selectedId===p.id ? ' '+highlightClass : '');
+    btn.dataset.id = p.id;
+    btn.dataset.name = p.name;
+    btn.innerHTML = '<span class="person-emoji-big">'+p.emoji+'</span>'+p.name;
+    btn.onclick = () => onClickFn(p.id, p.name);
+    grid.appendChild(btn);
+  });
+}
+
+function renderCorveeGrid() {
+  const grid = document.getElementById('corvee-person-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  getFamilyMembers().forEach(p => {
+    const btn = document.createElement('button');
+    const sel = selectedCorvee.includes(p.id);
+    btn.className = 'person-btn' + (sel ? ' selected-teal' : '');
+    btn.dataset.id = p.id;
+    btn.innerHTML = '<span class="person-emoji-big">'+p.emoji+'</span>'+p.name;
+    btn.onclick = () => {
+      if (selectedCorvee.includes(p.id)) {
+        selectedCorvee = selectedCorvee.filter(x=>x!==p.id);
+      } else {
+        selectedCorvee.push(p.id);
+      }
+      renderCorveeGrid();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function selectCook(val) {
+  selectedCook = val;
+  // Deselect person btns
+  document.querySelectorAll('#cook-person-grid .person-btn').forEach(b=>b.classList.remove('selected'));
+  // Toggle special btns
+  ['cook-afhaal','cook-uiteten'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('selected', id==='cook-'+val);
+  });
+  // Verberg corvee bij afhaal/uiteten
+  const corveeSection = document.getElementById('corvee-section');
+  if(corveeSection) corveeSection.style.display = (val==='afhaal'||val==='uiteten') ? 'none' : '';
+}
+
+function selectCookPerson(id, name) {
+  selectedCook = id;
+  document.querySelectorAll('#cook-person-grid .person-btn').forEach(b=>
+    b.classList.toggle('selected', b.dataset.id===id));
+  document.getElementById('cook-afhaal')?.classList.remove('selected');
+  document.getElementById('cook-uiteten')?.classList.remove('selected');
+  const corveeSection = document.getElementById('corvee-section');
+  if(corveeSection) corveeSection.style.display = '';
+}
+
 // ── MENU SCREEN ────────────────────────────────────────────────
 const WEEK_DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
 const WEEK_DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
@@ -1431,13 +1538,22 @@ async function renderMenuScreen() {
       row.className='menu-day-row'+(existing?' has-meal':'');
       // Check of dit een gestemde maaltijd is
       const voteCount = existing ? (voteTally[existing.meal_id]||0) : 0;
+      // Detail pills voor kok + corvee
+      let detailHtml = '';
+      if (existing) {
+        if (existing.cook_name==='Afhaal') detailHtml += '<span class="detail-pill special">🛵 Afhaal</span>';
+        else if (existing.cook_name==='Uit eten') detailHtml += '<span class="detail-pill special">🍽️ Uit eten</span>';
+        else if (existing.cook_name) detailHtml += '<span class="detail-pill cook">👨‍🍳 '+existing.cook_name+'</span>';
+        if (existing.corvee_names) detailHtml += '<span class="detail-pill corvee">🧹 '+existing.corvee_names+'</span>';
+        if (existing.note) detailHtml += '<span class="detail-pill">'+existing.note+'</span>';
+      }
       row.innerHTML=
         '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
         '<span style="font-size:28px">'+(existing?existing.meal_emoji:'➕')+'</span>'+
         '<div style="flex:1"><div class="menu-day-name">'+(existing?existing.meal_name:'<span style="color:#C0BEDD;font-style:italic;font-weight:400">Nog niet gekozen</span>')+'</div>'+
-        (existing&&existing.note?'<div class="menu-day-meal">'+existing.note+'</div>':'')+
+        (detailHtml?'<div class="menu-day-detail">'+detailHtml+'</div>':'')+
         '</div>'+
-        (voteCount>0?'<span class="menu-day-badge badge-votes">'+voteCount+'x gestemd</span>':'')+
+        (voteCount>0?'<span class="menu-day-badge badge-votes">'+voteCount+'x</span>':'')+
         (existing&&existing.published?'<span class="menu-day-badge badge-published" style="margin-left:4px">✓</span>':'');
       row.onclick=()=>openMealPicker(dateStr,i,existing);
       daysList.appendChild(row);
@@ -1485,12 +1601,26 @@ async function renderMenuScreen() {
       const row = document.createElement('div');
       row.className='menu-day-row'+(entry?' has-meal':'')+(isMyChoice?' my-choice':'')+(isToday?' today-ring':'');
       if (isToday) row.style.borderColor='var(--purple)';
+      // Controleer of dit kind corvee heeft
+      const myCorveeDays = entry && entry.corvee_ids ?
+        JSON.parse(entry.corvee_ids).includes(p.id) : false;
+
+      let childDetailHtml = '';
+      if (entry) {
+        if (entry.cook_name==='Afhaal') childDetailHtml += '<span class="detail-pill special">🛵 Afhaal</span>';
+        else if (entry.cook_name==='Uit eten') childDetailHtml += '<span class="detail-pill special">🍽️ Uit eten</span>';
+        else if (entry.cook_name) childDetailHtml += '<span class="detail-pill cook">👨‍🍳 '+entry.cook_name+'</span>';
+        if (myCorveeDays) childDetailHtml += '<span class="detail-pill me">🧹 Jij corvee!</span>';
+        else if (entry.corvee_names) childDetailHtml += '<span class="detail-pill corvee">🧹 '+entry.corvee_names+'</span>';
+        if (entry.note) childDetailHtml += '<span class="detail-pill">'+entry.note+'</span>';
+      }
+
       row.innerHTML=
         '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
         '<span style="font-size:28px">'+(entry?entry.meal_emoji:'❓')+'</span>'+
         '<div style="flex:1"><div class="menu-day-name">'+(entry?entry.meal_name:'Nog niet bekend')+'</div>'+
-        (entry&&entry.note?'<div class="menu-day-meal">'+entry.note+'</div>':'')+
-        (isToday?'<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:2px">Vandaag!</div>':'')+
+        (childDetailHtml?'<div class="menu-day-detail">'+childDetailHtml+'</div>':'')+
+        (isToday?'<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:3px">Vandaag!</div>':'')+
         '</div>'+
         (isMyChoice?'<span class="menu-day-badge badge-mine">Jouw keuze!</span>':'');
       childDays.appendChild(row);
@@ -1507,6 +1637,24 @@ function openMealPicker(dateStr, dayIndex, existing) {
     : 'Kies een maaltijd voor '+WEEK_DAYS[dayIndex].toLowerCase()+':';
   document.getElementById('meal-picker-custom').value = '';
   document.getElementById('meal-picker-note').value = existing?.note||'';
+  selectedCook = existing?.cook_id||null;
+  selectedCorvee = existing?.corvee_ids ? JSON.parse(existing.corvee_ids) : [];
+
+  // Render kok grid
+  renderPersonGrid('cook-person-grid', selectedCook, selectCookPerson);
+  // Render corvee grid
+  renderCorveeGrid();
+
+  // Zet special buttons
+  ['cook-afhaal','cook-uiteten'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('selected', selectedCook===id.replace('cook-',''));
+  });
+
+  // Verberg corvee bij afhaal/uiteten
+  const corveeSection = document.getElementById('corvee-section');
+  if(corveeSection) corveeSection.style.display =
+    (selectedCook==='afhaal'||selectedCook==='uiteten') ? 'none' : '';
 
   const grid = document.getElementById('meal-picker-grid');
   grid.innerHTML='';
@@ -1546,6 +1694,21 @@ async function confirmMealPick() {
   } else return;
 
   const weekStart = testMondayOfWeek();
+  // Bepaal cook naam
+  let cookName = null;
+  if (selectedCook==='afhaal') cookName='Afhaal';
+  else if (selectedCook==='uiteten') cookName='Uit eten';
+  else if (selectedCook) {
+    const member = getFamilyMembers().find(m=>m.id===selectedCook);
+    cookName = member ? member.name : null;
+  }
+
+  // Bepaal corvee namen
+  const corveeNames = selectedCorvee.map(cid=>{
+    const member = getFamilyMembers().find(m=>m.id===cid);
+    return member ? member.name : null;
+  }).filter(Boolean);
+
   await sb.from('weekly_menu').upsert({
     family_id: currentProfile.family_id,
     week_of: weekStart,
@@ -1554,6 +1717,10 @@ async function confirmMealPick() {
     meal_name: mealName,
     meal_emoji: mealEmoji,
     note: note||null,
+    cook_id: selectedCook||null,
+    cook_name: cookName,
+    corvee_ids: selectedCorvee.length ? JSON.stringify(selectedCorvee) : null,
+    corvee_names: corveeNames.length ? corveeNames.join(', ') : null,
     published: false,
   },{onConflict:'family_id,day_date'});
 
