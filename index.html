@@ -48,11 +48,10 @@
     .test-person { padding: 5px 10px; border-radius: 99px; border: 1.5px solid #444; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; color: #aaa; cursor: pointer; transition: all 0.2s; }
     .test-person.active { background: var(--purple); border-color: var(--purple); color: white; }
     .test-days { display: flex; gap: 8px; align-items: center; }
-    .test-nav-btn { width:28px; height:28px; border-radius:50%; border:1.5px solid #555; background:transparent; color:#aaa; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; }
-    .test-nav-btn:hover { border-color:#aaa; color:white; }
-    .test-day-info { flex:1; text-align:center; min-width:120px; }
-    .test-day-display { font-size:12px; color:white; font-weight:700; }
-    .test-day-phase { font-size:10px; color:#FFB830; font-weight:700; margin-top:1px; }
+    .test-scenario { padding:4px 10px; border-radius:99px; border:1px solid #444; background:transparent; font-family:'Nunito',sans-serif; font-weight:700; font-size:11px; color:#aaa; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .test-scenario:hover { border-color:#aaa; color:white; }
+    .test-scenario.active { background:var(--amber); border-color:var(--amber); color:#1A1A2E; }
+    .test-day-display { font-size:11px; }
     .test-sim { padding: 3px 10px; border-radius: 99px; border: 1px solid #22C9A0; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; color: #22C9A0; cursor: pointer; }
     .test-sim:hover { background: #22C9A0; color: #1A1A2E; }
     .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
@@ -185,6 +184,39 @@
     .spinner { width: 40px; height: 40px; border: 3px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
     .loading-text { font-weight: 700; color: var(--muted); font-size: 15px; }
+    /* STEMLIJST BEHEER */
+    .vote-setup-wrap { flex:1; padding:0 0 100px; }
+    .vote-col-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:0 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+    .vote-col-count { background:var(--purple-light); color:var(--purple); border-radius:99px; padding:1px 8px; font-size:10px; font-weight:700; }
+    .meal-drag-list { min-height:60px; padding:0 16px; margin-bottom:4px; }
+    .meal-drag-item { display:flex; align-items:center; gap:10px; padding:10px 14px; background:white; border-radius:var(--r); border:1.5px solid var(--border); margin-bottom:6px; cursor:grab; transition:all 0.15s; user-select:none; }
+    .meal-drag-item:active { cursor:grabbing; opacity:0.7; transform:scale(0.98); }
+    .meal-drag-item.dragging { opacity:0.4; border-style:dashed; }
+    .meal-drag-item.drag-over { border-color:var(--purple); background:var(--purple-light); }
+    .meal-drag-item.available { border-color:var(--teal); background:var(--teal-light); }
+    .drag-emoji { font-size:22px; flex-shrink:0; }
+    .drag-name { font-weight:700; font-size:14px; flex:1; }
+    .drag-handle { color:var(--muted); font-size:16px; flex-shrink:0; }
+    .drag-zone { min-height:80px; border:2px dashed var(--border); border-radius:var(--r); margin:0 16px 16px; padding:12px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .drag-zone.active-zone { border-color:var(--purple); background:var(--purple-light); }
+    .drag-zone-label { font-size:13px; color:var(--muted); font-weight:600; }
+    .settings-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:white; border-radius:var(--r); border:1.5px solid var(--border); margin:0 16px 10px; }
+    .settings-label { font-weight:700; font-size:14px; }
+    .settings-sub { font-size:12px; color:var(--muted); }
+    .day-picker { display:flex; gap:6px; flex-wrap:wrap; }
+    .day-pill { padding:5px 12px; border-radius:99px; border:1.5px solid var(--border); background:white; font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; color:var(--text); cursor:pointer; transition:all 0.15s; }
+    .day-pill.selected { background:var(--purple); border-color:var(--purple); color:white; }
+    /* STEMMEN KIND */
+    .vote-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:white; border:2px solid var(--border); border-radius:var(--r); margin-bottom:10px; cursor:pointer; transition:all 0.2s; }
+    .vote-item:hover { border-color:var(--amber); }
+    .vote-item.selected { border-color:var(--amber); background:var(--amber-light); }
+    .vote-item-emoji { font-size:28px; flex-shrink:0; }
+    .vote-item-name { font-weight:800; font-size:15px; flex:1; }
+    .vote-item-check { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+    .vote-item.selected .vote-item-check { background:var(--amber); border-color:var(--amber); color:white; }
+    .suggestion-box { background:var(--purple-light); border-radius:var(--r); padding:14px 16px; margin-bottom:16px; border:1.5px solid #D8D4FF; }
+    .suggestion-textarea { width:100%; border:none; background:transparent; font-family:'Nunito',sans-serif; font-size:14px; color:var(--text); outline:none; resize:none; min-height:56px; }
+    .suggestion-textarea::placeholder { color:#C0BEDD; }
     .week-dot.missed { border:2px dashed #FFB5B5; background:transparent; cursor:pointer; }
     .week-dot.missed:hover { background:var(--coral-light); }
     .missed-label { font-size:9px; color:var(--coral); font-weight:700; }
@@ -374,9 +406,9 @@
     <div class="insight"><div class="insight-badge">AI observatie</div><div class="insight-text" id="insight-text"></div></div>
   </div>
   <div id="friday-block" class="hidden">
-    <div class="section-title">Het is vrijdag! 🗳️</div>
+    <div class="section-title" id="stemdag-title">Stem voor volgende week 🗳️</div>
     <div class="card" style="margin:0 16px">
-      <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5">Kies twee maaltijden voor volgende week!</p>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5" id="stemdag-sub">Kies welke maaltijden je volgende week wilt eten.</p>
       <button class="btn btn-primary" onclick="goScreen('vote')">Stem nu →</button>
     </div>
   </div>
@@ -385,7 +417,7 @@
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
     <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">😋</span><span class="nav-label" id="nav-action-label">Check-in</span></button>
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">📋</span><span class="nav-label">Log</span></button>
-    <button class="nav-btn" onclick="goScreen('vote')"><span class="nav-icon">🗳️</span><span class="nav-label">Stem</span></button>
+    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">🗳️</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">🍽️</span><span class="nav-label">Maaltijden</span></button>
     <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">📅</span><span class="nav-label">Menu</span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
@@ -499,7 +531,10 @@
     </div>
     <div id="menu-days-list" style="padding:0 16px 20px"></div>
     <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:8px">
-      <button class="btn btn-primary" id="menu-publish-btn" onclick="publishMenu()">Menu publiceren voor kinderen →</button>
+      <div style="padding:0 16px 8px">
+      <button class="btn" style="background:var(--purple-light);color:var(--purple);margin-bottom:8px" onclick="goScreen('vote-setup')">⚙️ Kieslijst voor kinderen instellen →</button>
+    </div>
+    <button class="btn btn-primary" id="menu-publish-btn" onclick="publishMenu()">Menu publiceren voor kinderen →</button>
       <button class="btn" style="background:var(--teal-light);color:#0F6E56" id="menu-update-btn" onclick="publishMenu()" style="display:none">Menu bijwerken ✓</button>
       <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
     </div>
@@ -557,11 +592,54 @@
     <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Opslaan ✓</button>
   </div>
 </div>
+
+<div id="s-vote-setup" class="screen">
+  <div class="topbar">
+    <div class="logo">Lekker<span>stemmen</span></div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div class="vote-setup-wrap">
+    <div style="padding:0 16px 12px">
+      <p style="font-size:13px;color:var(--muted);line-height:1.5">Sleep maaltijden naar "Beschikbaar" om kinderen hieruit te laten kiezen. Max 10 opties.</p>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="settings-label">Stemdag</div><div class="settings-sub">Wanneer mogen kinderen stemmen?</div></div>
+      <div class="day-picker" id="stemdag-picker"></div>
+    </div>
+
+    <div class="vote-col-title" style="margin-top:8px">
+      Beschikbaar deze week
+      <span class="vote-col-count" id="available-count">0/10</span>
+    </div>
+    <div class="meal-drag-list" id="available-list"></div>
+    <div class="drag-zone" id="drop-to-available">
+      <span class="drag-zone-label">↑ Sleep hier naartoe om beschikbaar te maken</span>
+    </div>
+
+    <div class="vote-col-title" style="margin-top:8px">Niet beschikbaar</div>
+    <div class="meal-drag-list" id="unavailable-list"></div>
+    <div class="drag-zone" id="drop-to-unavailable">
+      <span class="drag-zone-label">↓ Sleep hier naartoe om te verwijderen</span>
+    </div>
+
+    <div style="padding:0 16px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveVoteSetup()">Kieslijst opslaan →</button>
+    </div>
+  </div>
+</div>
 <div id="s-vote" class="screen">
-  <div class="topbar"><h2 style="font-weight:900;font-size:20px">Kies voor volgende week 🗳️</h2></div>
-  <div class="vote-wrap">
-    <p class="vote-count">Kies nog <span id="vote-remaining">2</span> maaltijd(en)</p>
+  <div class="topbar"><h2 style="font-weight:900;font-size:20px">Stem voor volgende week 🗳️</h2></div>
+  <div style="padding:0 16px 100px">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Kies <strong>2 maaltijden</strong> die je graag wilt eten. Je ouder beslist het definitieve menu.
+    </p>
     <div id="vote-options"></div>
+    <div class="suggestion-box">
+      <div style="font-size:12px;font-weight:700;color:var(--purple);margin-bottom:6px">Vrije suggestie <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
+      <textarea class="suggestion-textarea" id="vote-suggestion" placeholder="Ik wil graag ook... (bijv. lasagne, surinaams, sushi)"></textarea>
+    </div>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px" id="vote-status">Kies nog <span id="vote-remaining" style="color:var(--amber);font-weight:800">2</span> maaltijden</div>
     <button class="btn btn-primary" onclick="doVote()" id="vote-btn" disabled>Stem versturen →</button>
     <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
   </div>
@@ -612,6 +690,10 @@ let selectedScore = null, selectedDrink = null, selectedMeal = null, selectedCom
 let togTogether = true, togSport = false, selectedRole = null;
 let voteChoices = [], inlineVoteChoices = [], currentAuthTab = 'login';
 let selectedEmoji = '🍽️';
+let availableMeals = [];
+let unavailableMeals = [];
+let dragItem = null;
+let familySettings = {};
 let weeklyMenu = [];
 let currentPickDay = null;
 let selectedCook = null;
@@ -703,6 +785,11 @@ function initTestBar() {
   unhide(document.getElementById('test-bar'));
   renderTestPersons();
   updateTestDayDisplay();
+  // Highlight huidig scenario
+  const map = {[-8]:'sc-stemdag',[-7]:'sc-menu',[-6]:'sc-ma',[-5]:'sc-di',[-4]:'sc-wo',[-3]:'sc-do',[-2]:'sc-vr',[0]:'sc-today'};
+  document.querySelectorAll('.test-scenario').forEach(b=>b.classList.remove('active'));
+  const el = document.getElementById(map[testDayOffset]);
+  if (el) el.classList.add('active');
 }
 
 function renderTestPersons() {
@@ -730,10 +817,9 @@ const DAY_PHASES = {
 function updateTestDayDisplay() {
   const d = new Date();
   d.setDate(d.getDate() + testDayOffset);
-  const dayOfWeek = d.getDay();
   const dateStr = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'short'});
-  document.getElementById('test-day-display').textContent = dateStr;
-  document.getElementById('test-day-phase').textContent = DAY_PHASES[dayOfWeek]||'—';
+  const el = document.getElementById('test-day-display');
+  if (el) el.textContent = dateStr;
 }
 
 function testStepDay(delta) {
@@ -742,15 +828,19 @@ function testStepDay(delta) {
   loadData().then(()=>{ refreshHome(); });
 }
 
-function testResetToFriday() {
-  // Ga naar vrijdag van vorige week
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  // Hoeveel dagen terug naar vrijdag van vorige week?
-  const daysToLastFriday = dayOfWeek === 5 ? 7 : (dayOfWeek + 2) % 7 + 1;
-  testDayOffset = -daysToLastFriday;
+function testScenario(offset) {
+  testDayOffset = offset;
   updateTestDayDisplay();
+  // Highlight actief scenario
+  document.querySelectorAll('.test-scenario').forEach(b=>b.classList.remove('active'));
+  const map = {'-8':'sc-stemdag','-7':'sc-menu','-6':'sc-ma','-5':'sc-di','-4':'sc-wo','-3':'sc-do','-2':'sc-vr','0':'sc-today'};
+  const el = document.getElementById(map[String(offset)]);
+  if (el) el.classList.add('active');
   loadData().then(()=>{ refreshHome(); });
+}
+
+function testResetToFriday() {
+  testScenario(-8);
 }
 
 async function switchTestPerson(id) {
@@ -961,6 +1051,18 @@ async function loadData() {
   const {data:wm} = await sb.from('weekly_menu')
     .select('*').eq('family_id',familyId).eq('week_of',weekStart);
   weeklyMenu = wm||[];
+
+  // Gezinsinstellingen
+  const {data:settings} = await sb.from('family_settings')
+    .select('*').eq('family_id',familyId).maybeSingle();
+  familySettings = settings || {vote_day: 6, family_id: familyId}; // 6=za default
+
+  // Beschikbare maaltijden voor stemmen
+  const {data:avail} = await sb.from('vote_available_meals')
+    .select('*').eq('family_id',familyId).eq('week_of',weekStart);
+  availableMeals = avail && avail.length > 0
+    ? avail.map(a => getAllMeals().find(m=>m.id===a.meal_id)||{id:a.meal_id,emoji:'🍽️',label:a.meal_id})
+    : getAllMeals().slice(0,8); // fallback: eerste 8 maaltijden
 }
 
 // ── HOME ───────────────────────────────────────────────────────
@@ -968,10 +1070,19 @@ function goScreen(name) {
   if (name==='home') { show('home'); refreshHome(); }
   else if (name==='checkin') { selectedScore=null; selectedDrink=null; resetCheckin(); show('checkin'); }
   else if (name==='log') { selectedMeal=null; resetLog(); buildLogGrid(); show('log'); }
-  else if (name==='vote') { voteChoices=[]; renderVoteOptions(); show('vote'); }
+  else if (name==='vote') {
+    voteChoices=[];
+    // Zorg dat availableMeals geladen zijn
+    if (availableMeals.length === 0) {
+      availableMeals = getAllMeals().slice(0,8);
+    }
+    renderVoteOptions();
+    show('vote');
+  }
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
   else if (name==='stats') { renderStats(); show('stats'); }
   else if (name==='menu') { renderMenuScreen(); show('menu'); }
+  else if (name==='vote-setup') { renderVoteSetup(); show('vote-setup'); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
 }
@@ -1006,6 +1117,8 @@ function refreshHome() {
     document.getElementById('nav-meals').style.display = 'none';
     document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = 'none';
+    // Stem-knop altijd zichtbaar voor kinderen
+    document.getElementById('nav-vote-child')&&(document.getElementById('nav-vote-child').style.display='');
   }
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
@@ -1135,11 +1248,20 @@ function refreshHome() {
     hide(menuPreview);
   }
 
-  // Vrijdag
-  const isFri = testDayOfWeek()===5;
+  // Stemdag block — toon op de ingestelde stemdag
+  const isStemdag = testDayOfWeek()===(familySettings.vote_day||6);
   const fridayBlock = document.getElementById('friday-block');
-  if (isFri&&p.role==='child') unhide(fridayBlock);
+  // Toon ook als kind nog niet gestemd heeft, ongeacht dag
+  const hasVotedThisWeek = false; // TODO: check votes
+  if (p.role==='child' && (isStemdag || availableMeals.length > 0)) unhide(fridayBlock);
   else hide(fridayBlock);
+
+  // Update stemdag label
+  const stemdagTitle = fridayBlock?.querySelector('.section-title');
+  if (stemdagTitle) {
+    const dayName = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'][familySettings.vote_day||6];
+    stemdagTitle.textContent = 'Stem voor volgende week 🗳️';
+  }
 
   // Menu klaar melding voor ouder (als er al een menu is)
   const nextWeekStart = testMondayOfWeek();
@@ -1391,17 +1513,26 @@ async function doCheckin() {
 
 // ── VOTE ───────────────────────────────────────────────────────
 function renderVoteOptions() {
-  const container=document.getElementById('vote-options');
-  container.innerHTML='';
-  getAllMeals().slice(0,8).forEach(opt=>{
-    const div=document.createElement('div');
-    div.className='vote-opt'+(voteChoices.includes(opt.id)?' selected':'');
-    div.innerHTML=`<span class="vote-opt-emoji">${opt.emoji}</span><div><div class="vote-opt-name">${opt.label}</div><div class="vote-opt-sub">${opt.note||'Kies voor volgende week'}</div></div><div class="vote-check">${voteChoices.includes(opt.id)?'✓':''}</div>`;
-    div.onclick=()=>toggleVote(opt.id);
+  const container = document.getElementById('vote-options');
+  container.innerHTML = '';
+  const meals = availableMeals.length > 0 ? availableMeals : getAllMeals().slice(0,8);
+  meals.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'vote-item' + (voteChoices.includes(opt.id) ? ' selected' : '');
+    div.innerHTML =
+      '<span class="vote-item-emoji">'+opt.emoji+'</span>'+
+      '<span class="vote-item-name">'+opt.label+'</span>'+
+      '<div class="vote-item-check">'+(voteChoices.includes(opt.id)?'✓':'')+'</div>';
+    div.onclick = () => toggleVote(opt.id);
     container.appendChild(div);
   });
-  document.getElementById('vote-remaining').textContent=2-voteChoices.length;
-  document.getElementById('vote-btn').disabled=voteChoices.length!==2;
+  const rem = 2 - voteChoices.length;
+  document.getElementById('vote-remaining').textContent = rem;
+  document.getElementById('vote-status').innerHTML =
+    rem > 0
+      ? 'Kies nog <span style="color:var(--amber);font-weight:800">'+rem+'</span> maaltijd'+(rem===1?'':'en')
+      : '✓ Keuze compleet — voeg optioneel een suggestie toe';
+  document.getElementById('vote-btn').disabled = voteChoices.length !== 2;
 }
 
 function toggleVote(id) {
@@ -1630,6 +1761,170 @@ function openMissedCheckin(dateStr) {
   });
 }
 
+
+// ── VOTE SETUP ─────────────────────────────────────────────────
+const DAY_NAMES = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
+const DAY_NAMES_FULL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+
+function renderVoteSetup() {
+  const allMeals = getAllMeals();
+  const weekStart = testMondayOfWeek();
+
+  // Stemdag picker
+  const picker = document.getElementById('stemdag-picker');
+  if (picker) {
+    picker.innerHTML = '';
+    [5,6,0].forEach(day => { // vr, za, zo
+      const btn = document.createElement('button');
+      btn.className = 'day-pill' + ((familySettings.vote_day||6)===day ? ' selected' : '');
+      btn.textContent = DAY_NAMES_FULL[day];
+      btn.onclick = () => {
+        familySettings.vote_day = day;
+        picker.querySelectorAll('.day-pill').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+      };
+      picker.appendChild(btn);
+    });
+  }
+
+  // Beschikbare maaltijden
+  const availIds = availableMeals.map(m=>m.id);
+  const unavailable = allMeals.filter(m=>!availIds.includes(m.id));
+
+  renderDragList('available-list', availableMeals, true);
+  renderDragList('unavailable-list', unavailable, false);
+  updateAvailableCount();
+  setupDropZones();
+}
+
+function renderDragList(containerId, meals, isAvailable) {
+  const list = document.getElementById(containerId);
+  if (!list) return;
+  list.innerHTML = '';
+  if (meals.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:12px">Geen maaltijden</p>';
+    return;
+  }
+  meals.forEach(meal => {
+    const item = document.createElement('div');
+    item.className = 'meal-drag-item' + (isAvailable ? ' available' : '');
+    item.draggable = true;
+    item.dataset.mealId = meal.id;
+    item.dataset.source = isAvailable ? 'available' : 'unavailable';
+    item.innerHTML =
+      '<span class="drag-emoji">'+meal.emoji+'</span>'+
+      '<span class="drag-name">'+meal.label+'</span>'+
+      '<span class="drag-handle">⋮⋮</span>';
+
+    // Drag events
+    item.addEventListener('dragstart', e => {
+      dragItem = {id: meal.id, emoji: meal.emoji, label: meal.label, source: item.dataset.source};
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+
+    // Tap to toggle (mobile)
+    item.addEventListener('click', () => toggleMealAvailability(meal, isAvailable));
+
+    list.appendChild(item);
+  });
+}
+
+function toggleMealAvailability(meal, isCurrentlyAvailable) {
+  if (isCurrentlyAvailable) {
+    availableMeals = availableMeals.filter(m=>m.id!==meal.id);
+  } else {
+    if (availableMeals.length >= 10) {
+      alert('Maximum 10 maaltijden beschikbaar. Verwijder er eerst een.');
+      return;
+    }
+    availableMeals = [...availableMeals, meal];
+  }
+  renderVoteSetup();
+}
+
+function setupDropZones() {
+  const toAvail = document.getElementById('drop-to-available');
+  const toUnavail = document.getElementById('drop-to-unavailable');
+  [toAvail, toUnavail].forEach(zone => {
+    if (!zone) return;
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('active-zone'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('active-zone'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('active-zone');
+      if (!dragItem) return;
+      const movingToAvailable = zone.id === 'drop-to-available';
+      if (movingToAvailable && dragItem.source === 'unavailable') {
+        if (availableMeals.length >= 10) { alert('Maximum 10 maaltijden.'); return; }
+        const meal = getAllMeals().find(m=>m.id===dragItem.id);
+        if (meal) availableMeals = [...availableMeals, meal];
+      } else if (!movingToAvailable && dragItem.source === 'available') {
+        availableMeals = availableMeals.filter(m=>m.id!==dragItem.id);
+      }
+      dragItem = null;
+      renderVoteSetup();
+    });
+  });
+}
+
+function updateAvailableCount() {
+  const el = document.getElementById('available-count');
+  if (el) el.textContent = availableMeals.length+'/10';
+  el.style.background = availableMeals.length >= 10 ? 'var(--amber-light)' : 'var(--purple-light)';
+  el.style.color = availableMeals.length >= 10 ? '#C47F00' : 'var(--purple)';
+}
+
+async function saveVoteSetup() {
+  const familyId = currentProfile.family_id;
+  const weekStart = testMondayOfWeek();
+
+  // Sla stemdag op in settings
+  await sb.from('family_settings').upsert({
+    family_id: familyId,
+    vote_day: familySettings.vote_day || 6,
+  }, {onConflict: 'family_id'});
+
+  // Sla beschikbare maaltijden op
+  await sb.from('vote_available_meals')
+    .delete().eq('family_id', familyId).eq('week_of', weekStart);
+
+  if (availableMeals.length > 0) {
+    await sb.from('vote_available_meals').insert(
+      availableMeals.map((m,i) => ({
+        family_id: familyId,
+        week_of: weekStart,
+        meal_id: m.id,
+        sort_order: i,
+      }))
+    );
+  }
+
+  await loadData();
+  // Toon bevestiging
+  const btn = document.querySelector('[onclick="saveVoteSetup()"]');
+  if (btn) { btn.textContent = '✓ Opgeslagen!'; setTimeout(()=>{ btn.textContent='Kieslijst opslaan →'; goScreen('menu'); }, 1200); }
+}
+
+// ── CONVERT SUGGESTION TO MEAL ────────────────────────────────
+async function convertSuggestion(suggestionText, familyId) {
+  const name = prompt('Maaltijdnaam voor "'+suggestionText+'":', suggestionText);
+  if (!name) return;
+  const emoji = prompt('Emoji:', '🍽️') || '🍽️';
+  const {error} = await sb.from('custom_meals').insert({
+    family_id: familyId,
+    name: name,
+    emoji: emoji,
+    note: 'Via suggestie kind',
+  });
+  if (!error) {
+    await loadData();
+    alert('✓ '+name+' toegevoegd aan jullie maaltijdenlijst!');
+  }
+}
+
+
 // ── MENU SCREEN ────────────────────────────────────────────────
 const WEEK_DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
 const WEEK_DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
@@ -1681,6 +1976,23 @@ async function renderMenuScreen() {
           '<span>'+m.emoji+'</span><span style="font-weight:700">'+m.label+'</span>'+
           '<span style="margin-left:auto;background:var(--purple);color:white;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:700">'+count+'x</span></div>';
       }).join('');
+    }
+    // Vrije suggesties tonen
+    const suggestions = votes.filter(v=>v.suggestion&&v.suggestion.trim());
+    if (suggestions.length > 0) {
+      voteSummary.innerHTML += '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #D8D4FF"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple);margin-bottom:6px">Vrije suggesties</div>';
+      suggestions.forEach(v => {
+        const member = getFamilyMembers().find(m=>m.id===v.profile_id);
+        const name = member?.name || 'Kind';
+        voteSummary.innerHTML +=
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;background:white;border-radius:8px;padding:6px 10px">'+
+          '<span style="font-size:13px;flex:1">💬 <em>'+v.suggestion+'</em></span>'+
+          '<span style="font-size:11px;color:var(--muted)">'+name+'</span>'+
+          '<button onclick="convertSuggestion(''+v.suggestion.replace(/'/g,"\'")+'',''+currentProfile.family_id+'')" '+
+          'style="background:var(--teal-light);color:#0F6E56;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Toevoegen</button>'+
+          '</div>';
+      });
+      voteSummary.innerHTML += '</div>';
     }
 
     // Daglijst
