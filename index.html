@@ -47,10 +47,12 @@
     .test-persons { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
     .test-person { padding: 5px 10px; border-radius: 99px; border: 1.5px solid #444; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; color: #aaa; cursor: pointer; transition: all 0.2s; }
     .test-person.active { background: var(--purple); border-color: var(--purple); color: white; }
-    .test-days { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-    .test-day-lbl { font-size: 10px; color: #666; font-weight: 700; margin-right: 2px; }
-    .test-day { padding: 3px 9px; border-radius: 99px; border: 1px solid #444; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; color: #888; cursor: pointer; transition: all 0.15s; }
-    .test-day.active { background: var(--amber); border-color: var(--amber); color: #1A1A2E; }
+    .test-days { display: flex; gap: 8px; align-items: center; }
+    .test-nav-btn { width:28px; height:28px; border-radius:50%; border:1.5px solid #555; background:transparent; color:#aaa; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; }
+    .test-nav-btn:hover { border-color:#aaa; color:white; }
+    .test-day-info { flex:1; text-align:center; min-width:120px; }
+    .test-day-display { font-size:12px; color:white; font-weight:700; }
+    .test-day-phase { font-size:10px; color:#FFB830; font-weight:700; margin-top:1px; }
     .test-sim { padding: 3px 10px; border-radius: 99px; border: 1px solid #22C9A0; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; color: #22C9A0; cursor: pointer; }
     .test-sim:hover { background: #22C9A0; color: #1A1A2E; }
     .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
@@ -183,6 +185,9 @@
     .spinner { width: 40px; height: 40px; border: 3px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
     .loading-text { font-weight: 700; color: var(--muted); font-size: 15px; }
+    .week-dot.missed { border:2px dashed #FFB5B5; background:transparent; cursor:pointer; }
+    .week-dot.missed:hover { background:var(--coral-light); }
+    .missed-label { font-size:9px; color:var(--coral); font-weight:700; }
     .picker-modal { background:rgba(0,0,0,0.4); min-height:500px; display:flex; align-items:flex-end; justify-content:center; }
     .picker-sheet { background:white; border-radius:20px 20px 0 0; padding:20px; width:100%; max-width:420px; }
     .picker-sheet-title { font-weight:900; font-size:18px; margin-bottom:16px; }
@@ -415,9 +420,12 @@
       <div class="vote-inline-grid" id="vote-inline-grid"></div>
       <p id="vote-inline-info" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></p>
     </div>
-    <div id="checkin-actions" class="actions hidden">
-      <button class="btn btn-primary" onclick="doCheckin()" id="checkin-btn">Opslaan ✓</button>
-      <button class="btn btn-ghost" onclick="goScreen('home')">Overslaan</button>
+    <div id="checkin-autosave" class="actions hidden" style="text-align:center;padding-bottom:8px">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px" id="checkin-autosave-msg">Wordt opgeslagen...</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="doCheckin()" id="checkin-btn" style="flex:1">Opslaan ✓</button>
+        <button class="btn btn-ghost" onclick="goScreen('home')" style="flex:1">Overslaan</button>
+      </div>
     </div>
     <div class="actions" id="checkin-skip"><button class="btn btn-ghost" onclick="goScreen('home')">Overslaan</button></div>
   </div>
@@ -614,6 +622,12 @@ const TEST_MODE = true;
 let testDayOffset = 0;
 const TEST_FAMILY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
+
+function testUuid(personId) {
+  const padded = personId.padEnd(12, '0').slice(0, 12);
+  return '00000000-0000-0000-0000-' + padded;
+}
+
 const TEST_PERSONS = [
   { id:'paul',   name:'Paul',   role:'parent', emoji:'👨' },
   { id:'dorres', name:'Dorres', role:'parent', emoji:'👩' },
@@ -696,21 +710,46 @@ function renderTestPersons() {
   });
 }
 
+const DAY_PHASES = {
+  5: 'Vrijdag — stemmen + menu opstellen',
+  6: 'Zaterdag — menu zichtbaar',
+  0: 'Zondag — menu zichtbaar',
+  1: 'Maandag — inchecken',
+  2: 'Dinsdag — inchecken',
+  3: 'Woensdag — inchecken',
+  4: 'Donderdag — inchecken',
+};
+
 function updateTestDayDisplay() {
   const d = new Date();
   d.setDate(d.getDate() + testDayOffset);
-  document.getElementById('test-day-display').textContent =
-    d.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'});
-  document.querySelectorAll('.test-day').forEach((btn,i) => {
-    const offsets = [-6,-5,-4,-3,-2,-1,0];
-    btn.classList.toggle('active', offsets[i]===testDayOffset);
-  });
+  const dayOfWeek = d.getDay();
+  const dateStr = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'short'});
+  document.getElementById('test-day-display').textContent = dateStr;
+  document.getElementById('test-day-phase').textContent = DAY_PHASES[dayOfWeek]||'—';
+}
+
+function testStepDay(delta) {
+  testDayOffset += delta;
+  updateTestDayDisplay();
+  loadData().then(()=>{ refreshHome(); });
+}
+
+function testResetToFriday() {
+  // Ga naar vrijdag van vorige week
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  // Hoeveel dagen terug naar vrijdag van vorige week?
+  const daysToLastFriday = dayOfWeek === 5 ? 7 : (dayOfWeek + 2) % 7 + 1;
+  testDayOffset = -daysToLastFriday;
+  updateTestDayDisplay();
+  loadData().then(()=>{ refreshHome(); });
 }
 
 async function switchTestPerson(id) {
   testPersonId = id;
   const p = TEST_PERSONS.find(x=>x.id===id);
-  currentProfile = { id:'00000000-0000-0000-0000-'+id.padStart(12,'0'), name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
+  currentProfile = { id: testUuid(id), name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
   renderTestPersons();
   await loadData();
   refreshHome();
@@ -723,6 +762,9 @@ async function testSetDay(offset) {
   await loadData();
   refreshHome();
 }
+
+// Legacy alias
+function testStep(delta) { testStepDay(delta); }
 
 async function simulateWeek() {
   const weekData = [
@@ -753,7 +795,7 @@ async function simulateWeek() {
     for (const kid of kids) {
       const idx = weekData.indexOf(w);
       await sb.from('checkins').upsert({
-        profile_id: '00000000-0000-0000-0000-'+kid.padStart(12,'0'),
+        profile_id: testUuid(kid),
         meal_id: meal.id,
         score: kidScores[kid][idx],
         drink: drinks[Math.floor(Math.random()*drinks.length)],
@@ -863,25 +905,54 @@ async function loadProfile() {
 
 async function loadData() {
   if (!currentProfile) return;
+  const familyId = currentProfile.family_id;
+  const profileId = currentProfile.id;
+
+  // Maaltijd van vandaag
   const {data:meal} = await sb.from('meals')
-    .select('*').eq('family_id',currentProfile.family_id).eq('eaten_at',todayStr()).maybeSingle();
+    .select('*').eq('family_id',familyId).eq('eaten_at',todayStr()).maybeSingle();
   todayMeal = meal;
 
+  // Check-ins: probeer eerst via view, dan direct via joins
   const since = new Date();
-  since.setDate(since.getDate()-14+testDayOffset);
-  const {data:cis} = await sb.from('checkins_with_context')
-    .select('*').eq('profile_id',currentProfile.id)
-    .gte('eaten_at',since.toISOString().split('T')[0])
+  since.setDate(since.getDate()-14);
+  const sinceStr = since.toISOString().split('T')[0];
+
+  let {data:cis, error:ciErr} = await sb.from('checkins_with_context')
+    .select('*').eq('profile_id', profileId)
+    .gte('eaten_at', sinceStr)
     .order('eaten_at',{ascending:false});
+
+  // Als view leeg is (bijv testmodus), probeer direct op checkins tabel
+  if ((!cis || cis.length === 0) && meal) {
+    const {data:directCis} = await sb.from('checkins')
+      .select('*, meals(eaten_at, meal_type, ate_together, had_sport)')
+      .eq('profile_id', profileId)
+      .order('checked_in_at',{ascending:false})
+      .limit(30);
+    if (directCis && directCis.length > 0) {
+      cis = directCis.map(c => ({
+        ...c,
+        eaten_at: c.meals?.eaten_at,
+        meal_type: c.meals?.meal_type,
+        ate_together: c.meals?.ate_together,
+        had_sport: c.meals?.had_sport,
+        child_name: currentProfile.name,
+        family_id: familyId,
+      }));
+    }
+  }
   checkins = cis||[];
 
+  // Custom meals
   const {data:cm} = await sb.from('custom_meals')
-    .select('*').eq('family_id',currentProfile.family_id).order('created_at',{ascending:true});
+    .select('*').eq('family_id',familyId).order('created_at',{ascending:true});
   customMeals = cm||[];
 
+  // Weekmenu
   const weekStart = testMondayOfWeek();
   const {data:wm} = await sb.from('weekly_menu')
-    .select('*').eq('family_id',currentProfile.family_id).eq('week_of',weekStart);
+    .select('*').eq('family_id',familyId).eq('week_of',weekStart);
   weeklyMenu = wm||[];
 }
 
@@ -933,7 +1004,12 @@ function refreshHome() {
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
     .forEach(id => hide(document.getElementById(id)));
 
-  const hasCheckedIn = todayMeal && checkins.some(c=>c.meal_id===todayMeal?.id);
+  // Check of er vandaag een check-in is (op datum of meal_id)
+  const todayDateStr = todayStr();
+  const hasCheckedIn = checkins.some(c=>
+    c.meal_id===todayMeal?.id ||
+    c.eaten_at===todayDateStr
+  );
 
   if (p.role==='child') {
     if (!todayMeal) unhide(document.getElementById('today-child-wait'));
@@ -963,6 +1039,8 @@ function refreshHome() {
   row.innerHTML = '';
   const baseDate = new Date();
   baseDate.setDate(baseDate.getDate()+testDayOffset);
+  const realToday = new Date();
+  realToday.setDate(realToday.getDate()+testDayOffset);
   for (let i=0;i<7;i++) {
     const d = new Date(baseDate);
     const startOfWeek = baseDate.getDate()-baseDate.getDay()+1;
@@ -971,9 +1049,19 @@ function refreshHome() {
     const ci = checkins.find(c=>c.eaten_at===ds);
     const score = ci?.score??null;
     const isToday = ds===todayStr();
+    const isPast = d < realToday && !isToday;
+    // Heeft deze dag een maaltijd maar geen check-in?
+    const hasMeal = weeklyMenu.find(m=>m.day_date===ds&&m.published) ||
+                    checkins.find(c=>c.eaten_at===ds); // proxy: als er check-in data is
+    const isMissed = isPast && !score && currentProfile?.role==='child';
+
     const dot = document.createElement('div');
     dot.className = 'day-wrap';
-    dot.innerHTML = `<div class="day-dot ${score?'s'+score:''} ${isToday?'today-ring':''}">${score===1?'😕':score===2?'😐':score===3?'😋':''}</div><div class="day-label">${DAYS[(i+1)%7]}</div>`;
+    const dotClass = score?'s'+score:(isMissed?'missed':'');
+    const emoji = score===1?'😕':score===2?'😐':score===3?'😋':(isMissed?'!':'');
+    dot.innerHTML = '<div class="day-dot '+dotClass+' '+(isToday?'today-ring':'')+'" '+
+      (isMissed ? 'onclick="openMissedCheckin('+"'"+ds+"'"+')" title="Vergeten in te vullen — tik om alsnog te checken"' : '')+
+      '>'+emoji+'</div><div class="day-label '+(isMissed?'missed-label':'')+'">'+DAYS[(i+1)%7]+'</div>';
     row.appendChild(dot);
   }
 
@@ -1192,7 +1280,7 @@ function resetCheckin() {
   [1,2,3].forEach(i=>document.getElementById('sm-'+i).className='smiley');
   ['water','milk','juice','soda'].forEach(d=>document.getElementById('drink-'+d).classList.remove('selected'));
   hide(document.getElementById('drink-section'));
-  hide(document.getElementById('checkin-actions'));
+  hide(document.getElementById('checkin-autosave'));
   unhide(document.getElementById('checkin-skip'));
   if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
   selectedComment=''; inlineVoteChoices=[];
@@ -1219,8 +1307,12 @@ function selectSmiley(score) {
   // Inline stemmen
   renderInlineVote();
   unhide(document.getElementById('vote-inline-section'));
-  unhide(document.getElementById('checkin-actions'));
+  unhide(document.getElementById('checkin-autosave'));
   hide(document.getElementById('checkin-skip'));
+
+  // Auto-save na 2 seconden als gebruiker niets meer doet
+  clearTimeout(window._checkinTimer);
+  document.getElementById('checkin-autosave-msg').textContent = 'Tik op opslaan, of voeg optioneel drankje/opmerking toe';
 }
 
 
@@ -1257,11 +1349,17 @@ async function doCheckin() {
   if (!selectedScore||!todayMeal) return;
   document.getElementById('checkin-btn').textContent='Opslaan...';
   const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
-  await sb.from('checkins').upsert({
+  const {error:ciError} = await sb.from('checkins').upsert({
     profile_id:currentProfile.id, meal_id:todayMeal.id,
     score:selectedScore, drink:selectedDrink,
     comment: commentVal||null,
   },{onConflict:'profile_id,meal_id'});
+  if (ciError) {
+    console.error('Checkin error:', ciError);
+    document.getElementById('checkin-btn').textContent='Opslaan ✓';
+    alert('Fout bij opslaan: '+ciError.message);
+    return;
+  }
   // Inline stem opslaan als gekozen
   if (inlineVoteChoices.length>0) {
     const choices = [...inlineVoteChoices];
@@ -1278,6 +1376,9 @@ async function doCheckin() {
   document.getElementById('success-emoji').textContent=m[0];
   document.getElementById('success-title').textContent=m[1];
   document.getElementById('success-sub').textContent=m[2];
+  // Reset terug-knop naar normaal
+  const skipBtn = document.getElementById('checkin-skip')?.querySelector('button');
+  if (skipBtn) skipBtn.onclick = ()=>goScreen('home');
   show('success');
 }
 
@@ -1322,10 +1423,33 @@ async function renderStats() {
 
   // Haal alle checkins van het gezin op via een bredere query
   const since = new Date(); since.setDate(since.getDate()-30);
-  const {data:allCis} = await sb.from('checkins_with_context')
+  // Haal alle checkins op voor het gezin via de view
+  let {data:allCis} = await sb.from('checkins_with_context')
     .select('*').eq('family_id', familyId)
     .gte('eaten_at', since.toISOString().split('T')[0])
     .order('eaten_at',{ascending:false});
+
+  // Als view leeg is, haal direct op via joins
+  if (!allCis || allCis.length === 0) {
+    const {data:directAll} = await sb.from('checkins')
+      .select('*, profiles(name, family_id), meals(eaten_at, meal_type, ate_together, had_sport)')
+      .eq('profiles.family_id', familyId)
+      .order('checked_in_at',{ascending:false})
+      .limit(100);
+    if (directAll) {
+      allCis = directAll
+        .filter(c => c.profiles?.family_id === familyId)
+        .map(c => ({
+          ...c,
+          child_name: c.profiles?.name || 'Onbekend',
+          eaten_at: c.meals?.eaten_at,
+          meal_type: c.meals?.meal_type,
+          ate_together: c.meals?.ate_together,
+          had_sport: c.meals?.had_sport,
+          family_id: familyId,
+        }));
+    }
+  }
   const cis = allCis||[];
 
   // Totalen
@@ -1471,6 +1595,32 @@ function selectCookPerson(id, name) {
   document.getElementById('cook-uiteten')?.classList.remove('selected');
   const corveeSection = document.getElementById('corvee-section');
   if(corveeSection) corveeSection.style.display = '';
+}
+
+
+function openMissedCheckin(dateStr) {
+  // Sla de datum op en open check-in scherm voor die dag
+  const saved = testDayOffset;
+  const today = new Date();
+  const target = new Date(dateStr+'T12:00:00');
+  const diff = Math.round((target-today)/(1000*60*60*24));
+  testDayOffset = diff;
+  updateTestDayDisplay();
+  loadData().then(()=>{
+    if (todayMeal) {
+      selectedScore=null; selectedDrink=null;
+      resetCheckin();
+      // Zet terug-functie
+      document.getElementById('checkin-skip').querySelector('button').onclick = ()=>{
+        testDayOffset=saved; loadData().then(()=>{ refreshHome(); show('home'); });
+      };
+      show('checkin');
+    } else {
+      alert('Geen maaltijd gelogd voor '+new Date(dateStr+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'})+'. Vraag je ouder om die dag alsnog te loggen.');
+      testDayOffset=saved;
+      updateTestDayDisplay();
+    }
+  });
 }
 
 // ── MENU SCREEN ────────────────────────────────────────────────
@@ -1762,7 +1912,9 @@ function toggleTestMode() {
   if (testModeActive) {
     // Switch naar testmodus
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
-    currentProfile = {id:'00000000-0000-0000-0000-'+testPersonId.padStart(12,'0'), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    // UUID format: 00000000-0000-0000-0000-00000000paul
+    currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    console.log('[Test] Profile:', currentProfile);
     loadData().then(()=>{ refreshHome(); show('home'); });
   } else {
     // Switch naar echte account
@@ -1786,7 +1938,9 @@ async function boot() {
   if (testModeActive) {
     // Start in testmodus
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
-    currentProfile = {id:'00000000-0000-0000-0000-'+testPersonId.padStart(12,'0'), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    // UUID format: 00000000-0000-0000-0000-00000000paul
+    currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    console.log('[Test] Profile:', currentProfile);
     await loadData();
     refreshHome();
     show('home');
