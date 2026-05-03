@@ -183,6 +183,20 @@
     .spinner { width: 40px; height: 40px; border: 3px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
     .loading-text { font-weight: 700; color: var(--muted); font-size: 15px; }
+    .menu-day-row { background:white; border-radius:var(--r); border:1.5px solid var(--border); padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:12px; }
+    .menu-day-row:hover { border-color:var(--purple); }
+    .menu-day-row.has-meal { border-color:var(--teal); }
+    .menu-day-row.my-choice { border-color:var(--amber); background:var(--amber-light); }
+    .menu-day-date { font-size:11px; font-weight:700; color:var(--muted); width:32px; flex-shrink:0; text-align:center; }
+    .menu-day-date-num { font-size:18px; font-weight:900; color:var(--text); line-height:1; }
+    .menu-day-name { font-weight:700; font-size:14px; color:var(--text); }
+    .menu-day-meal { font-size:13px; color:var(--muted); margin-top:2px; }
+    .menu-day-empty { font-size:13px; color:#C0BEDD; font-style:italic; }
+    .menu-day-emoji { font-size:28px; flex-shrink:0; }
+    .menu-day-badge { font-size:10px; padding:2px 7px; border-radius:99px; font-weight:700; margin-left:auto; flex-shrink:0; }
+    .badge-mine { background:var(--amber-light); color:#C47F00; border:1px solid #FFD97A; }
+    .badge-votes { background:var(--purple-light); color:var(--purple); border:1px solid #D8D4FF; }
+    .badge-published { background:var(--teal-light); color:#0F6E56; border:1px solid #7EECD4; }
     /* COMMENT */
     .comment-section { padding: 0 24px 20px; }
     .comment-textarea { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:var(--r); font-family:'Nunito',sans-serif; font-size:14px; color:var(--text); background:var(--bg); outline:none; resize:none; transition:border-color 0.2s; min-height:72px; }
@@ -233,14 +247,17 @@
     <div class="test-persons" id="test-persons"></div>
     <div class="test-days">
       <span class="test-day-lbl">Dag:</span>
+        <button class="test-day" onclick="testSetDay(-8)" title="Vorige vrijdag — stemmen">Vr-1</button>
+      <button class="test-day" onclick="testSetDay(-7)" title="Vorige zaterdag — menu opstellen">Za-1</button>
       <button class="test-day" onclick="testSetDay(-6)">Ma</button>
       <button class="test-day" onclick="testSetDay(-5)">Di</button>
       <button class="test-day" onclick="testSetDay(-4)">Wo</button>
       <button class="test-day" onclick="testSetDay(-3)">Do</button>
-      <button class="test-day" onclick="testSetDay(-2)">Vr</button>
-      <button class="test-day" onclick="testSetDay(-1)">Za</button>
+      <button class="test-day" onclick="testSetDay(-2)" title="Vrijdag — stemmen + menu">Vr</button>
+      <button class="test-day" onclick="testSetDay(-1)" title="Zaterdag — menu zichtbaar">Za</button>
       <button class="test-day active" onclick="testSetDay(0)">Vandaag</button>
-      <button class="test-sim" onclick="simulateWeek()">⚡ Simuleer week</button>
+      <button class="test-day" onclick="testSetDay(1)" title="Morgen">+1</button>
+      <button class="test-sim" onclick="simulateWeek()">⚡ Week</button>
     </div>
   </div>
 </div>
@@ -306,6 +323,13 @@
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op maaltijd van ouder...</div>
   </div>
+  <div id="today-menu-preview" class="hidden" style="margin:0 16px 16px">
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Menu deze week</div>
+      <div id="today-menu-preview-list"></div>
+      <button class="btn" style="background:var(--purple-light);color:var(--purple);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="goScreen('menu')">Heel menu bekijken →</button>
+    </div>
+  </div>
   <div id="today-parent" class="today-card hidden">
     <div class="today-badge">Vandaag</div>
     <div class="today-q">Wat eten jullie vanavond?</div>
@@ -340,6 +364,7 @@
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">📋</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')"><span class="nav-icon">🗳️</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">🍽️</span><span class="nav-label">Maaltijden</span></button>
+    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">📅</span><span class="nav-label">Menu</span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
   </nav>
 </div>
@@ -431,6 +456,63 @@
   </div>
 </div>
 
+
+<div id="s-menu" class="screen">
+  <div class="topbar">
+    <div class="logo">Lekker<span>stemmen</span></div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div id="menu-parent-view" class="hidden">
+    <div style="padding:0 24px 12px">
+      <h2 style="font-weight:900;font-size:20px;margin-bottom:4px">Menu vaststellen 📅</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Stemmen van de kinderen staan als suggestie. Klik een dag om de maaltijd te kiezen.</p>
+      <div id="vote-summary" style="background:var(--purple-light);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;border:1.5px solid #D8D4FF">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple);margin-bottom:8px">Stemmen kinderen</div>
+        <div id="vote-summary-list" style="font-size:13px;color:var(--text)"></div>
+      </div>
+    </div>
+    <div id="menu-days-list" style="padding:0 16px 20px"></div>
+    <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" id="menu-publish-btn" onclick="publishMenu()">Menu publiceren voor kinderen →</button>
+      <button class="btn" style="background:var(--teal-light);color:#0F6E56" id="menu-update-btn" onclick="publishMenu()" style="display:none">Menu bijwerken ✓</button>
+      <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
+    </div>
+  </div>
+  <div id="menu-child-view" class="hidden">
+    <div style="padding:0 24px 12px">
+      <h2 style="font-weight:900;font-size:20px;margin-bottom:4px">Menu deze week 🍽️</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Vastgesteld door je ouder. Jouw keuzes zijn gemarkeerd!</p>
+    </div>
+    <div id="menu-child-days" style="padding:0 16px 100px"></div>
+  </div>
+  <div id="menu-empty-view" class="hidden">
+    <div style="padding:40px 24px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">📅</div>
+      <div style="font-weight:800;font-size:18px;margin-bottom:8px">Nog geen menu</div>
+      <p style="font-size:14px;color:var(--muted);line-height:1.6">Het weekmenu is nog niet vastgesteld door je ouder. Vrijdag wordt er gestemd!</p>
+    </div>
+  </div>
+</div>
+
+<div id="s-meal-picker" class="screen">
+  <div class="topbar">
+    <h2 style="font-weight:900;font-size:20px" id="meal-picker-title">Kies maaltijd</h2>
+    <button class="avatar" onclick="goScreen('menu')" style="font-size:18px">✕</button>
+  </div>
+  <div style="padding:0 16px 100px">
+    <p style="font-size:13px;color:var(--muted);padding:0 8px 16px" id="meal-picker-sub"></p>
+    <div class="meal-grid" id="meal-picker-grid"></div>
+    <div style="margin-top:12px">
+      <div class="label" style="margin-bottom:6px">Of typ een gerecht</div>
+      <input type="text" id="meal-picker-custom" placeholder="bijv. stamppot boerenkool..." maxlength="40" />
+    </div>
+    <div style="margin-top:8px">
+      <div class="label" style="margin-bottom:6px">Notitie (optioneel)</div>
+      <input type="text" id="meal-picker-note" placeholder="bijv. met gehaktballen" maxlength="60" />
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Maaltijd kiezen ✓</button>
+  </div>
+</div>
 <div id="s-vote" class="screen">
   <div class="topbar"><h2 style="font-weight:900;font-size:20px">Kies voor volgende week 🗳️</h2></div>
   <div class="vote-wrap">
@@ -486,6 +568,8 @@ let selectedScore = null, selectedDrink = null, selectedMeal = null, selectedCom
 let togTogether = true, togSport = false, selectedRole = null;
 let voteChoices = [], inlineVoteChoices = [], currentAuthTab = 'login';
 let selectedEmoji = '🍽️';
+let weeklyMenu = [];
+let currentPickDay = null;
 
 // ── TEST MODE ──────────────────────────────────────────────────
 const TEST_MODE = true;
@@ -638,7 +722,35 @@ async function simulateWeek() {
       }, {onConflict:'profile_id,meal_id'});
     }
   }
-  alert('✅ Week gesimuleerd voor familie Brentjens!\n\nSchakel nu tussen Tjeerd, Faas en Biek om hun check-ins te zien. Gebruik de dagknoppen om door de week te navigeren.');
+  // Maak ook een voorbeeldmenu voor volgende week
+  const nextMon = testMondayOfWeek();
+  const sampleMenu = [
+    {offset:0,meal_id:'pasta',  name:'Pasta bolognese',    emoji:'🍝'},
+    {offset:1,meal_id:'soep',   name:'Tomatensoep',         emoji:'🍲'},
+    {offset:2,meal_id:'rijst',  name:'Nasi goreng',         emoji:'🍛'},
+    {offset:3,meal_id:'pizza',  name:'Zelfgemaakte pizza',  emoji:'🍕'},
+    {offset:4,meal_id:'vlees',  name:'Gehaktballen',        emoji:'🥩'},
+    {offset:5,meal_id:'brood',  name:'Broodmaaltijd',       emoji:'🥪'},
+    {offset:6,meal_id:'anders', name:'Kip prutje',          emoji:'🍗'},
+  ];
+  const baseDate = new Date();
+  baseDate.setDate(baseDate.getDate()+testDayOffset);
+  const monDate = new Date(baseDate);
+  const day = monDate.getDay();
+  monDate.setDate(monDate.getDate()-day+(day===0?-6:1));
+  for (const s of sampleMenu) {
+    const d = new Date(monDate); d.setDate(monDate.getDate()+s.offset);
+    await sb.from('weekly_menu').upsert({
+      family_id: TEST_FAMILY_ID,
+      week_of: nextMon,
+      day_date: d.toISOString().split('T')[0],
+      meal_id: s.meal_id,
+      meal_name: s.name,
+      meal_emoji: s.emoji,
+      published: true,
+    },{onConflict:'family_id,day_date'});
+  }
+  alert('✅ Week gesimuleerd voor familie Brentjens!\n\nSchakel nu tussen personen en dagen. Ouders kunnen menu aanpassen, kinderen zien het weekmenu.');
   await loadData();
   refreshHome();
 }
@@ -728,6 +840,11 @@ async function loadData() {
   const {data:cm} = await sb.from('custom_meals')
     .select('*').eq('family_id',currentProfile.family_id).order('created_at',{ascending:true});
   customMeals = cm||[];
+
+  const weekStart = testMondayOfWeek();
+  const {data:wm} = await sb.from('weekly_menu')
+    .select('*').eq('family_id',currentProfile.family_id).eq('week_of',weekStart);
+  weeklyMenu = wm||[];
 }
 
 // ── HOME ───────────────────────────────────────────────────────
@@ -738,6 +855,8 @@ function goScreen(name) {
   else if (name==='vote') { voteChoices=[]; renderVoteOptions(); show('vote'); }
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
   else if (name==='stats') { renderStats(); show('stats'); }
+  else if (name==='menu') { renderMenuScreen(); show('menu'); }
+  else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
 }
 
@@ -762,12 +881,14 @@ function refreshHome() {
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = '';
     document.getElementById('nav-meals').style.display = '';
+    document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = '';
   } else {
     document.getElementById('nav-action-icon').textContent = '😋';
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-meals').style.display = 'none';
+    document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = 'none';
   }
 
@@ -866,11 +987,37 @@ function refreshHome() {
     unhide(document.getElementById('insight-block'));
   } else hide(document.getElementById('insight-block'));
 
+  // Menu preview voor kinderen
+  const menuPreview = document.getElementById('today-menu-preview');
+  const previewList = document.getElementById('today-menu-preview-list');
+  if (p.role==='child' && weeklyMenu.length>0 && weeklyMenu.some(m=>m.published)) {
+    const published = weeklyMenu.filter(m=>m.published).sort((a,b)=>a.day_date>b.day_date?1:-1);
+    previewList.innerHTML = published.slice(0,3).map(m=>{
+      const d = new Date(m.day_date+'T12:00:00');
+      const dayName = d.toLocaleDateString('nl-NL',{weekday:'short'});
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px"><span>'+m.meal_emoji+'</span><span style="font-weight:700;width:28px">'+dayName+'</span><span style="color:var(--muted)">'+m.meal_name+'</span></div>';
+    }).join('');
+    unhide(menuPreview);
+  } else {
+    hide(menuPreview);
+  }
+
   // Vrijdag
   const isFri = testDayOfWeek()===5;
   const fridayBlock = document.getElementById('friday-block');
   if (isFri&&p.role==='child') unhide(fridayBlock);
   else hide(fridayBlock);
+
+  // Menu klaar melding voor ouder (als er al een menu is)
+  const nextWeekStart = testMondayOfWeek();
+  const hasPublishedMenu = weeklyMenu.some(m=>m.published&&m.week_of===nextWeekStart);
+  if (p.role==='parent') {
+    const parentDoneEl = document.getElementById('today-parent-done');
+    const existingText = document.getElementById('today-parent-meal');
+    if (hasPublishedMenu && existingText) {
+      existingText.innerHTML += ' &nbsp;<span style="font-size:12px;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:99px">Menu gepubliceerd ✓</span>';
+    }
+  }
 }
 
 // ── LOG ────────────────────────────────────────────────────────
@@ -1217,6 +1364,222 @@ async function renderStats() {
     }
   }
 }
+
+
+// ── MENU SCREEN ────────────────────────────────────────────────
+const WEEK_DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+const WEEK_DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+
+function getWeekDates(mondayStr) {
+  const dates = [];
+  const base = new Date(mondayStr+'T12:00:00');
+  for (let i=0;i<7;i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate()+i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+async function renderMenuScreen() {
+  const p = currentProfile;
+  const weekStart = testMondayOfWeek();
+  const dates = getWeekDates(weekStart);
+  const published = weeklyMenu.some(m=>m.published);
+
+  // Haal stemmen op
+  const {data:allVotes} = await sb.from('votes')
+    .select('*').eq('family_id',p.family_id).eq('week_of',weekStart);
+  const votes = allVotes||[];
+
+  // Stem tally
+  const voteTally = {};
+  votes.forEach(v=>{
+    [v.meal_choice_1,v.meal_choice_2].forEach(mc=>{
+      if(mc) voteTally[mc]=(voteTally[mc]||0)+1;
+    });
+  });
+
+  if (p.role==='parent') {
+    document.getElementById('menu-parent-view').classList.remove('hidden');
+    document.getElementById('menu-child-view').classList.add('hidden');
+    document.getElementById('menu-empty-view').classList.add('hidden');
+
+    // Stem samenvatting
+    const voteSummary = document.getElementById('vote-summary-list');
+    const sortedVotes = Object.entries(voteTally).sort((a,b)=>b[1]-a[1]);
+    if (sortedVotes.length===0) {
+      voteSummary.innerHTML='<span style="color:var(--muted);font-style:italic">Nog geen stemmen ontvangen.</span>';
+    } else {
+      voteSummary.innerHTML = sortedVotes.map(([mealId,count])=>{
+        const m = getAllMeals().find(x=>x.id===mealId)||{emoji:'🍽️',label:mealId};
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+          '<span>'+m.emoji+'</span><span style="font-weight:700">'+m.label+'</span>'+
+          '<span style="margin-left:auto;background:var(--purple);color:white;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:700">'+count+'x</span></div>';
+      }).join('');
+    }
+
+    // Daglijst
+    const daysList = document.getElementById('menu-days-list');
+    daysList.innerHTML='';
+    dates.forEach((dateStr,i)=>{
+      const existing = weeklyMenu.find(m=>m.day_date===dateStr);
+      const d = new Date(dateStr+'T12:00:00');
+      const dayNum = d.getDate();
+      const monthName = d.toLocaleDateString('nl-NL',{month:'short'});
+      const row = document.createElement('div');
+      row.className='menu-day-row'+(existing?' has-meal':'');
+      // Check of dit een gestemde maaltijd is
+      const voteCount = existing ? (voteTally[existing.meal_id]||0) : 0;
+      row.innerHTML=
+        '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
+        '<span style="font-size:28px">'+(existing?existing.meal_emoji:'➕')+'</span>'+
+        '<div style="flex:1"><div class="menu-day-name">'+(existing?existing.meal_name:'<span style="color:#C0BEDD;font-style:italic;font-weight:400">Nog niet gekozen</span>')+'</div>'+
+        (existing&&existing.note?'<div class="menu-day-meal">'+existing.note+'</div>':'')+
+        '</div>'+
+        (voteCount>0?'<span class="menu-day-badge badge-votes">'+voteCount+'x gestemd</span>':'')+
+        (existing&&existing.published?'<span class="menu-day-badge badge-published" style="margin-left:4px">✓</span>':'');
+      row.onclick=()=>openMealPicker(dateStr,i,existing);
+      daysList.appendChild(row);
+    });
+
+    // Publish knop
+    const publishBtn = document.getElementById('menu-publish-btn');
+    const updateBtn = document.getElementById('menu-update-btn');
+    if (published) {
+      publishBtn.style.display='none';
+      updateBtn.style.display='';
+    } else {
+      publishBtn.style.display='';
+      updateBtn.style.display='none';
+    }
+
+  } else {
+    // Kind view
+    document.getElementById('menu-parent-view').classList.add('hidden');
+    const childView = document.getElementById('menu-child-view');
+    const emptyView = document.getElementById('menu-empty-view');
+
+    const publishedMenu = weeklyMenu.filter(m=>m.published);
+    if (publishedMenu.length===0) {
+      childView.classList.add('hidden');
+      emptyView.classList.remove('hidden');
+      return;
+    }
+    childView.classList.remove('hidden');
+    emptyView.classList.add('hidden');
+
+    // Haal eigen stemmen op
+    const myVote = votes.find(v=>v.profile_id===p.id);
+    const myChoices = myVote ? [myVote.meal_choice_1,myVote.meal_choice_2] : [];
+
+    const childDays = document.getElementById('menu-child-days');
+    childDays.innerHTML='';
+    dates.forEach((dateStr,i)=>{
+      const entry = weeklyMenu.find(m=>m.day_date===dateStr&&m.published);
+      const d = new Date(dateStr+'T12:00:00');
+      const dayNum = d.getDate();
+      const monthName = d.toLocaleDateString('nl-NL',{month:'short'});
+      const isMyChoice = entry && myChoices.includes(entry.meal_id);
+      const isToday = dateStr===todayStr();
+      const row = document.createElement('div');
+      row.className='menu-day-row'+(entry?' has-meal':'')+(isMyChoice?' my-choice':'')+(isToday?' today-ring':'');
+      if (isToday) row.style.borderColor='var(--purple)';
+      row.innerHTML=
+        '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
+        '<span style="font-size:28px">'+(entry?entry.meal_emoji:'❓')+'</span>'+
+        '<div style="flex:1"><div class="menu-day-name">'+(entry?entry.meal_name:'Nog niet bekend')+'</div>'+
+        (entry&&entry.note?'<div class="menu-day-meal">'+entry.note+'</div>':'')+
+        (isToday?'<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:2px">Vandaag!</div>':'')+
+        '</div>'+
+        (isMyChoice?'<span class="menu-day-badge badge-mine">Jouw keuze!</span>':'');
+      childDays.appendChild(row);
+    });
+  }
+}
+
+function openMealPicker(dateStr, dayIndex, existing) {
+  currentPickDay = {dateStr, dayIndex, existing};
+  const d = new Date(dateStr+'T12:00:00');
+  document.getElementById('meal-picker-title').textContent = WEEK_DAYS[dayIndex]+' '+d.getDate();
+  document.getElementById('meal-picker-sub').textContent = existing
+    ? 'Nu: '+existing.meal_emoji+' '+existing.meal_name+'. Kies een andere maaltijd:'
+    : 'Kies een maaltijd voor '+WEEK_DAYS[dayIndex].toLowerCase()+':';
+  document.getElementById('meal-picker-custom').value = '';
+  document.getElementById('meal-picker-note').value = existing?.note||'';
+
+  const grid = document.getElementById('meal-picker-grid');
+  grid.innerHTML='';
+  getAllMeals().forEach(m=>{
+    const btn = document.createElement('button');
+    btn.className='meal-btn'+(existing&&existing.meal_id===m.id?' selected':'');
+    btn.dataset.meal=m.id;
+    btn.dataset.emoji=m.emoji;
+    btn.dataset.name=m.label;
+    btn.innerHTML='<span class="meal-emoji-big">'+m.emoji+'</span>'+m.label;
+    btn.onclick=()=>{
+      document.querySelectorAll('.meal-picker-grid .meal-btn, #meal-picker-grid .meal-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('meal-picker-custom').value='';
+    };
+    grid.appendChild(btn);
+  });
+  show('meal-picker');
+}
+
+async function confirmMealPick() {
+  if (!currentPickDay) return;
+  const {dateStr, dayIndex} = currentPickDay;
+  const customVal = document.getElementById('meal-picker-custom').value.trim();
+  const note = document.getElementById('meal-picker-note').value.trim();
+  const selectedBtn = document.querySelector('#meal-picker-grid .meal-btn.selected');
+
+  let mealId, mealName, mealEmoji;
+  if (customVal) {
+    mealId = 'custom-'+customVal.toLowerCase().split(' ').join('-');
+    mealName = customVal;
+    mealEmoji = '🍽️';
+  } else if (selectedBtn) {
+    mealId = selectedBtn.dataset.meal;
+    mealEmoji = selectedBtn.dataset.emoji;
+    mealName = selectedBtn.dataset.name;
+  } else return;
+
+  const weekStart = testMondayOfWeek();
+  await sb.from('weekly_menu').upsert({
+    family_id: currentProfile.family_id,
+    week_of: weekStart,
+    day_date: dateStr,
+    meal_id: mealId,
+    meal_name: mealName,
+    meal_emoji: mealEmoji,
+    note: note||null,
+    published: false,
+  },{onConflict:'family_id,day_date'});
+
+  await loadData();
+  renderMenuScreen();
+  show('menu');
+}
+
+async function publishMenu() {
+  const weekStart = testMondayOfWeek();
+  const {data:existing} = await sb.from('weekly_menu')
+    .select('id').eq('family_id',currentProfile.family_id).eq('week_of',weekStart);
+  if (!existing||existing.length===0) {
+    alert('Voeg eerst maaltijden toe aan het menu.');
+    return;
+  }
+  await sb.from('weekly_menu')
+    .update({published:true})
+    .eq('family_id',currentProfile.family_id)
+    .eq('week_of',weekStart);
+  await loadData();
+  renderMenuScreen();
+  document.getElementById('menu-publish-btn').style.display='none';
+  document.getElementById('menu-update-btn').style.display='';
+}
+
 
 // ── TEST TOGGLE ────────────────────────────────────────────────
 let testModeActive = true;
