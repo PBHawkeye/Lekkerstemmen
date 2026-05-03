@@ -623,9 +623,16 @@ let testDayOffset = 0;
 const TEST_FAMILY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 
+const TEST_UUIDS = {
+  paul:   'a0000000-0000-0000-0000-000000000001',
+  dorres: 'a0000000-0000-0000-0000-000000000002',
+  tjeerd: 'a0000000-0000-0000-0000-000000000003',
+  faas:   'a0000000-0000-0000-0000-000000000004',
+  biek:   'a0000000-0000-0000-0000-000000000005',
+};
+
 function testUuid(personId) {
-  const padded = personId.padEnd(12, '0').slice(0, 12);
-  return '00000000-0000-0000-0000-' + padded;
+  return TEST_UUIDS[personId] || 'a0000000-0000-0000-0000-000000000001';
 }
 
 const TEST_PERSONS = [
