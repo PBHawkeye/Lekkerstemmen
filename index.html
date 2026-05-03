@@ -53,6 +53,10 @@
     .test-day.active { background: var(--amber); border-color: var(--amber); color: #1A1A2E; }
     .test-sim { padding: 3px 10px; border-radius: 99px; border: 1px solid #22C9A0; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; color: #22C9A0; cursor: pointer; }
     .test-sim:hover { background: #22C9A0; color: #1A1A2E; }
+    .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
+    .test-toggle.off { background: transparent; color: #666; border-color: #444; }
+    .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
+    .test-toggle.off { background: transparent; color: #666; border-color: #444; }
 
     /* AUTH */
     .auth-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 24px; }
@@ -183,22 +187,27 @@
 </head>
 <body>
 
-<div id="test-bar" class="test-bar hidden">
+<div id="test-bar" class="test-bar">
   <div class="test-bar-top">
     <div class="test-bar-title">🧪 Testmodus</div>
-    <div class="test-day-display" id="test-day-display">vandaag</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="test-day-display" id="test-day-display">vandaag</div>
+      <button class="test-toggle" id="test-toggle-btn" onclick="toggleTestMode()">Aan</button>
+    </div>
   </div>
-  <div class="test-persons" id="test-persons"></div>
-  <div class="test-days">
-    <span class="test-day-lbl">Dag:</span>
-    <button class="test-day" onclick="testSetDay(-6)">Ma</button>
-    <button class="test-day" onclick="testSetDay(-5)">Di</button>
-    <button class="test-day" onclick="testSetDay(-4)">Wo</button>
-    <button class="test-day" onclick="testSetDay(-3)">Do</button>
-    <button class="test-day" onclick="testSetDay(-2)">Vr</button>
-    <button class="test-day" onclick="testSetDay(-1)">Za</button>
-    <button class="test-day active" onclick="testSetDay(0)">Vandaag</button>
-    <button class="test-sim" onclick="simulateWeek()">⚡ Simuleer week</button>
+  <div id="test-controls">
+    <div class="test-persons" id="test-persons"></div>
+    <div class="test-days">
+      <span class="test-day-lbl">Dag:</span>
+      <button class="test-day" onclick="testSetDay(-6)">Ma</button>
+      <button class="test-day" onclick="testSetDay(-5)">Di</button>
+      <button class="test-day" onclick="testSetDay(-4)">Wo</button>
+      <button class="test-day" onclick="testSetDay(-3)">Do</button>
+      <button class="test-day" onclick="testSetDay(-2)">Vr</button>
+      <button class="test-day" onclick="testSetDay(-1)">Za</button>
+      <button class="test-day active" onclick="testSetDay(0)">Vandaag</button>
+      <button class="test-sim" onclick="simulateWeek()">⚡ Simuleer week</button>
+    </div>
   </div>
 </div>
 
@@ -985,24 +994,61 @@ async function doVote() {
   show('success');
 }
 
+// ── TEST TOGGLE ────────────────────────────────────────────────
+let testModeActive = true;
+
+function toggleTestMode() {
+  testModeActive = !testModeActive;
+  const btn = document.getElementById('test-toggle-btn');
+  const controls = document.getElementById('test-controls');
+  btn.textContent = testModeActive ? 'Aan' : 'Uit';
+  btn.classList.toggle('off', !testModeActive);
+  controls.style.display = testModeActive ? '' : 'none';
+
+  if (testModeActive) {
+    // Switch naar testmodus
+    const p = TEST_PERSONS.find(x=>x.id===testPersonId);
+    currentProfile = {id:'test-'+testPersonId, name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
+    loadData().then(()=>{ refreshHome(); show('home'); });
+  } else {
+    // Switch naar echte account
+    sb.auth.getSession().then(({data:{session}})=>{
+      if (session) {
+        currentUser = session.user;
+        loadProfile().then(()=>{ show('home'); });
+      } else {
+        show('auth');
+      }
+    });
+  }
+}
+
 // ── BOOT ───────────────────────────────────────────────────────
 async function boot() {
   show('loading');
-  if (TEST_MODE) {
+  // Altijd testbar tonen
+  initTestBar();
+
+  if (testModeActive) {
+    // Start in testmodus
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
     currentProfile = {id:'test-'+testPersonId, name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
-    initTestBar();
     await loadData();
     refreshHome();
     show('home');
-    return;
+  } else {
+    // Start met echte account
+    const {data:{session}} = await sb.auth.getSession();
+    if (session) { currentUser=session.user; await loadProfile(); show('home'); }
+    else show('auth');
   }
-  const {data:{session}} = await sb.auth.getSession();
-  if (session) { currentUser=session.user; await loadProfile(); show('home'); }
-  else show('auth');
+
+  // Auth listener altijd actief voor als testmodus uit staat
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); show('home'); }
-    else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
+    if (!testModeActive) {
+      if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); show('home'); }
+      else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
+    }
   });
 }
 
