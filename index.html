@@ -3,16 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen</title>
+  <title>Lekkerstemmen 🍽️</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --purple: #7C6FF7;
       --purple-light: #EEF0FF;
@@ -26,1387 +22,786 @@
       --bg: #F7F6FF;
       --card: #FFFFFF;
       --text: #1A1A2E;
-      --text-muted: #7B7A8E;
+      --muted: #7B7A8E;
       --border: #ECEAF8;
-      --radius: 20px;
-      --radius-sm: 12px;
+      --r: 16px;
     }
+    html, body { height: 100%; background: var(--bg); font-family: 'Nunito', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+    .screen { display: none; min-height: 100vh; flex-direction: column; max-width: 420px; margin: 0 auto; padding-bottom: 32px; }
+    .screen.active { display: flex; }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      font-family: 'Nunito Sans', sans-serif;
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    #root {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ---- LAYOUT ---- */
-    .app-shell {
-      max-width: 420px;
-      margin: 0 auto;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: 0 0 32px;
-      position: relative;
-    }
-
-    /* ---- TOP BAR ---- */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px 12px;
-    }
-    .logo {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 22px;
-      color: var(--purple);
-      letter-spacing: -0.5px;
-    }
+    /* TOPBAR */
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 12px; }
+    .logo { font-weight: 900; font-size: 22px; color: var(--purple); }
     .logo span { color: var(--text); }
-    .avatar-btn {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      background: var(--purple-light);
-      border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800; font-size: 14px;
-      color: var(--purple);
-      transition: background 0.2s;
-    }
-    .avatar-btn:hover { background: #dddaff; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--purple-light); border: none; cursor: pointer; font-weight: 800; font-size: 14px; color: var(--purple); }
 
-    /* ---- CARDS ---- */
-    .card {
-      background: var(--card);
-      border-radius: var(--radius);
-      border: 1.5px solid var(--border);
-      padding: 24px;
-      margin: 0 16px 16px;
-    }
-    .card-sm { padding: 16px 20px; }
-
-    /* ---- BUTTONS ---- */
-    .btn {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800;
-      font-size: 16px;
-      border: none;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .btn:active { transform: scale(0.97); }
-    .btn-primary {
-      background: var(--purple);
-      color: white;
-      padding: 14px 28px;
-      width: 100%;
-      box-shadow: 0 4px 16px rgba(124,111,247,0.3);
-    }
-    .btn-primary:hover { background: var(--purple-dark); box-shadow: 0 6px 20px rgba(124,111,247,0.4); }
-    .btn-primary:disabled { background: #C5C2F5; box-shadow: none; cursor: not-allowed; }
-    .btn-secondary {
-      background: var(--purple-light);
-      color: var(--purple);
-      padding: 12px 24px;
-      width: 100%;
-    }
-    .btn-secondary:hover { background: #dddaff; }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-muted);
-      padding: 10px 16px;
-      font-size: 14px;
-    }
-
-    /* ---- INPUTS ---- */
-    .input-group { margin-bottom: 16px; }
-    .input-label {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      display: block;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .input {
-      width: 100%;
-      padding: 13px 16px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-family: 'Nunito Sans', sans-serif;
-      font-size: 15px;
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .input:focus { border-color: var(--purple); background: white; }
-    .input::placeholder { color: #C0BEDD; }
-
-    /* ---- AUTH SCREEN ---- */
-    .auth-screen {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 40px 24px;
-    }
-    .auth-hero {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-    .auth-emoji {
-      font-size: 64px;
-      display: block;
-      margin-bottom: 16px;
-      animation: bounce 2s ease-in-out infinite;
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    .auth-title {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 32px;
-      color: var(--text);
-      line-height: 1.1;
-      margin-bottom: 8px;
-    }
+    /* AUTH */
+    .auth-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 24px; }
+    .auth-emoji { font-size: 64px; text-align: center; display: block; margin-bottom: 16px; animation: bounce 2s ease-in-out infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .auth-title { font-weight: 900; font-size: 32px; text-align: center; margin-bottom: 8px; }
     .auth-title span { color: var(--purple); }
-    .auth-sub {
-      font-size: 15px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-    .auth-tabs {
-      display: flex;
-      background: var(--purple-light);
-      border-radius: var(--radius-sm);
-      padding: 4px;
-      margin-bottom: 24px;
-    }
-    .auth-tab {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 9px;
-      background: transparent;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .auth-tab.active {
-      background: white;
-      color: var(--purple);
-      box-shadow: 0 2px 8px rgba(124,111,247,0.15);
-    }
-    .error-msg {
-      background: var(--coral-light);
-      color: var(--coral);
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    .success-msg {
-      background: var(--teal-light);
-      color: #0F9E78;
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      text-align: center;
-    }
+    .auth-sub { font-size: 15px; color: var(--muted); text-align: center; margin-bottom: 32px; line-height: 1.6; }
+    .tabs { display: flex; background: var(--purple-light); border-radius: var(--r); padding: 4px; margin-bottom: 24px; }
+    .tab { flex: 1; padding: 10px; border: none; border-radius: 12px; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .tab.active { background: white; color: var(--purple); box-shadow: 0 2px 8px rgba(124,111,247,0.15); }
 
-    /* ---- SETUP SCREEN ---- */
-    .setup-screen { flex: 1; padding: 24px 0; }
-    .setup-title {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 26px;
-      color: var(--text);
-      padding: 0 24px;
-      margin-bottom: 6px;
-    }
-    .setup-sub {
-      font-size: 14px;
-      color: var(--text-muted);
-      padding: 0 24px;
-      margin-bottom: 24px;
-      line-height: 1.5;
-    }
-    .role-picker {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .role-card {
-      border: 2px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 16px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: white;
-    }
-    .role-card.selected {
-      border-color: var(--purple);
-      background: var(--purple-light);
-    }
-    .role-card-emoji { font-size: 36px; display: block; margin-bottom: 8px; }
-    .role-card-label {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800;
-      font-size: 15px;
-      color: var(--text);
-    }
-    .role-card-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    /* INPUTS */
+    .field { margin-bottom: 16px; }
+    .label { font-weight: 700; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
+    input { width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: var(--r); font-family: 'Nunito', sans-serif; font-size: 15px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: var(--purple); background: white; }
+    input::placeholder { color: #C0BEDD; }
 
-    /* ---- HOME SCREEN ---- */
-    .home-screen { flex: 1; padding-top: 8px; }
-    .greeting-block { padding: 8px 24px 20px; }
-    .greeting {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 28px;
-      color: var(--text);
-      line-height: 1.2;
-    }
-    .greeting span { color: var(--purple); }
-    .greeting-sub { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+    /* BUTTONS */
+    .btn { width: 100%; padding: 14px; border: none; border-radius: var(--r); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--purple); color: white; box-shadow: 0 4px 16px rgba(124,111,247,0.3); }
+    .btn-primary:hover { background: var(--purple-dark); }
+    .btn-primary:disabled { background: #C5C2F5; box-shadow: none; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-white { background: white; color: var(--purple); padding: 12px 24px; width: auto; border-radius: var(--r); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; border: none; cursor: pointer; }
 
-    /* streak pill */
-    .streak-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--amber-light);
-      border: 1.5px solid #FFD97A;
-      border-radius: 99px;
-      padding: 6px 14px;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800;
-      font-size: 14px;
-      color: #C47F00;
-      margin-top: 12px;
-    }
+    /* MESSAGES */
+    .msg-error { background: var(--coral-light); color: var(--coral); border-radius: var(--r); padding: 12px 16px; font-size: 14px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+    .msg-success { background: var(--teal-light); color: #0F9E78; border-radius: var(--r); padding: 12px 16px; font-size: 14px; font-weight: 700; margin-bottom: 16px; text-align: center; }
 
-    /* today card */
-    .today-card {
-      background: linear-gradient(135deg, var(--purple) 0%, #9B8FF9 100%);
-      border-radius: var(--radius);
-      margin: 0 16px 16px;
-      padding: 24px;
-      color: white;
-      position: relative;
-      overflow: hidden;
-    }
-    .today-card::after {
-      content: '';
-      position: absolute;
-      right: -20px; top: -20px;
-      width: 120px; height: 120px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 50%;
-    }
-    .today-label {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.8;
-      margin-bottom: 6px;
-    }
-    .today-question {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 22px;
-      line-height: 1.2;
-      margin-bottom: 20px;
-    }
-    .today-done {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.2);
-      border-radius: var(--radius-sm);
-      padding: 10px 16px;
-      font-weight: 700;
-      font-size: 15px;
-    }
-    .btn-white {
-      background: white;
-      color: var(--purple);
-      padding: 12px 24px;
-      border-radius: var(--radius-sm);
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800;
-      font-size: 15px;
-      border: none;
-      cursor: pointer;
-      transition: transform 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-white:hover { transform: scale(1.02); }
+    /* SETUP */
+    .setup-wrap { padding: 24px; flex: 1; }
+    .page-title { font-weight: 900; font-size: 26px; margin-bottom: 6px; }
+    .page-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+    .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .role-card { border: 2px solid var(--border); border-radius: var(--r); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
+    .role-card.selected { border-color: var(--purple); background: var(--purple-light); }
+    .role-emoji { font-size: 36px; display: block; margin-bottom: 8px; }
+    .role-name { font-weight: 800; font-size: 15px; }
+    .role-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
-    /* section header */
-    .section-header {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800;
-      font-size: 16px;
-      color: var(--text);
-      padding: 0 24px;
-      margin-bottom: 12px;
-    }
+    /* HOME */
+    .greeting { padding: 8px 24px 20px; }
+    .greeting h1 { font-weight: 900; font-size: 28px; line-height: 1.2; }
+    .greeting h1 span { color: var(--purple); }
+    .greeting p { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .streak { display: inline-flex; align-items: center; gap: 6px; background: var(--amber-light); border: 1.5px solid #FFD97A; border-radius: 99px; padding: 6px 14px; font-weight: 800; font-size: 14px; color: #C47F00; margin-top: 12px; }
 
-    /* week overview mini */
-    .week-dots {
-      display: flex;
-      gap: 6px;
-      padding: 0 24px;
-      margin-bottom: 20px;
-    }
-    .week-dot-wrap { flex: 1; text-align: center; }
-    .week-dot {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      margin: 0 auto 4px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px;
-      border: 2px solid var(--border);
-      background: white;
-    }
-    .week-dot.score-1 { background: var(--coral-light); border-color: #FFB5B5; }
-    .week-dot.score-2 { background: var(--amber-light); border-color: #FFD97A; }
-    .week-dot.score-3 { background: var(--teal-light); border-color: #7EECD4; }
-    .week-dot-label { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+    .today-card { background: linear-gradient(135deg, var(--purple) 0%, #9B8FF9 100%); border-radius: var(--r); margin: 0 16px 16px; padding: 24px; color: white; position: relative; overflow: hidden; }
+    .today-card::after { content:''; position:absolute; right:-20px; top:-20px; width:120px; height:120px; background:rgba(255,255,255,0.08); border-radius:50%; }
+    .today-badge { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; margin-bottom: 6px; }
+    .today-q { font-weight: 900; font-size: 22px; line-height: 1.2; margin-bottom: 20px; }
+    .today-done { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); border-radius: var(--r); padding: 10px 16px; font-weight: 700; font-size: 15px; }
 
-    /* parent overview */
-    .insight-card {
-      background: var(--purple-light);
-      border-radius: var(--radius);
-      margin: 0 16px 16px;
-      padding: 20px;
-      border: 1.5px solid #D8D4FF;
-    }
-    .insight-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--purple);
-      margin-bottom: 6px;
-    }
-    .insight-text {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--text);
-      line-height: 1.4;
-    }
+    .section-title { font-weight: 800; font-size: 16px; padding: 0 24px; margin-bottom: 12px; }
 
-    /* ---- CHECKIN SCREEN ---- */
-    .checkin-screen { flex: 1; padding: 16px 0 0; }
-    .checkin-header {
-      padding: 0 24px 24px;
-      text-align: center;
-    }
-    .checkin-title {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 26px;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-    .checkin-sub { font-size: 14px; color: var(--text-muted); }
+    .week-row { display: flex; gap: 6px; padding: 0 24px; margin-bottom: 20px; }
+    .day-wrap { flex: 1; text-align: center; }
+    .day-dot { width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid var(--border); background: white; }
+    .day-dot.s1 { background: var(--coral-light); border-color: #FFB5B5; }
+    .day-dot.s2 { background: var(--amber-light); border-color: #FFD97A; }
+    .day-dot.s3 { background: var(--teal-light); border-color: #7EECD4; }
+    .day-label { font-size: 10px; color: var(--muted); font-weight: 700; }
 
-    .smiley-row {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      padding: 8px 24px 32px;
-    }
-    .smiley-btn {
-      width: 88px; height: 88px;
-      border-radius: 50%;
-      border: 3px solid var(--border);
-      background: white;
-      font-size: 42px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-    .smiley-btn:hover { transform: scale(1.08); }
-    .smiley-btn.selected-1 {
-      border-color: var(--coral);
-      background: var(--coral-light);
-      transform: scale(1.12);
-      box-shadow: 0 8px 24px rgba(255,107,107,0.25);
-    }
-    .smiley-btn.selected-2 {
-      border-color: var(--amber);
-      background: var(--amber-light);
-      transform: scale(1.12);
-      box-shadow: 0 8px 24px rgba(255,184,48,0.25);
-    }
-    .smiley-btn.selected-3 {
-      border-color: var(--teal);
-      background: var(--teal-light);
-      transform: scale(1.12);
-      box-shadow: 0 8px 24px rgba(34,201,160,0.25);
-    }
+    .insight { background: var(--purple-light); border-radius: var(--r); margin: 0 16px 16px; padding: 20px; border: 1.5px solid #D8D4FF; }
+    .insight-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--purple); margin-bottom: 6px; }
+    .insight-text { font-weight: 700; font-size: 15px; line-height: 1.4; }
+
+    /* CHECKIN */
+    .checkin-wrap { flex: 1; padding: 16px 0 100px; }
+    .checkin-head { padding: 0 24px 24px; text-align: center; }
+    .checkin-head h2 { font-weight: 900; font-size: 26px; margin-bottom: 6px; }
+    .checkin-head p { font-size: 14px; color: var(--muted); }
+    .smiley-row { display: flex; justify-content: center; gap: 16px; padding: 8px 24px 32px; }
+    .smiley { width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--border); background: white; font-size: 42px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+    .smiley:hover { transform: scale(1.08); }
+    .smiley.sel-1 { border-color: var(--coral); background: var(--coral-light); transform: scale(1.12); box-shadow: 0 8px 24px rgba(255,107,107,0.25); }
+    .smiley.sel-2 { border-color: var(--amber); background: var(--amber-light); transform: scale(1.12); box-shadow: 0 8px 24px rgba(255,184,48,0.25); }
+    .smiley.sel-3 { border-color: var(--teal); background: var(--teal-light); transform: scale(1.12); box-shadow: 0 8px 24px rgba(34,201,160,0.25); }
 
     .drink-section { padding: 0 24px 24px; }
-    .drink-label {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 800;
-      font-size: 15px;
-      color: var(--text);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .drink-label .optional {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      background: var(--bg);
-      padding: 2px 8px;
-      border-radius: 99px;
-    }
-    .drink-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .drink-btn {
-      padding: 12px 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--text);
-    }
+    .drink-title { font-weight: 800; font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .optional { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--bg); padding: 2px 8px; border-radius: 99px; }
+    .drink-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .drink-btn { padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--r); background: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); }
     .drink-btn:hover { border-color: var(--purple); background: var(--purple-light); }
     .drink-btn.selected { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
     .drink-emoji { font-size: 22px; }
+    .actions { padding: 0 24px; }
 
-    .checkin-actions { padding: 0 24px; }
+    /* SUCCESS */
+    .success-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+    .success-emoji { font-size: 80px; display: block; margin-bottom: 24px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+    .success-title { font-weight: 900; font-size: 30px; margin-bottom: 8px; }
+    .success-sub { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 32px; }
 
-    /* ---- SUCCESS SCREEN ---- */
-    .success-screen {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 24px;
-      text-align: center;
-    }
-    .success-emoji {
-      font-size: 80px;
-      display: block;
-      margin-bottom: 24px;
-      animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    @keyframes pop {
-      from { transform: scale(0); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    .success-title {
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 30px;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-    .success-sub { font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 32px; }
-
-    /* ---- PARENT LOG SCREEN ---- */
-    .parent-screen { flex: 1; padding: 16px 0; }
-
-    .meal-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .meal-btn {
-      padding: 12px 8px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--text);
-    }
+    /* PARENT LOG */
+    .log-wrap { flex: 1; padding: 16px; padding-bottom: 100px; }
+    .meal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+    .meal-btn { padding: 12px 8px; border: 2px solid var(--border); border-radius: var(--r); background: white; cursor: pointer; transition: all 0.2s; text-align: center; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 13px; color: var(--text); }
     .meal-btn:hover { border-color: var(--teal); }
     .meal-btn.selected { border-color: var(--teal); background: var(--teal-light); color: #0F9E78; }
-    .meal-emoji { font-size: 24px; display: block; margin-bottom: 4px; }
-
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      background: white;
-      border-radius: var(--radius-sm);
-      border: 1.5px solid var(--border);
-      margin-bottom: 10px;
-    }
+    .meal-emoji-big { font-size: 24px; display: block; margin-bottom: 4px; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: white; border-radius: var(--r); border: 1.5px solid var(--border); margin-bottom: 10px; }
     .toggle-info { display: flex; align-items: center; gap: 12px; }
-    .toggle-icon { font-size: 22px; }
-    .toggle-label { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); }
-    .toggle-sub { font-size: 12px; color: var(--text-muted); }
-    .toggle {
-      width: 46px; height: 26px;
-      border-radius: 13px;
-      background: var(--border);
-      border: none;
-      cursor: pointer;
-      position: relative;
-      transition: background 0.2s;
-      flex-shrink: 0;
-    }
+    .toggle-icon-big { font-size: 22px; }
+    .toggle-label { font-weight: 700; font-size: 14px; }
+    .toggle-sub { font-size: 12px; color: var(--muted); }
+    .toggle { width: 46px; height: 26px; border-radius: 13px; background: var(--border); border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
     .toggle.on { background: var(--teal); }
-    .toggle::after {
-      content: '';
-      position: absolute;
-      top: 3px; left: 3px;
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      background: white;
-      transition: transform 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-    }
-    .toggle.on::after { transform: translateX(20px); }
+    .toggle::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:white; transition:transform 0.2s; box-shadow:0 1px 4px rgba(0,0,0,0.15); }
+    .toggle.on::after { transform:translateX(20px); }
 
-    /* ---- BOTTOM NAV ---- */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 420px;
-      background: white;
-      border-top: 1.5px solid var(--border);
-      display: flex;
-      padding: 8px 0 20px;
-      z-index: 100;
-    }
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      padding: 6px 0;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      transition: color 0.2s;
-      color: var(--text-muted);
-    }
-    .nav-item.active { color: var(--purple); }
-    .nav-icon { font-size: 22px; line-height: 1; }
-    .nav-label { font-size: 10px; font-weight: 700; font-family: 'Nunito', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; }
-
-    .pb-nav { padding-bottom: 88px; }
-
-    /* ---- LOADING ---- */
-    .loading {
-      flex: 1; display: flex;
-      align-items: center; justify-content: center;
-      flex-direction: column; gap: 16px;
-    }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 3px solid var(--purple-light);
-      border-top-color: var(--purple);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-family: 'Nunito', sans-serif; font-weight: 700; color: var(--text-muted); font-size: 15px; }
-
-    /* ---- VOTE SCREEN ---- */
-    .vote-screen { flex: 1; padding: 16px 0; }
-    .vote-option {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 20px;
-      background: white;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-sm);
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .vote-option:hover { border-color: var(--amber); }
-    .vote-option.selected { border-color: var(--amber); background: var(--amber-light); }
-    .vote-option-emoji { font-size: 32px; }
-    .vote-option-name { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px; color: var(--text); }
-    .vote-option-sub { font-size: 12px; color: var(--text-muted); }
-    .vote-check {
-      margin-left: auto;
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      border: 2px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px;
-      transition: all 0.2s;
-    }
-    .vote-option.selected .vote-check { background: var(--amber); border-color: var(--amber); color: white; }
-    .vote-count { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 16px; }
+    /* VOTE */
+    .vote-wrap { flex: 1; padding: 16px 16px 100px; }
+    .vote-count { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 16px; }
     .vote-count span { color: var(--amber); font-weight: 800; }
+    .vote-opt { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: white; border: 2px solid var(--border); border-radius: var(--r); margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+    .vote-opt:hover { border-color: var(--amber); }
+    .vote-opt.selected { border-color: var(--amber); background: var(--amber-light); }
+    .vote-opt-emoji { font-size: 32px; }
+    .vote-opt-name { font-weight: 800; font-size: 16px; }
+    .vote-opt-sub { font-size: 12px; color: var(--muted); }
+    .vote-check { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.2s; }
+    .vote-opt.selected .vote-check { background: var(--amber); border-color: var(--amber); color: white; }
+
+    /* BOTTOM NAV */
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 420px; background: white; border-top: 1.5px solid var(--border); display: flex; padding: 8px 0 20px; z-index: 100; }
+    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border: none; background: transparent; cursor: pointer; color: var(--muted); font-family: 'Nunito', sans-serif; }
+    .nav-btn.active { color: var(--purple); }
+    .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* LOADING */
+    .loading-wrap { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; min-height: 100vh; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .loading-text { font-weight: 700; color: var(--muted); font-size: 15px; }
+
+    .hidden { display: none !important; }
+    .card { background: white; border-radius: var(--r); border: 1.5px solid var(--border); padding: 20px; margin-bottom: 16px; }
   </style>
 </head>
 <body>
-<div id="root"></div>
 
-<script type="text/babel">
-const { createClient } = supabase;
-const { useState, useEffect, useCallback } = React;
+<!-- LOADING -->
+<div id="s-loading" class="screen active">
+  <div class="loading-wrap">
+    <div class="spinner"></div>
+    <div class="loading-text">Laden...</div>
+  </div>
+</div>
 
-// ── Supabase client ──────────────────────────────────────────────
-const sb = createClient(
+<!-- AUTH -->
+<div id="s-auth" class="screen">
+  <div class="auth-wrap">
+    <span class="auth-emoji">🍽️</span>
+    <h1 class="auth-title">Lekker<span>stemmen</span></h1>
+    <p class="auth-sub">Jij kiest wat er vanavond op tafel komt.</p>
+    <div class="tabs">
+      <button class="tab active" onclick="authTab('login')" id="tab-login">Inloggen</button>
+      <button class="tab" onclick="authTab('signup')" id="tab-signup">Aanmelden</button>
+    </div>
+    <div id="auth-error" class="msg-error hidden"></div>
+    <div id="auth-success" class="msg-success hidden"></div>
+    <div class="field">
+      <label class="label">E-mailadres</label>
+      <input type="email" id="auth-email" placeholder="jouw@email.nl" />
+    </div>
+    <div class="field">
+      <label class="label">Wachtwoord</label>
+      <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()" />
+    </div>
+    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn">Inloggen →</button>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div id="s-setup" class="screen">
+  <div class="topbar"><div class="logo">Lekker<span>stemmen</span></div></div>
+  <div class="setup-wrap">
+    <h2 class="page-title">Welkom! 👋</h2>
+    <p class="page-sub">Vertel ons even wie je bent.</p>
+    <div class="field">
+      <label class="label">Jouw naam</label>
+      <input type="text" id="setup-name" placeholder="bijv. Papa, Luca, ..." />
+    </div>
+    <div class="field">
+      <label class="label">Gezinsnaam (optioneel)</label>
+      <input type="text" id="setup-family" placeholder="bijv. Familie De Vries" />
+    </div>
+    <div class="label" style="margin-bottom:12px">Ik ben...</div>
+    <div class="role-grid">
+      <div class="role-card" id="role-parent" onclick="selectRole('parent')">
+        <span class="role-emoji">👨‍👩‍👧</span>
+        <div class="role-name">Ouder</div>
+        <div class="role-sub">Ik log de maaltijden</div>
+      </div>
+      <div class="role-card" id="role-child" onclick="selectRole('child')">
+        <span class="role-emoji">🧒</span>
+        <div class="role-name">Kind</div>
+        <div class="role-sub">Ik stem en check in</div>
+      </div>
+    </div>
+    <div id="setup-error" class="msg-error hidden"></div>
+    <button class="btn btn-primary" onclick="doSetup()" id="setup-btn">Starten →</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="s-home" class="screen">
+  <div class="topbar">
+    <div class="logo">Lekker<span>stemmen</span></div>
+    <button class="avatar" id="home-avatar" onclick="doSignOut()">?</button>
+  </div>
+  <div class="greeting">
+    <h1>Hey <span id="home-name">daar</span> 👋</h1>
+    <p id="home-date"></p>
+    <div id="home-streak" class="streak hidden">🔥 <span id="streak-num">0</span> dagen op rij!</div>
+  </div>
+
+  <!-- Today card child -->
+  <div id="today-child" class="today-card hidden">
+    <div class="today-badge">Vanavond</div>
+    <div id="today-child-q" class="today-q">Hoe was het eten?</div>
+    <button class="btn-white" onclick="goScreen('checkin')">Check in → <small>8 sec</small></button>
+  </div>
+  <div id="today-child-done" class="today-card hidden">
+    <div class="today-badge">Vanavond</div>
+    <div class="today-done">✓ Check-in gedaan voor vandaag!</div>
+  </div>
+  <div id="today-child-wait" class="today-card hidden">
+    <div class="today-badge">Vanavond</div>
+    <div class="today-q">Wacht op maaltijd van ouder...</div>
+  </div>
+
+  <!-- Today card parent -->
+  <div id="today-parent" class="today-card hidden">
+    <div class="today-badge">Vandaag</div>
+    <div class="today-q">Wat eten jullie vanavond?</div>
+    <button class="btn-white" onclick="goScreen('log')">Log maaltijd →</button>
+  </div>
+  <div id="today-parent-done" class="today-card hidden">
+    <div class="today-badge">Vandaag</div>
+    <div class="today-done" id="today-parent-meal">✓ Gelogd</div>
+  </div>
+
+  <div class="section-title">Deze week</div>
+  <div class="week-row" id="week-row"></div>
+
+  <div id="insight-block" class="hidden">
+    <div class="section-title">Inzicht</div>
+    <div class="insight">
+      <div class="insight-badge">AI observatie</div>
+      <div class="insight-text" id="insight-text"></div>
+    </div>
+  </div>
+
+  <div id="friday-block" class="hidden">
+    <div class="section-title">Het is vrijdag! 🗳️</div>
+    <div class="card" style="margin:0 16px">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5">Kies twee maaltijden die je volgende week wilt eten!</p>
+      <button class="btn btn-primary" onclick="goScreen('vote')">Stem nu →</button>
+    </div>
+  </div>
+
+  <div style="height:80px"></div>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="goScreen('home')">
+      <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+    </button>
+    <button class="nav-btn" id="nav-action" onclick="navAction()">
+      <span class="nav-icon" id="nav-action-icon">😋</span>
+      <span class="nav-label" id="nav-action-label">Check-in</span>
+    </button>
+    <button class="nav-btn" onclick="goScreen('vote')">
+      <span class="nav-icon">🗳️</span><span class="nav-label">Stem</span>
+    </button>
+  </nav>
+</div>
+
+<!-- CHECKIN -->
+<div id="s-checkin" class="screen">
+  <div class="checkin-wrap">
+    <div class="checkin-head">
+      <h2>Hoe was het eten?</h2>
+      <p id="checkin-meal-name">Vanavond</p>
+    </div>
+    <div class="smiley-row">
+      <div class="smiley" id="sm-1" onclick="selectSmiley(1)">😕</div>
+      <div class="smiley" id="sm-2" onclick="selectSmiley(2)">😐</div>
+      <div class="smiley" id="sm-3" onclick="selectSmiley(3)">😋</div>
+    </div>
+    <div id="drink-section" class="drink-section hidden">
+      <div class="drink-title">Wat dronk je erbij? <span class="optional">optioneel</span></div>
+      <div class="drink-grid">
+        <button class="drink-btn" id="drink-water" onclick="selectDrink('water')"><span class="drink-emoji">💧</span>Water</button>
+        <button class="drink-btn" id="drink-milk" onclick="selectDrink('milk')"><span class="drink-emoji">🥛</span>Melk</button>
+        <button class="drink-btn" id="drink-juice" onclick="selectDrink('juice')"><span class="drink-emoji">🧃</span>Sap</button>
+        <button class="drink-btn" id="drink-soda" onclick="selectDrink('soda')"><span class="drink-emoji">🥤</span>Frisdrank</button>
+      </div>
+    </div>
+    <div id="checkin-actions" class="actions hidden">
+      <button class="btn btn-primary" onclick="doCheckin()" id="checkin-btn">Opslaan ✓</button>
+      <button class="btn btn-ghost" onclick="goScreen('home')">Overslaan</button>
+    </div>
+    <div class="actions" id="checkin-skip">
+      <button class="btn btn-ghost" onclick="goScreen('home')">Overslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="s-success" class="screen">
+  <div class="success-wrap">
+    <span class="success-emoji" id="success-emoji">😋</span>
+    <h2 class="success-title" id="success-title">Geweldig!</h2>
+    <p class="success-sub" id="success-sub">Fijn dat het smaakte.</p>
+    <button class="btn btn-primary" style="max-width:280px" onclick="goScreen('home')">Terug naar home</button>
+  </div>
+</div>
+
+<!-- PARENT LOG -->
+<div id="s-log" class="screen">
+  <div class="topbar"><h2 style="font-weight:900;font-size:22px">Vanavond gelogd 📋</h2></div>
+  <div class="log-wrap">
+    <div class="label" style="margin-bottom:12px">Wat hebben we gegeten?</div>
+    <div class="meal-grid">
+      <button class="meal-btn" data-meal="pasta" onclick="selectMeal('pasta')"><span class="meal-emoji-big">🍝</span>Pasta</button>
+      <button class="meal-btn" data-meal="rijst" onclick="selectMeal('rijst')"><span class="meal-emoji-big">🍚</span>Rijst</button>
+      <button class="meal-btn" data-meal="aardappelen" onclick="selectMeal('aardappelen')"><span class="meal-emoji-big">🥔</span>Aardappelen</button>
+      <button class="meal-btn" data-meal="soep" onclick="selectMeal('soep')"><span class="meal-emoji-big">🍲</span>Soep</button>
+      <button class="meal-btn" data-meal="pizza" onclick="selectMeal('pizza')"><span class="meal-emoji-big">🍕</span>Pizza</button>
+      <button class="meal-btn" data-meal="nasi" onclick="selectMeal('nasi')"><span class="meal-emoji-big">🍛</span>Nasi</button>
+      <button class="meal-btn" data-meal="brood" onclick="selectMeal('brood')"><span class="meal-emoji-big">🥪</span>Brood</button>
+      <button class="meal-btn" data-meal="vlees" onclick="selectMeal('vlees')"><span class="meal-emoji-big">🥩</span>Vlees</button>
+      <button class="meal-btn" data-meal="anders" onclick="selectMeal('anders')"><span class="meal-emoji-big">🍽️</span>Anders</button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <span class="toggle-icon-big">👨‍👩‍👧</span>
+        <div><div class="toggle-label">Samen gegeten</div><div class="toggle-sub">Heel gezin aan tafel</div></div>
+      </div>
+      <button class="toggle on" id="tog-together" onclick="toggleTog('together')"></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <span class="toggle-icon-big">⚽</span>
+        <div><div class="toggle-label">Sportdag</div><div class="toggle-sub">Iemand had sport vandaag</div></div>
+      </div>
+      <button class="toggle" id="tog-sport" onclick="toggleTog('sport')"></button>
+    </div>
+    <div id="log-error" class="msg-error hidden"></div>
+    <button class="btn btn-primary" onclick="doLog()" id="log-btn" style="margin-top:20px">Maaltijd opslaan ✓</button>
+    <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
+  </div>
+</div>
+
+<!-- VOTE -->
+<div id="s-vote" class="screen">
+  <div class="topbar"><h2 style="font-weight:900;font-size:22px">Kies voor volgende week 🗳️</h2></div>
+  <div class="vote-wrap">
+    <p class="vote-count">Kies nog <span id="vote-remaining">2</span> maaltijd(en)</p>
+    <div id="vote-options"></div>
+    <button class="btn btn-primary" onclick="doVote()" id="vote-btn" disabled>Stem versturen →</button>
+    <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
+  </div>
+</div>
+
+<script>
+// ── Init Supabase ──────────────────────────────────────────────
+const sb = supabase.createClient(
   'https://wzdxkyclnwpopbfembpp.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZHhreWNsbndwb3BiZmVtYnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjM0NzUsImV4cCI6MjA5MzM5OTQ3NX0.9cDCZmN4QzHkIcCmaQB8R4bm2wGIPSLqU2pSJ8V5POI'
 );
 
-// ── Constants ────────────────────────────────────────────────────
-const MEALS = [
-  { id: 'pasta',   emoji: '🍝', label: 'Pasta' },
-  { id: 'rijst',   emoji: '🍚', label: 'Rijst' },
-  { id: 'aardappelen', emoji: '🥔', label: 'Aardappelen' },
-  { id: 'soep',    emoji: '🍲', label: 'Soep' },
-  { id: 'pizza',   emoji: '🍕', label: 'Pizza' },
-  { id: 'nasi',    emoji: '🍛', label: 'Nasi' },
-  { id: 'brood',   emoji: '🥪', label: 'Brood' },
-  { id: 'vlees',   emoji: '🥩', label: 'Vlees' },
-  { id: 'anders',  emoji: '🍽️', label: 'Anders' },
-];
-
-const DRINKS = [
-  { id: 'water', emoji: '💧', label: 'Water' },
-  { id: 'milk',  emoji: '🥛', label: 'Melk' },
-  { id: 'juice', emoji: '🧃', label: 'Sap' },
-  { id: 'soda',  emoji: '🥤', label: 'Frisdrank' },
-];
-
-const SMILEYS = [
-  { score: 1, emoji: '😕', label: 'Niet lekker' },
-  { score: 2, emoji: '😐', label: 'Gewoon' },
-  { score: 3, emoji: '😋', label: 'Lekker!' },
-];
+// ── State ──────────────────────────────────────────────────────
+let currentUser = null;
+let currentProfile = null;
+let todayMeal = null;
+let checkins = [];
+let selectedScore = null;
+let selectedDrink = null;
+let selectedMeal = null;
+let togTogether = true;
+let togSport = false;
+let selectedRole = null;
+let voteChoices = [];
+let currentAuthTab = 'login';
 
 const DAYS = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
 const VOTE_OPTIONS = [
-  { id: 'pasta',  emoji: '🍝', label: 'Pasta', sub: 'jouw nr. 1 van vorige week' },
-  { id: 'pizza',  emoji: '🍕', label: 'Pizza', sub: 'populair in het gezin' },
-  { id: 'nasi',   emoji: '🍛', label: 'Nasi', sub: 'snel klaar op sportdagen' },
-  { id: 'soep',   emoji: '🍲', label: 'Soep', sub: 'warm en makkelijk' },
-  { id: 'rijst',  emoji: '🍚', label: 'Rijst', sub: 'veelzijdig' },
+  { id:'pasta',  emoji:'🍝', label:'Pasta',       sub:'jouw nr. 1 van vorige week' },
+  { id:'pizza',  emoji:'🍕', label:'Pizza',        sub:'populair in het gezin' },
+  { id:'nasi',   emoji:'🍛', label:'Nasi',         sub:'snel klaar op sportdagen' },
+  { id:'soep',   emoji:'🍲', label:'Soep',         sub:'warm en makkelijk' },
+  { id:'rijst',  emoji:'🍚', label:'Rijst',        sub:'veelzijdig' },
 ];
+const MEAL_EMOJIS = { pasta:'🍝',rijst:'🍚',aardappelen:'🥔',soep:'🍲',pizza:'🍕',nasi:'🍛',brood:'🥪',vlees:'🥩',anders:'🍽️' };
 
-// ── Helpers ──────────────────────────────────────────────────────
-function initials(name) {
-  return name ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2) : '?';
+// ── Helpers ────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
 }
-function todayStr() {
-  return new Date().toISOString().split('T')[0];
-}
-function mondayOfWeek(d = new Date()) {
+function hide(el) { el.classList.add('hidden'); }
+function unhide(el) { el.classList.remove('hidden'); }
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function mondayOfWeek() {
+  const d = new Date();
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const diff = d.getDate() - day + (day===0?-6:1);
   return new Date(d.setDate(diff)).toISOString().split('T')[0];
 }
+function initials(name) {
+  return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?';
+}
 
-// ── AUTH SCREEN ──────────────────────────────────────────────────
-function AuthScreen({ onAuth }) {
-  const [tab, setTab] = useState('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+// ── Screens ────────────────────────────────────────────────────
+function goScreen(name) {
+  if (name === 'home') { show('home'); refreshHome(); }
+  else if (name === 'checkin') { selectedScore=null; selectedDrink=null; resetCheckin(); show('checkin'); }
+  else if (name === 'log') { selectedMeal=null; resetLog(); show('log'); }
+  else if (name === 'vote') { voteChoices=[]; renderVoteOptions(); show('vote'); }
+  else show(name);
+}
 
-  async function handleSubmit() {
-    setError(''); setSuccess(''); setLoading(true);
-    try {
-      if (tab === 'login') {
-        const { data, error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        onAuth(data.user);
-      } else {
-        const { error } = await sb.auth.signUp({ email, password });
-        if (error) throw error;
-        setSuccess('Check je e-mail voor een bevestigingslink!');
-      }
-    } catch(e) {
-      setError(e.message || 'Er ging iets mis.');
+function navAction() {
+  if (!currentProfile) return;
+  if (currentProfile.role === 'child') goScreen('checkin');
+  else goScreen('log');
+}
+
+// ── AUTH ───────────────────────────────────────────────────────
+function authTab(t) {
+  currentAuthTab = t;
+  document.getElementById('tab-login').classList.toggle('active', t==='login');
+  document.getElementById('tab-signup').classList.toggle('active', t==='signup');
+  document.getElementById('auth-btn').textContent = t==='login' ? 'Inloggen →' : 'Account aanmaken →';
+}
+
+async function doAuth() {
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  const sucEl = document.getElementById('auth-success');
+  hide(errEl); hide(sucEl);
+  if (!email || !password) return;
+
+  document.getElementById('auth-btn').textContent = '...';
+  try {
+    if (currentAuthTab === 'login') {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } else {
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      unhide(sucEl);
+      sucEl.textContent = 'Check je e-mail voor een bevestigingslink!';
     }
-    setLoading(false);
+  } catch(e) {
+    unhide(errEl);
+    errEl.textContent = e.message || 'Er ging iets mis.';
   }
-
-  return (
-    <div className="app-shell">
-      <div className="auth-screen">
-        <div className="auth-hero">
-          <span className="auth-emoji">🍽️</span>
-          <h1 className="auth-title">Lekker<span>stemmen</span></h1>
-          <p className="auth-sub">Jij kiest wat er vanavond op tafel komt.</p>
-        </div>
-
-        <div className="auth-tabs">
-          <button className={`auth-tab ${tab==='login'?'active':''}`} onClick={()=>setTab('login')}>Inloggen</button>
-          <button className={`auth-tab ${tab==='signup'?'active':''}`} onClick={()=>setTab('signup')}>Aanmelden</button>
-        </div>
-
-        {error && <div className="error-msg">{error}</div>}
-        {success && <div className="success-msg">{success}</div>}
-
-        <div className="input-group">
-          <label className="input-label">E-mailadres</label>
-          <input className="input" type="email" placeholder="jouw@email.nl" value={email} onChange={e=>setEmail(e.target.value)} />
-        </div>
-        <div className="input-group">
-          <label className="input-label">Wachtwoord</label>
-          <input className="input" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&handleSubmit()} />
-        </div>
-
-        <button className="btn btn-primary" onClick={handleSubmit} disabled={loading || !email || !password}>
-          {loading ? '...' : tab==='login' ? 'Inloggen →' : 'Account aanmaken →'}
-        </button>
-      </div>
-    </div>
-  );
+  authTab(currentAuthTab);
 }
 
-// ── SETUP SCREEN ─────────────────────────────────────────────────
-function SetupScreen({ user, onDone }) {
-  const [role, setRole] = useState('');
-  const [name, setName] = useState('');
-  const [familyName, setFamilyName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+async function doSignOut() {
+  await sb.auth.signOut();
+  currentProfile = null; currentUser = null;
+  show('auth');
+}
 
-  async function handleSave() {
-    if (!role || !name) return;
-    setLoading(true); setError('');
-    try {
-      // Maak gezin aan
-      const { data: fam, error: famErr } = await sb.from('families')
-        .insert({ name: familyName || `Familie ${name}` })
-        .select().single();
-      if (famErr) throw famErr;
+// ── SETUP ──────────────────────────────────────────────────────
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('role-parent').classList.toggle('selected', r==='parent');
+  document.getElementById('role-child').classList.toggle('selected', r==='child');
+}
 
-      // Maak profiel aan
-      const { error: profErr } = await sb.from('profiles')
-        .insert({ id: user.id, family_id: fam.id, name, role });
-      if (profErr) throw profErr;
+async function doSetup() {
+  const name = document.getElementById('setup-name').value.trim();
+  const family = document.getElementById('setup-family').value.trim();
+  const errEl = document.getElementById('setup-error');
+  hide(errEl);
+  if (!name || !selectedRole) return;
+  document.getElementById('setup-btn').textContent = 'Bezig...';
+  try {
+    const { data: fam, error: famErr } = await sb.from('families')
+      .insert({ name: family || 'Familie '+name }).select().single();
+    if (famErr) throw famErr;
+    const { error: profErr } = await sb.from('profiles')
+      .insert({ id: currentUser.id, family_id: fam.id, name, role: selectedRole });
+    if (profErr) throw profErr;
+    await loadProfile();
+  } catch(e) {
+    unhide(errEl); errEl.textContent = e.message;
+    document.getElementById('setup-btn').textContent = 'Starten →';
+  }
+}
 
-      onDone();
-    } catch(e) {
-      setError(e.message);
+// ── LOAD DATA ──────────────────────────────────────────────────
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+  if (!data) { show('setup'); return; }
+  await loadData();
+  refreshHome();
+  show('home');
+}
+
+async function loadData() {
+  const { data: meal } = await sb.from('meals')
+    .select('*').eq('family_id', currentProfile.family_id).eq('eaten_at', todayStr()).maybeSingle();
+  todayMeal = meal;
+
+  const since = new Date(); since.setDate(since.getDate()-14);
+  const { data: cis } = await sb.from('checkins_with_context')
+    .select('*').eq('profile_id', currentProfile.id)
+    .gte('eaten_at', since.toISOString().split('T')[0])
+    .order('eaten_at', { ascending: false });
+  checkins = cis || [];
+}
+
+// ── HOME ───────────────────────────────────────────────────────
+function refreshHome() {
+  if (!currentProfile) return;
+  const p = currentProfile;
+
+  document.getElementById('home-name').textContent = p.name;
+  document.getElementById('home-avatar').textContent = initials(p.name);
+  document.getElementById('home-date').textContent =
+    new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+
+  // Nav
+  if (p.role === 'parent') {
+    document.getElementById('nav-action-icon').textContent = '📋';
+    document.getElementById('nav-action-label').textContent = 'Log';
+  }
+
+  // Today cards
+  const ids = ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done'];
+  ids.forEach(id => hide(document.getElementById(id)));
+
+  const hasCheckedIn = todayMeal && checkins.some(c => c.meal_id === todayMeal?.id);
+
+  if (p.role === 'child') {
+    if (!todayMeal) {
+      unhide(document.getElementById('today-child-wait'));
+    } else if (hasCheckedIn) {
+      unhide(document.getElementById('today-child-done'));
+    } else {
+      document.getElementById('today-child-q').textContent =
+        'Hoe was de '+(MEAL_EMOJIS[todayMeal.meal_type]||'🍽️')+' '+todayMeal.meal_type+' vanavond?';
+      unhide(document.getElementById('today-child'));
     }
-    setLoading(false);
+  } else {
+    if (todayMeal) {
+      document.getElementById('today-parent-meal').textContent =
+        '✓ '+(MEAL_EMOJIS[todayMeal.meal_type]||'🍽️')+' '+todayMeal.meal_type+' gelogd';
+      unhide(document.getElementById('today-parent-done'));
+    } else {
+      unhide(document.getElementById('today-parent'));
+    }
   }
 
-  return (
-    <div className="app-shell">
-      <div className="setup-screen">
-        <div className="topbar">
-          <div className="logo">Lekker<span>stemmen</span></div>
-        </div>
-        <h2 className="setup-title">Welkom! 👋</h2>
-        <p className="setup-sub">Vertel ons even wie je bent om te beginnen.</p>
-
-        <div style={{padding:'0 16px'}}>
-          <div className="input-group">
-            <label className="input-label">Jouw naam</label>
-            <input className="input" placeholder="bijv. Papa, Luca, ..." value={name} onChange={e=>setName(e.target.value)} />
-          </div>
-          <div className="input-group">
-            <label className="input-label">Gezinsnaam (optioneel)</label>
-            <input className="input" placeholder="bijv. Familie De Vries" value={familyName} onChange={e=>setFamilyName(e.target.value)} />
-          </div>
-
-          <div className="input-label" style={{marginBottom:12}}>Ik ben...</div>
-          <div className="role-picker">
-            <div className={`role-card ${role==='parent'?'selected':''}`} onClick={()=>setRole('parent')}>
-              <span className="role-card-emoji">👨‍👩‍👧</span>
-              <div className="role-card-label">Ouder</div>
-              <div className="role-card-sub">Ik log de maaltijden</div>
-            </div>
-            <div className={`role-card ${role==='child'?'selected':''}`} onClick={()=>setRole('child')}>
-              <span className="role-card-emoji">🧒</span>
-              <div className="role-card-label">Kind</div>
-              <div className="role-card-sub">Ik stem en check in</div>
-            </div>
-          </div>
-
-          {error && <div className="error-msg" style={{marginBottom:16}}>{error}</div>}
-
-          <button className="btn btn-primary" onClick={handleSave} disabled={loading||!role||!name}>
-            {loading ? 'Bezig...' : 'Starten →'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── CHECKIN SCREEN ───────────────────────────────────────────────
-function CheckinScreen({ profile, meal, onDone, onSkip }) {
-  const [score, setScore] = useState(null);
-  const [drink, setDrink] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit() {
-    if (!score) return;
-    setLoading(true);
-    await sb.from('checkins').insert({
-      profile_id: profile.id,
-      meal_id: meal.id,
-      score,
-      drink,
-    });
-    setLoading(false);
-    onDone(score);
-  }
-
-  return (
-    <div className="checkin-screen pb-nav">
-      <div className="checkin-header">
-        <h2 className="checkin-title">Hoe was het eten?</h2>
-        <p className="checkin-sub">Vanavond: <strong>{MEALS.find(m=>m.id===meal.meal_type)?.emoji} {meal.meal_type}</strong></p>
-      </div>
-
-      <div className="smiley-row">
-        {SMILEYS.map(s => (
-          <button key={s.score}
-            className={`smiley-btn ${score===s.score?`selected-${s.score}`:''}`}
-            onClick={() => setScore(s.score)}
-          >{s.emoji}</button>
-        ))}
-      </div>
-
-      {score && (
-        <>
-          <div className="drink-section">
-            <div className="drink-label">
-              Wat dronk je erbij?
-              <span className="optional">optioneel</span>
-            </div>
-            <div className="drink-grid">
-              {DRINKS.map(d => (
-                <button key={d.id}
-                  className={`drink-btn ${drink===d.id?'selected':''}`}
-                  onClick={() => setDrink(drink===d.id?null:d.id)}
-                >
-                  <span className="drink-emoji">{d.emoji}</span>
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="checkin-actions">
-            <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-              {loading ? 'Opslaan...' : 'Opslaan ✓'}
-            </button>
-            <button className="btn btn-ghost" style={{width:'100%',marginTop:8}} onClick={onSkip}>
-              Overslaan
-            </button>
-          </div>
-        </>
-      )}
-
-      {!score && (
-        <div style={{padding:'0 24px'}}>
-          <button className="btn btn-ghost" style={{width:'100%'}} onClick={onSkip}>
-            Overslaan
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── SUCCESS SCREEN ───────────────────────────────────────────────
-function SuccessScreen({ score, onBack }) {
-  const msg = score===3
-    ? ['😋','Geweldig!', 'Fijn dat het smaakte. Jouw stem telt mee voor het menu van volgende week.']
-    : score===2
-    ? ['😐','Oké dan!', 'Goed dat je het hebt doorgegeven. We leren zo wat jij het liefste eet.']
-    : ['😕','Noteer!', 'Jammer dat het niet smaakte. Vrijdag mag jij kiezen wat er volgende week op tafel komt.'];
-
-  return (
-    <div className="success-screen">
-      <span className="success-emoji">{msg[0]}</span>
-      <h2 className="success-title">{msg[1]}</h2>
-      <p className="success-sub">{msg[2]}</p>
-      <button className="btn btn-primary" style={{maxWidth:280}} onClick={onBack}>
-        Terug naar home
-      </button>
-    </div>
-  );
-}
-
-// ── PARENT LOG SCREEN ────────────────────────────────────────────
-function ParentLogScreen({ profile, onDone }) {
-  const [mealType, setMealType] = useState('');
-  const [ateTogether, setAteTogether] = useState(true);
-  const [hadSport, setHadSport] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  async function handleSave() {
-    if (!mealType) return;
-    setLoading(true); setError('');
-    const { error } = await sb.from('meals').upsert({
-      family_id: profile.family_id,
-      eaten_at: todayStr(),
-      meal_type: mealType,
-      ate_together: ateTogether,
-      had_sport: hadSport,
-    }, { onConflict: 'family_id,eaten_at' });
-    if (error) setError(error.message);
-    else onDone();
-    setLoading(false);
-  }
-
-  return (
-    <div className="parent-screen pb-nav">
-      <div className="topbar" style={{paddingBottom:8}}>
-        <h2 style={{fontFamily:'Nunito',fontWeight:900,fontSize:22}}>Vanavond gelogd 📋</h2>
-      </div>
-
-      <div style={{padding:'0 16px'}}>
-        <div className="card card-sm" style={{marginBottom:16}}>
-          <div className="input-label" style={{marginBottom:12}}>Wat hebben we gegeten?</div>
-          <div className="meal-grid">
-            {MEALS.map(m => (
-              <button key={m.id}
-                className={`meal-btn ${mealType===m.id?'selected':''}`}
-                onClick={()=>setMealType(m.id)}
-              >
-                <span className="meal-emoji">{m.emoji}</span>
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-icon">👨‍👩‍👧</span>
-            <div>
-              <div className="toggle-label">Samen gegeten</div>
-              <div className="toggle-sub">Heel gezin aan tafel</div>
-            </div>
-          </div>
-          <button className={`toggle ${ateTogether?'on':''}`} onClick={()=>setAteTogether(!ateTogether)} />
-        </div>
-
-        <div className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-icon">⚽</span>
-            <div>
-              <div className="toggle-label">Sportdag</div>
-              <div className="toggle-sub">Iemand had sport vandaag</div>
-            </div>
-          </div>
-          <button className={`toggle ${hadSport?'on':''}`} onClick={()=>setHadSport(!hadSport)} />
-        </div>
-
-        {error && <div className="error-msg" style={{marginTop:12}}>{error}</div>}
-
-        <div style={{marginTop:20}}>
-          <button className="btn btn-primary" onClick={handleSave} disabled={loading||!mealType}>
-            {loading ? 'Opslaan...' : 'Maaltijd opslaan ✓'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── VOTE SCREEN ──────────────────────────────────────────────────
-function VoteScreen({ profile, onDone }) {
-  const [choices, setChoices] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-
-  function toggle(id) {
-    setChoices(prev =>
-      prev.includes(id)
-        ? prev.filter(c=>c!==id)
-        : prev.length < 2 ? [...prev, id] : prev
-    );
-  }
-
-  async function handleVote() {
-    if (choices.length !== 2) return;
-    setLoading(true);
-    await sb.from('votes').upsert({
-      profile_id: profile.id,
-      family_id: profile.family_id,
-      week_of: mondayOfWeek(),
-      meal_choice_1: choices[0],
-      meal_choice_2: choices[1],
-    }, { onConflict: 'profile_id,week_of' });
-    setLoading(false);
-    setDone(true);
-    setTimeout(onDone, 1800);
-  }
-
-  if (done) return (
-    <div className="success-screen">
-      <span className="success-emoji" style={{animation:'pop 0.4s cubic-bezier(0.34,1.56,0.64,1)'}}>🗳️</span>
-      <h2 className="success-title">Stem uitgebracht!</h2>
-      <p className="success-sub">Jouw keuzes worden meegenomen in het menu van volgende week.</p>
-    </div>
-  );
-
-  return (
-    <div className="vote-screen pb-nav">
-      <div className="topbar" style={{paddingBottom:8}}>
-        <h2 style={{fontFamily:'Nunito',fontWeight:900,fontSize:22}}>Kies voor volgende week 🗳️</h2>
-      </div>
-      <p className="vote-count" style={{padding:'0 24px'}}>
-        Kies <span>{2 - choices.length}</span> maaltijd{choices.length===1?'':'en} nog
-      </p>
-      <div style={{padding:'0 16px'}}>
-        {VOTE_OPTIONS.map(opt => (
-          <div key={opt.id}
-            className={`vote-option ${choices.includes(opt.id)?'selected':''}`}
-            onClick={()=>toggle(opt.id)}
-          >
-            <span className="vote-option-emoji">{opt.emoji}</span>
-            <div>
-              <div className="vote-option-name">{opt.label}</div>
-              <div className="vote-option-sub">{opt.sub}</div>
-            </div>
-            <div className="vote-check">{choices.includes(opt.id)?'✓':''}</div>
-          </div>
-        ))}
-        <button className="btn btn-primary" style={{marginTop:8}}
-          onClick={handleVote} disabled={loading||choices.length!==2}>
-          {loading ? 'Opslaan...' : 'Stem versturen →'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── HOME SCREEN ──────────────────────────────────────────────────
-function HomeScreen({ profile, checkins, todayMeal, onCheckin, onLogMeal, onVote }) {
+  // Week dots
+  const row = document.getElementById('week-row');
+  row.innerHTML = '';
   const today = new Date();
-  const isFriday = today.getDay() === 5;
-
-  // Bouw weekoverzicht: ma-zo
-  const week = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i=0; i<7; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() - today.getDay() + 1 + i);
     const ds = d.toISOString().split('T')[0];
     const ci = checkins.find(c => c.eaten_at === ds);
-    week.push({ day: DAYS[(i+1)%7], score: ci?.score ?? null });
+    const score = ci?.score ?? null;
+    const dot = document.createElement('div');
+    dot.className = 'day-wrap';
+    dot.innerHTML = `<div class="day-dot ${score?'s'+score:''}">${score===1?'😕':score===2?'😐':score===3?'😋':''}</div><div class="day-label">${DAYS[(i+1)%7]}</div>`;
+    row.appendChild(dot);
   }
 
-  const streak = checkins.reduce((acc, _, i, arr) => {
+  // Streak
+  let streak = 0;
+  for (let i=0; i<checkins.length; i++) {
     const d = new Date(); d.setDate(d.getDate()-i);
-    return arr[i]?.eaten_at === d.toISOString().split('T')[0] ? acc+1 : acc;
-  }, 0);
+    if (checkins[i]?.eaten_at === d.toISOString().split('T')[0]) streak++;
+    else break;
+  }
+  const streakEl = document.getElementById('home-streak');
+  if (streak > 1) { document.getElementById('streak-num').textContent = streak; unhide(streakEl); }
+  else hide(streakEl);
 
-  const isChild = profile.role === 'child';
-  const hasCheckedIn = todayMeal && checkins.some(c => c.meal_id === todayMeal?.id);
+  // Insight
+  if (checkins.length >= 3) {
+    const together = checkins.filter(c=>c.ate_together).length;
+    const apart = checkins.filter(c=>!c.ate_together).length;
+    document.getElementById('insight-text').textContent = together > apart
+      ? `${p.name} geeft eten een hogere score als jullie samen eten. 🤝`
+      : `Check of samen eten het eten leuker maakt voor ${p.name}. 💬`;
+    unhide(document.getElementById('insight-block'));
+  } else {
+    hide(document.getElementById('insight-block'));
+  }
 
-  return (
-    <div className="home-screen pb-nav">
-      <div className="greeting-block">
-        <h1 className="greeting">Hey <span>{profile.name}</span> 👋</h1>
-        <p className="greeting-sub">{new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'})}</p>
-        {streak > 1 && (
-          <div className="streak-pill">🔥 {streak} dagen op rij!</div>
-        )}
-      </div>
-
-      {/* Vandaag card */}
-      {isChild ? (
-        <div className="today-card">
-          <div className="today-label">Vanavond</div>
-          {!todayMeal ? (
-            <>
-              <div className="today-question">Nog geen maaltijd gelogd door je ouder.</div>
-            </>
-          ) : hasCheckedIn ? (
-            <div className="today-done">✓ Check-in gedaan voor vandaag!</div>
-          ) : (
-            <>
-              <div className="today-question">Hoe was de {todayMeal.meal_type} vanavond?</div>
-              <button className="btn-white" onClick={onCheckin}>Check in → <span>8 sec</span></button>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="today-card">
-          <div className="today-label">Vandaag</div>
-          {todayMeal ? (
-            <div className="today-done">✓ {MEALS.find(m=>m.id===todayMeal.meal_type)?.emoji} {todayMeal.meal_type} gelogd</div>
-          ) : (
-            <>
-              <div className="today-question">Wat eten jullie vanavond?</div>
-              <button className="btn-white" onClick={onLogMeal}>Log maaltijd →</button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Week overzicht */}
-      <div className="section-header">Deze week</div>
-      <div className="week-dots">
-        {week.map((d,i) => (
-          <div key={i} className="week-dot-wrap">
-            <div className={`week-dot ${d.score?`score-${d.score}`:''}`}>
-              {d.score===1?'😕':d.score===2?'😐':d.score===3?'😋':''}
-            </div>
-            <div className="week-dot-label">{d.day}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Inzicht */}
-      {checkins.length >= 3 && (
-        <>
-          <div className="section-header">Inzicht</div>
-          <div className="insight-card">
-            <div className="insight-label">AI observatie</div>
-            <div className="insight-text">
-              {checkins.filter(c=>c.ate_together).length > checkins.filter(c=>!c.ate_together).length
-                ? `${profile.name} geeft eten een hogere score als jullie samen eten. 🤝`
-                : `Check of samen eten het eten leuker maakt voor ${profile.name}. 💬`
-              }
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Vrijdag stem */}
-      {isFriday && isChild && (
-        <>
-          <div className="section-header">Het is vrijdag! 🗳️</div>
-          <div className="card" style={{margin:'0 16px'}}>
-            <p style={{fontSize:14,color:'var(--text-muted)',marginBottom:12,lineHeight:1.5}}>
-              Kies twee maaltijden die je volgende week wilt eten. Jouw stem telt mee!
-            </p>
-            <button className="btn btn-primary" onClick={onVote}>Stem nu →</button>
-          </div>
-        </>
-      )}
-    </div>
-  );
+  // Friday vote
+  const isFriday = new Date().getDay() === 5;
+  const fridayBlock = document.getElementById('friday-block');
+  if (isFriday && p.role === 'child') unhide(fridayBlock);
+  else hide(fridayBlock);
 }
 
-// ── MAIN APP ─────────────────────────────────────────────────────
-function App() {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [screen, setScreen] = useState('home'); // home | checkin | log | vote | success
-  const [successScore, setSuccessScore] = useState(null);
-  const [todayMeal, setTodayMeal] = useState(null);
-  const [checkins, setCheckins] = useState([]);
-  const [tab, setTab] = useState('home'); // home | log | vote
+// ── CHECKIN ────────────────────────────────────────────────────
+function resetCheckin() {
+  [1,2,3].forEach(i => document.getElementById('sm-'+i).className = 'smiley');
+  ['water','milk','juice','soda'].forEach(d => document.getElementById('drink-'+d).classList.remove('selected'));
+  hide(document.getElementById('drink-section'));
+  hide(document.getElementById('checkin-actions'));
+  unhide(document.getElementById('checkin-skip'));
+  if (todayMeal) document.getElementById('checkin-meal-name').textContent =
+    'Vanavond: '+(MEAL_EMOJIS[todayMeal.meal_type]||'')+' '+todayMeal.meal_type;
+}
 
-  // Auth listener
-  useEffect(() => {
-    sb.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) loadProfile(session.user);
-      else setLoading(false);
-    });
-    const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => {
-      setSession(session);
-      if (session) loadProfile(session.user);
-      else { setProfile(null); setLoading(false); }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+function selectSmiley(score) {
+  selectedScore = score;
+  [1,2,3].forEach(i => document.getElementById('sm-'+i).className = 'smiley' + (i===score?' sel-'+score:''));
+  unhide(document.getElementById('drink-section'));
+  unhide(document.getElementById('checkin-actions'));
+  hide(document.getElementById('checkin-skip'));
+}
 
-  async function loadProfile(user) {
-    setLoading(true);
-    const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
-    setProfile(data);
-    if (data) {
-      await loadData(data);
+function selectDrink(d) {
+  selectedDrink = selectedDrink===d ? null : d;
+  ['water','milk','juice','soda'].forEach(k =>
+    document.getElementById('drink-'+k).classList.toggle('selected', k===selectedDrink));
+}
+
+async function doCheckin() {
+  if (!selectedScore || !todayMeal) return;
+  document.getElementById('checkin-btn').textContent = 'Opslaan...';
+  await sb.from('checkins').insert({
+    profile_id: currentProfile.id,
+    meal_id: todayMeal.id,
+    score: selectedScore,
+    drink: selectedDrink,
+  });
+  await loadData();
+  const msgs = {
+    3: ['😋','Geweldig!','Fijn dat het smaakte. Jouw stem telt mee voor volgende week.'],
+    2: ['😐','Oké dan!','Goed dat je het hebt doorgegeven. We leren zo wat jij lekker vindt.'],
+    1: ['😕','Noteer!','Vrijdag mag jij kiezen wat er volgende week op tafel komt.']
+  };
+  const m = msgs[selectedScore];
+  document.getElementById('success-emoji').textContent = m[0];
+  document.getElementById('success-title').textContent = m[1];
+  document.getElementById('success-sub').textContent = m[2];
+  show('success');
+}
+
+// ── PARENT LOG ─────────────────────────────────────────────────
+function resetLog() {
+  document.querySelectorAll('.meal-btn').forEach(b => b.classList.remove('selected'));
+  togTogether = true; togSport = false;
+  document.getElementById('tog-together').className = 'toggle on';
+  document.getElementById('tog-sport').className = 'toggle';
+  document.getElementById('log-btn').textContent = 'Maaltijd opslaan ✓';
+}
+
+function selectMeal(m) {
+  selectedMeal = m;
+  document.querySelectorAll('.meal-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.meal===m));
+}
+
+function toggleTog(which) {
+  if (which==='together') {
+    togTogether = !togTogether;
+    document.getElementById('tog-together').className = 'toggle'+(togTogether?' on':'');
+  } else {
+    togSport = !togSport;
+    document.getElementById('tog-sport').className = 'toggle'+(togSport?' on':'');
+  }
+}
+
+async function doLog() {
+  if (!selectedMeal) return;
+  document.getElementById('log-btn').textContent = 'Opslaan...';
+  const { error } = await sb.from('meals').upsert({
+    family_id: currentProfile.family_id,
+    eaten_at: todayStr(),
+    meal_type: selectedMeal,
+    ate_together: togTogether,
+    had_sport: togSport,
+  }, { onConflict: 'family_id,eaten_at' });
+  if (error) {
+    const errEl = document.getElementById('log-error');
+    errEl.textContent = error.message; unhide(errEl);
+    document.getElementById('log-btn').textContent = 'Maaltijd opslaan ✓';
+    return;
+  }
+  await loadData();
+  goScreen('home');
+}
+
+// ── VOTE ───────────────────────────────────────────────────────
+function renderVoteOptions() {
+  const container = document.getElementById('vote-options');
+  container.innerHTML = '';
+  VOTE_OPTIONS.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'vote-opt' + (voteChoices.includes(opt.id)?' selected':'');
+    div.innerHTML = `<span class="vote-opt-emoji">${opt.emoji}</span><div><div class="vote-opt-name">${opt.label}</div><div class="vote-opt-sub">${opt.sub}</div></div><div class="vote-check">${voteChoices.includes(opt.id)?'✓':''}</div>`;
+    div.onclick = () => toggleVote(opt.id);
+    container.appendChild(div);
+  });
+  document.getElementById('vote-remaining').textContent = 2 - voteChoices.length;
+  document.getElementById('vote-btn').disabled = voteChoices.length !== 2;
+}
+
+function toggleVote(id) {
+  if (voteChoices.includes(id)) voteChoices = voteChoices.filter(c=>c!==id);
+  else if (voteChoices.length < 2) voteChoices.push(id);
+  renderVoteOptions();
+}
+
+async function doVote() {
+  if (voteChoices.length !== 2) return;
+  document.getElementById('vote-btn').textContent = 'Opslaan...';
+  await sb.from('votes').upsert({
+    profile_id: currentProfile.id,
+    family_id: currentProfile.family_id,
+    week_of: mondayOfWeek(),
+    meal_choice_1: voteChoices[0],
+    meal_choice_2: voteChoices[1],
+  }, { onConflict: 'profile_id,week_of' });
+  document.getElementById('success-emoji').textContent = '🗳️';
+  document.getElementById('success-title').textContent = 'Stem uitgebracht!';
+  document.getElementById('success-sub').textContent = 'Jouw keuzes worden meegenomen in het menu van volgende week.';
+  show('success');
+}
+
+// ── BOOT ───────────────────────────────────────────────────────
+async function boot() {
+  show('loading');
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadProfile();
+  } else {
+    show('auth');
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      await loadProfile();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null; currentProfile = null;
+      show('auth');
     }
-    setLoading(false);
-  }
-
-  async function loadData(p) {
-    // Vandaag's maaltijd
-    const { data: meal } = await sb.from('meals')
-      .select('*').eq('family_id', p.family_id).eq('eaten_at', todayStr()).single();
-    setTodayMeal(meal || null);
-
-    // Check-ins van afgelopen 14 dagen
-    const since = new Date(); since.setDate(since.getDate()-14);
-    const { data: cis } = await sb.from('checkins_with_context')
-      .select('*').eq('profile_id', p.id)
-      .gte('eaten_at', since.toISOString().split('T')[0])
-      .order('eaten_at', { ascending: false });
-    setCheckins(cis || []);
-  }
-
-  async function handleSignOut() {
-    await sb.auth.signOut();
-  }
-
-  function handleCheckinDone(score) {
-    setSuccessScore(score);
-    setScreen('success');
-    loadData(profile);
-  }
-
-  function handleLogDone() {
-    setScreen('home');
-    loadData(profile);
-  }
-
-  // ── Render tree ──
-  if (loading) return (
-    <div className="app-shell">
-      <div className="loading">
-        <div className="spinner"></div>
-        <div className="loading-text">Laden...</div>
-      </div>
-    </div>
-  );
-
-  if (!session) return <AuthScreen onAuth={() => {}} />;
-  if (!profile) return <SetupScreen user={session.user} onDone={() => loadProfile(session.user)} />;
-
-  if (screen === 'checkin' && todayMeal) return (
-    <div className="app-shell">
-      <CheckinScreen
-        profile={profile}
-        meal={todayMeal}
-        onDone={handleCheckinDone}
-        onSkip={() => setScreen('home')}
-      />
-    </div>
-  );
-
-  if (screen === 'log') return (
-    <div className="app-shell">
-      <ParentLogScreen profile={profile} onDone={handleLogDone} />
-    </div>
-  );
-
-  if (screen === 'vote') return (
-    <div className="app-shell">
-      <VoteScreen profile={profile} onDone={() => { setScreen('home'); loadData(profile); }} />
-    </div>
-  );
-
-  if (screen === 'success') return (
-    <div className="app-shell">
-      <SuccessScreen score={successScore} onBack={() => setScreen('home')} />
-    </div>
-  );
-
-  return (
-    <div className="app-shell">
-      <div className="topbar">
-        <div className="logo">Lekker<span>stemmen</span></div>
-        <button className="avatar-btn" onClick={handleSignOut} title="Uitloggen">
-          {initials(profile.name)}
-        </button>
-      </div>
-
-      <HomeScreen
-        profile={profile}
-        checkins={checkins}
-        todayMeal={todayMeal}
-        onCheckin={() => setScreen('checkin')}
-        onLogMeal={() => setScreen('log')}
-        onVote={() => setScreen('vote')}
-      />
-
-      {/* Bottom nav */}
-      <nav className="bottom-nav">
-        <button className={`nav-item ${tab==='home'?'active':''}`} onClick={()=>{setTab('home');setScreen('home')}}>
-          <span className="nav-icon">🏠</span>
-          <span className="nav-label">Home</span>
-        </button>
-        {profile.role === 'child' ? (
-          <button className={`nav-item ${screen==='checkin'?'active':''}`} onClick={()=>todayMeal&&setScreen('checkin')}>
-            <span className="nav-icon">😋</span>
-            <span className="nav-label">Check-in</span>
-          </button>
-        ) : (
-          <button className={`nav-item ${screen==='log'?'active':''}`} onClick={()=>setScreen('log')}>
-            <span className="nav-icon">📋</span>
-            <span className="nav-label">Log</span>
-          </button>
-        )}
-        <button className={`nav-item ${screen==='vote'?'active':''}`} onClick={()=>setScreen('vote')}>
-          <span className="nav-icon">🗳️</span>
-          <span className="nav-label">Stem</span>
-        </button>
-      </nav>
-    </div>
-  );
+  });
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+boot();
 </script>
 </body>
 </html>
