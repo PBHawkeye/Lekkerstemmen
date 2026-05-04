@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v14:46</title>
+  <title>Lekkerstemmen v14:59</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -833,6 +833,64 @@
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">Check-ins deze week</div>
       <div id="status-checkins"></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-meal-detail" class="screen">
+  <div class="topbar">
+    <button class="avatar" onclick="closeMealDetail()" style="font-size:18px">←</button>
+    <div style="flex:1;text-align:center">
+      <div style="font-size:22px" id="md-emoji">🍽️</div>
+    </div>
+    <button id="md-recipe-btn" onclick="openMealDetailRecipe()" style="display:none;width:36px;height:36px;border-radius:50%;background:var(--green-bg);border:1.5px solid var(--border);font-size:18px;cursor:pointer" title="Recept">📖</button>
+  </div>
+  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+    <div style="text-align:center;padding:12px 0 20px">
+      <div style="font-size:26px;font-weight:800;color:var(--text);font-family:'Fraunces',serif" id="md-name">—</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px" id="md-note"></div>
+    </div>
+
+    <!-- Stats grid -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px" id="md-stats-grid">
+      <div style="background:var(--green-bg);border-radius:var(--r);padding:12px;text-align:center">
+        <div style="font-size:22px" id="md-avg-score">—</div>
+        <div id="md-avg-bar" style="margin:4px auto;width:80%;display:none"></div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:2px">Gem. smaak</div>
+      </div>
+      <div style="background:var(--amber-light);border-radius:var(--r);padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:#C47F00" id="md-times-eaten">—</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:2px">Keer gegeten</div>
+      </div>
+      <div style="background:#F0EEFF;border-radius:var(--r);padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:#7C6FF7" id="md-times-voted">—</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:2px">Keer gestemd</div>
+      </div>
+    </div>
+
+    <!-- Score per persoon -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:10px">Score per gezinslid</div>
+      <div id="md-per-person"></div>
+    </div>
+
+    <!-- Commentaren -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:10px">Commentaren</div>
+      <div id="md-comments"><div style="font-size:13px;color:var(--muted);font-style:italic">Geen commentaren</div></div>
+    </div>
+
+    <!-- AI aanbeveling -->
+    <div style="background:linear-gradient(135deg,var(--green) 0%,var(--green-light) 100%);border-radius:var(--r);padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.8);margin-bottom:6px">✨ AI aanbeveling</div>
+      <div style="font-weight:700;font-size:14px;line-height:1.5;color:white" id="md-ai-tip">Analyseren...</div>
+      <button onclick="generateMealAI()" id="md-ai-btn" style="margin-top:10px;padding:6px 14px;border-radius:99px;border:1.5px solid white;background:transparent;color:white;font-weight:700;font-size:12px;cursor:pointer">↻ Nieuwe analyse</button>
+    </div>
+
+    <!-- Wanneer voor het laatst gegeten -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:10px">Geschiedenis (2 maanden)</div>
+      <div id="md-history"></div>
     </div>
   </div>
 </div>
@@ -2036,6 +2094,14 @@ function renderVoteOptions() {
       '<span style="font-weight:800;font-size:15px;flex:1">'+opt.label+'</span>'+
       '<div style="width:24px;height:24px;border-radius:50%;border:2px solid '+(isSelected?'#FFB830':'#ECEAF8')+';background:'+(isSelected?'#FFB830':'transparent')+';display:flex;align-items:center;justify-content:center;font-size:12px;color:white">'+(isSelected?'✓':'')+'</div>';
     div.onclick = () => toggleVote(opt.id);
+    // Info knop voor statistieken
+    const infoBtn = document.createElement('button');
+    infoBtn.style.cssText = 'position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,0.06);border:none;border-radius:99px;padding:2px 6px;cursor:pointer;color:var(--muted)';
+    infoBtn.textContent = '📊';
+    infoBtn.title = 'Statistieken';
+    infoBtn.onclick = (e) => { e.stopPropagation(); openMealDetail(opt.id, 'vote'); };
+    div.style.position = 'relative';
+    div.appendChild(infoBtn);
     container.appendChild(div);
   });
 
@@ -3164,6 +3230,267 @@ async function renderVoteSetupSportGrid(weekStart) {
   grid.appendChild(link);
 }
 
+
+// ── MEAL DETAIL ────────────────────────────────────────────────
+let currentMealDetail = null;
+let mealDetailPrevScreen = 'meals';
+
+function openMealDetail(mealId, fromScreen='meals') {
+  const meal = getAllMeals(true).find(m=>m.id===mealId)
+    || customMeals.find(m=>m.id===mealId)
+    || {id:mealId, emoji:'🍽️', label:mealId, name:mealId};
+  currentMealDetail = meal;
+  mealDetailPrevScreen = fromScreen;
+  renderMealDetail(meal);
+  show('meal-detail');
+}
+
+function closeMealDetail() {
+  goScreen(mealDetailPrevScreen);
+}
+
+function openMealDetailRecipe() {
+  const url = currentMealDetail?.recipe_url;
+  if (url) window.open(url, '_blank');
+}
+
+async function renderMealDetail(meal) {
+  const mealId = meal.id;
+  const familyId = currentProfile.family_id;
+
+  // Basis info
+  document.getElementById('md-emoji').textContent = meal.emoji || '🍽️';
+  document.getElementById('md-name').textContent = meal.label || meal.name || mealId;
+  document.getElementById('md-note').textContent = meal.note || '';
+
+  // Recept knop
+  const recipeBtn = document.getElementById('md-recipe-btn');
+  if (meal.recipe_url) {
+    recipeBtn.style.display = '';
+  } else {
+    recipeBtn.style.display = 'none';
+  }
+
+  // AI placeholder
+  document.getElementById('md-ai-tip').textContent = 'Analyseren...';
+
+  // Haal data op
+  const since = new Date();
+  since.setDate(since.getDate() - 60);
+  const sinceStr = since.toISOString().split('T')[0];
+
+  const [cisRes, votesRes, menuRes] = await Promise.all([
+    sb.from('checkins_with_context').select('*')
+      .eq('family_id', familyId)
+      .eq('meal_type', mealId)
+      .gte('eaten_at', sinceStr)
+      .order('eaten_at', {ascending: false}),
+    sb.from('votes').select('*')
+      .eq('family_id', familyId)
+      .or('meal_choice_1.eq.'+mealId+',meal_choice_2.eq.'+mealId),
+    sb.from('weekly_menu').select('*')
+      .eq('family_id', familyId)
+      .eq('meal_id', mealId)
+      .order('day_date', {ascending: false})
+      .limit(8),
+  ]);
+
+  const cis = cisRes.data || [];
+  const votes = votesRes.data || [];
+  const menuHistory = menuRes.data || [];
+
+  // ── Stats grid ──────────────────────────────────────────────
+  const avgScore = cis.length
+    ? cis.reduce((a,b)=>a+b.score,0)/cis.length
+    : null;
+  const avgEl = document.getElementById('md-avg-score');
+  const barEl = document.getElementById('md-avg-bar');
+  if (avgScore !== null) {
+    // Emoji-slider: 😕 ──●──── 😋
+    const pct = Math.round((avgScore - 1) / 2 * 100); // 1=0%, 3=100%
+    avgEl.innerHTML =
+      '<div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-bottom:4px">'+
+      '<span style="font-size:18px">😕</span>'+
+      '<div style="flex:1;max-width:80px;height:8px;background:#E8F7F2;border-radius:4px;position:relative">'+
+        '<div style="position:absolute;left:0;top:0;height:8px;width:'+pct+'%;background:var(--green);border-radius:4px;transition:width 0.5s"></div>'+
+        '<div style="position:absolute;top:50%;left:'+pct+'%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div>'+
+      '</div>'+
+      '<span style="font-size:18px">😋</span>'+
+      '</div>';
+  } else {
+    avgEl.textContent = '—';
+  }
+  document.getElementById('md-times-eaten').textContent = menuHistory.length || '0';
+  document.getElementById('md-times-voted').textContent = votes.length || '0';
+
+  // ── Score per persoon ───────────────────────────────────────
+  const perPersonEl = document.getElementById('md-per-person');
+  const personMap = {};
+  cis.forEach(c => {
+    if (!personMap[c.child_name]) personMap[c.child_name] = {total:0, count:0, emoji:'😐'};
+    personMap[c.child_name].total += c.score;
+    personMap[c.child_name].count++;
+  });
+  // Voeg stemmen toe
+  const members = getFamilyMembers();
+  members.forEach(m => {
+    const hasVoted = votes.some(v => v.profile_id === m.id);
+    if (!personMap[m.name]) personMap[m.name] = {total:0, count:0, voted: hasVoted};
+    else personMap[m.name].voted = hasVoted;
+  });
+
+  if (Object.keys(personMap).length === 0) {
+    perPersonEl.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic">Nog niet gegeten</div>';
+  } else {
+    perPersonEl.innerHTML = Object.entries(personMap).map(([name, d]) => {
+      const avg = d.count > 0 ? d.total/d.count : null;
+      const bar = avg !== null ? Math.round(avg/3*100) : 0;
+      const color = avg >= 2.5 ? 'var(--green)' : avg >= 1.8 ? 'var(--amber)' : 'var(--coral)';
+      const member = members.find(m=>m.name===name);
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<span style="font-size:16px">'+(member?.emoji||'👤')+'</span>'+
+        '<div style="flex:1">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'+
+            '<span style="font-size:13px;font-weight:700">'+name+'</span>'+
+            '<span style="font-size:11px;color:var(--muted)">'+
+              (avg !== null ? avg.toFixed(1)+'/3' : '—')+
+              (d.voted ? ' · gestemd ❤️' : '')+
+            '</span>'+
+          '</div>'+
+          (avg !== null ?
+            '<div style="display:flex;align-items:center;gap:5px">'+
+            '<span style="font-size:13px">😕</span>'+
+            '<div style="flex:1;height:8px;background:var(--border);border-radius:4px;position:relative">'+
+              '<div style="position:absolute;left:0;top:0;height:8px;width:'+Math.round((avg-1)/2*100)+'%;background:'+color+';border-radius:4px"></div>'+
+              '<div style="position:absolute;top:50%;left:'+Math.round((avg-1)/2*100)+'%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:'+color+';border:2px solid white"></div>'+
+            '</div>'+
+            '<span style="font-size:13px">😋</span>'+
+            '</div>' :
+            '<div style="font-size:11px;color:var(--muted);font-style:italic">Nog niet geproefd</div>'
+          )+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  // ── Commentaren ─────────────────────────────────────────────
+  const commentsEl = document.getElementById('md-comments');
+  const withComments = cis.filter(c=>c.comment);
+  if (withComments.length === 0) {
+    commentsEl.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic">Nog geen commentaren</div>';
+  } else {
+    commentsEl.innerHTML = withComments.map(c =>
+      '<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
+        '<span style="font-size:14px">'+(members.find(m=>m.name===c.child_name)?.emoji||'👤')+'</span>'+
+        '<span style="font-size:12px;font-weight:700">'+c.child_name+'</span>'+
+        '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+c.eaten_at+'</span>'+
+      '</div>'+
+      '<div style="font-size:13px;color:var(--text)">'+c.comment+'</div>'+
+      '</div>'
+    ).join('');
+  }
+
+  // ── Geschiedenis ────────────────────────────────────────────
+  const historyEl = document.getElementById('md-history');
+  if (menuHistory.length === 0) {
+    historyEl.innerHTML = '<div style="font-size:13px;color:var(--muted);font-style:italic">Nog niet op het menu geweest</div>';
+  } else {
+    historyEl.innerHTML = menuHistory.map(m => {
+      const d = new Date(m.day_date+'T12:00:00');
+      const dateStr = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+      const dayCis = cis.filter(c=>c.eaten_at===m.day_date);
+      const avgDay = dayCis.length ? (dayCis.reduce((a,b)=>a+b.score,0)/dayCis.length).toFixed(1) : null;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border)">'+
+        '<div style="flex:1;font-size:13px;color:var(--text)">'+dateStr+'</div>'+
+        (m.cook_name?'<div style="font-size:11px;color:var(--muted)">'+m.cook_name+'</div>':'')+
+        (avgDay?
+          '<div style="display:flex;align-items:center;gap:3px;width:80px">'+
+          '<span style="font-size:12px">😕</span>'+
+          '<div style="flex:1;height:6px;background:var(--border);border-radius:3px;position:relative">'+
+            '<div style="position:absolute;left:0;top:0;height:6px;width:'+Math.round((avgDay-1)/2*100)+'%;background:'+(avgDay>=2.5?'var(--green)':avgDay>=1.8?'var(--amber)':'var(--coral)')+';border-radius:3px"></div>'+
+          '</div>'+
+          '<span style="font-size:12px">😋</span>'+
+          '</div>' :
+          '<div style="font-size:11px;color:var(--muted)">—</div>'
+        )+
+      '</div>';
+    }).join('');
+  }
+
+  // ── AI aanbeveling ───────────────────────────────────────────
+  generateMealAI(meal, cis, votes, menuHistory);
+}
+
+async function generateMealAI(meal, cis, votes, menuHistory) {
+  meal = meal || currentMealDetail;
+  if (!meal) return;
+  const aiEl = document.getElementById('md-ai-tip');
+  aiEl.textContent = 'Analyseren...';
+
+  // Als geen data meegegeven, haal opnieuw op
+  if (!cis) {
+    const since = new Date(); since.setDate(since.getDate()-60);
+    const {data} = await sb.from('checkins_with_context').select('*')
+      .eq('family_id',currentProfile.family_id).eq('meal_type',meal.id)
+      .gte('eaten_at',since.toISOString().split('T')[0]);
+    cis = data||[];
+  }
+  if (!votes) {
+    const {data} = await sb.from('votes').select('*')
+      .eq('family_id',currentProfile.family_id)
+      .or('meal_choice_1.eq.'+meal.id+',meal_choice_2.eq.'+meal.id);
+    votes = data||[];
+  }
+  if (!menuHistory) {
+    const {data} = await sb.from('weekly_menu').select('*')
+      .eq('family_id',currentProfile.family_id).eq('meal_id',meal.id)
+      .order('day_date',{ascending:false}).limit(8);
+    menuHistory = data||[];
+  }
+
+  const avgScore = cis.length ? (cis.reduce((a,b)=>a+b.score,0)/cis.length).toFixed(1) : null;
+  const comments = cis.filter(c=>c.comment).map(c=>c.child_name+': "'+c.comment+'"').join(' | ');
+  const members = getFamilyMembers();
+  const voterNames = [...new Set(votes.map(v=>members.find(m=>m.id===v.profile_id)?.name).filter(Boolean))];
+
+  if (!avgScore && !comments && votes.length===0) {
+    aiEl.textContent = 'Nog te weinig data voor een aanbeveling. Voeg dit gerecht toe aan het menu!';
+    return;
+  }
+
+  const promptParts = [
+    'Je analyseert een gerecht voor een gezin.',
+    'Geef een korte, praktische aanbeveling in 2-3 zinnen in begrijpelijk Nederlands.',
+    'Geen scores noemen, gewoon menselijke taal.',
+    '',
+    'Gerecht: '+meal.emoji+' '+(meal.label||meal.name),
+    avgScore ? 'Gemiddelde score: '+avgScore+'/3' : '',
+    'Hoe vaak op menu (laatste 2 maanden): '+menuHistory.length+'x',
+    voterNames.length ? 'Gestemd door: '+voterNames.join(', ') : '',
+    comments ? 'Commentaren: '+comments : '',
+    '',
+    'Geef een aanbeveling: hoe vaak op het menu zetten? Iets aanpassen? Is het een favoriet of juist overslaan?',
+  ];
+  const prompt = promptParts.filter(Boolean).join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:200,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    aiEl.textContent = data.content?.[0]?.text || 'Geen aanbeveling beschikbaar.';
+  } catch(e) {
+    aiEl.textContent = 'Kon geen analyse genereren. Probeer het opnieuw.';
+  }
+}
+
 // ── VOTE SETUP ─────────────────────────────────────────────────
 const DAY_NAMES = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
 const DAY_NAMES_FULL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
@@ -3607,7 +3934,16 @@ async function renderMenuScreen() {
         '</div>'+
         (voteCount>0?'<span class="menu-day-badge badge-votes">'+voteCount+'x</span>':'')+
         (existing&&existing.published?'<span class="menu-day-badge badge-published" style="margin-left:4px">✓</span>':'');
+      // Rechter-klik of long-press toont statistieken (hier: apart info knop)
       row.onclick=()=>openMealPicker(dateStr,i,existing);
+      if (existing) {
+        const statsBtn = document.createElement('button');
+        statsBtn.style.cssText = 'font-size:13px;background:var(--green-bg);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;flex-shrink:0;margin-left:4px';
+        statsBtn.textContent = '📊';
+        statsBtn.title = 'Statistieken voor '+existing.meal_name;
+        statsBtn.onclick = (e) => { e.stopPropagation(); openMealDetail(existing.meal_id, 'menu'); };
+        row.appendChild(statsBtn);
+      }
       daysList.appendChild(row);
     });
 
