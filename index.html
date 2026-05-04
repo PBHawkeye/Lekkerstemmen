@@ -2643,8 +2643,11 @@ function getSportWeekDates(offset) {
 }
 
 async function renderSportSchedule() {
-  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const allMembers = getFamilyMembers();
+  const parents = allMembers.filter(p=>p.role==='parent');
+  const kids = allMembers.filter(p=>p.role==='child');
   const dates = getSportWeekDates(sportWeekOffset);
+
   const mon = new Date(dates[0]+'T12:00:00');
   const sun = new Date(dates[6]+'T12:00:00');
   const fmt = {day:'numeric',month:'short'};
@@ -2655,7 +2658,7 @@ async function renderSportSchedule() {
     sportWeekOffset > 0 ? 'over '+sportWeekOffset+' week'+(sportWeekOffset>1?'en':'') :
     Math.abs(sportWeekOffset)+' week'+(Math.abs(sportWeekOffset)>1?'en':'')+' geleden';
 
-  // Haal bestaande sportdata op
+  // Haal sportdata op
   const {data:existing} = await sb.from('sport_schedule')
     .select('*')
     .eq('family_id', currentProfile.family_id)
@@ -2664,7 +2667,6 @@ async function renderSportSchedule() {
   sportScheduleData = {};
   (existing||[]).forEach(s => {
     if (!sportScheduleData[s.sport_date]) sportScheduleData[s.sport_date] = {};
-    // Gebruik note als event type, fallback naar 'sport' als has_sport=true
     sportScheduleData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
   });
 
@@ -2674,47 +2676,59 @@ async function renderSportSchedule() {
 
   const DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
 
-  // Header rij
+  // Instructie tekst
+  const instr = document.createElement('p');
+  instr.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5';
+  instr.textContent = 'Klik een cel om te wisselen: ⚽ sport → 🕐 laat thuis → 🍽️ zakelijk diner → ✈️ op reis → leeg';
+  grid.appendChild(instr);
+
+  // Header
   const header = document.createElement('div');
-  header.style.cssText = 'display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;margin-bottom:6px';
+  header.style.cssText = 'display:grid;grid-template-columns:90px repeat(7,1fr);gap:4px;margin-bottom:6px';
   header.innerHTML = '<div></div>' + dates.map((d,i) => {
     const date = new Date(d+'T12:00:00');
-    const isPast = date < new Date();
-    return '<div style="text-align:center;font-size:11px;font-weight:700;color:'+(isPast?'#C0BEDD':'#7B7A8E')+'">'+
+    const isToday = d === new Date().toISOString().split('T')[0];
+    return '<div style="text-align:center;font-size:11px;font-weight:700;color:'+(isToday?'var(--green)':'var(--muted)')+'">'+
       DAYS_SHORT[i]+'<br><span style="font-size:10px">'+date.getDate()+'</span></div>';
   }).join('');
   grid.appendChild(header);
 
-  // Rij per kind
-  kids.forEach(kid => {
+  // Rijen: ouders eerst, dan kinderen
+  [...parents, ...kids].forEach(member => {
     const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;margin-bottom:6px;align-items:center';
-    const kidId = kid.id; // al een UUID via getFamilyMembers()
+    row.style.cssText = 'display:grid;grid-template-columns:90px repeat(7,1fr);gap:4px;margin-bottom:6px;align-items:center';
 
     // Naam cel
     const nameCell = document.createElement('div');
-    nameCell.style.cssText = 'font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px';
-    nameCell.textContent = kid.emoji + ' ' + kid.name;
+    nameCell.style.cssText = 'font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;overflow:hidden';
+    const roleTag = member.role==='parent'
+      ? '<span style="font-size:9px;padding:1px 5px;border-radius:99px;background:var(--green-bg);color:var(--green);font-weight:700;white-space:nowrap">ouder</span>'
+      : '';
+    nameCell.innerHTML = '<span style="font-size:16px">'+member.emoji+'</span>'+
+      '<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+member.name+'</span>'+roleTag;
     row.appendChild(nameCell);
 
-    // Sport cel per dag
+    // Dag cellen
     dates.forEach(d => {
-      const hasSport = sportScheduleData[d]?.[kidId] ?? false;
+      const currentType = sportScheduleData[d]?.[member.id] || null;
+      const info = currentType ? EVENT_TYPES[currentType] : null;
       const cell = document.createElement('div');
-      cell.style.cssText = 'height:36px;border-radius:8px;background:' +
-        (hasSport ? 'var(--green-bg)' : '#F4FAF7') +
-        ';border:1.5px solid ' + (hasSport ? 'var(--green)' : 'var(--border)') +
-        ';display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all 0.15s';
-      cell.textContent = hasSport ? '⚽' : '';
-      const capturedD = d;
-      const capturedId = kidId;
-      cell.onclick = () => toggleSport(capturedD, capturedId);
+      cell.style.cssText = 'height:36px;border-radius:8px;background:'+(info?info.bg:'#F4FAF7')+
+        ';border:1.5px solid '+(info?info.border:'var(--border)')+
+        ';display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all 0.15s'+
+        (info?.eetsNiet?';opacity:0.7':'');
+      cell.textContent = info ? info.emoji : '';
+      cell.title = info ? info.label+' — '+info.tip : 'Klik om status in te stellen';
+      const capD = d;
+      const capId = member.id;
+      cell.onclick = () => cycleSportEvent(capD, capId, cell);
       row.appendChild(cell);
     });
 
     grid.appendChild(row);
   });
 }
+
 
 const EVENT_TYPES = {
   sport:  { emoji:'⚽', label:'Sport',              bg:'var(--green-bg)',    border:'var(--green)',      eetsNiet: false, tip:'Kies snelle/lichte maaltijd' },
