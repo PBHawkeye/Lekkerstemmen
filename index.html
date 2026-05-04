@@ -610,19 +610,10 @@
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div class="meals-wrap">
-    <div class="add-meal-form">
-      <div class="label" style="margin-bottom:8px">Nieuwe maaltijd toevoegen</div>
-      <div class="emoji-picker" id="emoji-picker"></div>
-      <div class="field" style="margin-bottom:8px">
-        <input type="text" id="new-meal-name" placeholder="Naam, bijv. 'Stamppot boerenkool'" maxlength="40" />
-      </div>
-      <div class="field" style="margin-bottom:8px">
-        <textarea id="new-meal-note" placeholder="Notitie, bijv. 'met spekjes en worst'" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:80px;transition:border-color 0.2s"></textarea>
-      </div>
-      <div class="field" style="margin-bottom:10px">
-        <input type="url" id="new-meal-url" placeholder="Recept URL (optioneel), bijv. https://..." />
-      </div>
-      <button class="btn btn-primary" style="margin-bottom:0" onclick="addCustomMeal()">+ Maaltijd toevoegen</button>
+    <div style="padding:0 0 12px">
+      <button onclick="openAddMealSheet()" class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span style="font-size:18px">+</span> Maaltijd toevoegen
+      </button>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
     <div class="label" style="margin-bottom:8px">Onze maaltijdenlijst</div>
@@ -2123,6 +2114,25 @@ function renderCustomMealsList() {
     div2.appendChild(item);
   });
   list.appendChild(div2);
+}
+
+
+function openAddMealSheet() {
+  const sheet = document.getElementById('add-meal-sheet');
+  if (sheet) { sheet.style.display = 'flex'; renderEmojiPicker(); }
+  // Reset velden
+  const nameEl = document.getElementById('new-meal-name');
+  const noteEl = document.getElementById('new-meal-note');
+  const urlEl = document.getElementById('new-meal-url');
+  if (nameEl) nameEl.value = '';
+  if (noteEl) noteEl.value = '';
+  if (urlEl) urlEl.value = '';
+  selectedEmoji = '🍽️';
+}
+
+function closeAddMealSheet() {
+  const sheet = document.getElementById('add-meal-sheet');
+  if (sheet) sheet.style.display = 'none';
 }
 
 async function addCustomMeal() {
@@ -4904,6 +4914,30 @@ boot();
     <input type="hidden" id="edit-meal-emoji-val" />
     <button onclick="saveEditMeal()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--green);color:white;font-weight:800;font-size:16px;cursor:pointer;margin-bottom:8px">Opslaan ✓</button>
     <button onclick="closeEditMeal()" style="width:100%;padding:12px;border:none;border-radius:14px;background:transparent;color:#7B7A8E;font-weight:700;font-size:15px;cursor:pointer">Annuleren</button>
+  </div>
+</div>
+
+<div id="add-meal-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">Maaltijd toevoegen</div>
+      <button onclick="closeAddMealSheet()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div class="label" style="margin-bottom:8px">Emoji</div>
+    <div class="emoji-picker" id="emoji-picker" style="margin-bottom:16px"></div>
+    <div class="label" style="margin-bottom:6px">Naam</div>
+    <div class="field" style="margin-bottom:10px">
+      <input type="text" id="new-meal-name" placeholder="bijv. Stamppot boerenkool" maxlength="40" />
+    </div>
+    <div class="label" style="margin-bottom:6px">Notitie <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
+    <div class="field" style="margin-bottom:10px">
+      <textarea id="new-meal-note" placeholder="bijv. met spekjes en worst" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:72px"></textarea>
+    </div>
+    <div class="label" style="margin-bottom:6px">Recept URL <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
+    <div class="field" style="margin-bottom:20px">
+      <input type="url" id="new-meal-url" placeholder="https://..." />
+    </div>
+    <button class="btn btn-primary" onclick="addCustomMeal()" style="width:100%">Toevoegen ✓</button>
   </div>
 </div>
 </body>
