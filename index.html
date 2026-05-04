@@ -1275,39 +1275,76 @@ function refreshHome() {
   if (streak>1) { document.getElementById('streak-num').textContent=streak; unhide(streakEl); }
   else hide(streakEl);
 
-  // Inzicht — ouder ziet vergelijking met kinderen, kind ziet eigen patroon
+  // Inzicht — menselijke taal, geen cijfers
   if (checkins.length>=3) {
     const tog = checkins.filter(c=>c.ate_together);
     const apart = checkins.filter(c=>!c.ate_together);
     const avgT = tog.length ? tog.reduce((a,b)=>a+b.score,0)/tog.length : 0;
     const avgA = apart.length ? apart.reduce((a,b)=>a+b.score,0)/apart.length : 0;
-    let txt = '';
+    const sports = checkins.filter(c=>c.had_sport);
+    const noSport = checkins.filter(c=>!c.had_sport);
+    const avgSport = sports.length ? sports.reduce((a,b)=>a+b.score,0)/sports.length : 0;
+    const avgNoSport = noSport.length ? noSport.reduce((a,b)=>a+b.score,0)/noSport.length : 0;
+    const allScores = checkins.map(c=>c.score);
+    const avgAll = allScores.reduce((a,b)=>a+b,0)/allScores.length;
+    // Vind hoogst scorende maaltijd
+    const mealMap = {};
+    checkins.forEach(c=>{ if(!mealMap[c.meal_type]) mealMap[c.meal_type]={t:0,n:0}; mealMap[c.meal_type].t+=c.score; mealMap[c.meal_type].n++; });
+    const bestMealId = Object.entries(mealMap).sort((a,b)=>(b[1].t/b[1].n)-(a[1].t/a[1].n))[0]?.[0];
+    const bestMeal = getAllMeals().find(m=>m.id===bestMealId);
+    const worstMealId = Object.entries(mealMap).sort((a,b)=>(a[1].t/a[1].n)-(b[1].t/b[1].n))[0]?.[0];
+    const worstMeal = getAllMeals().find(m=>m.id===worstMealId);
+
+    // Verzamel mogelijke inzichten
+    const insights = [];
+
     if (p.role==='parent') {
-      // Ouder ziet vergelijking met gezin
-      const mySports = checkins.filter(c=>c.had_sport);
-      const myNoSport = checkins.filter(c=>!c.had_sport);
-      const avgSport = mySports.length ? mySports.reduce((a,b)=>a+b.score,0)/mySports.length : 0;
-      const avgNoSport = myNoSport.length ? myNoSport.reduce((a,b)=>a+b.score,0)/myNoSport.length : 0;
-      if (tog.length>0&&apart.length>0) {
-        txt = avgT>avgA
-          ? `${p.name} eet liever samen aan tafel (${avgT.toFixed(1)} vs ${avgA.toFixed(1)}). 🤝`
-          : `${p.name} scoort eten vergelijkbaar samen of apart. 🍽️`;
-      } else if (mySports.length>0&&myNoSport.length>0) {
-        txt = avgNoSport>avgSport
-          ? `Op sportdagen scoort het eten lager (${avgSport.toFixed(1)} vs ${avgNoSport.toFixed(1)}). Sneller eten? ⚽`
-          : `Sportdagen maken eten juist lekkerder! (${avgSport.toFixed(1)} vs ${avgNoSport.toFixed(1)}) 💪`;
-      } else {
-        txt = `${p.name} geeft het eten gemiddeld een ${(checkins.reduce((a,b)=>a+b.score,0)/checkins.length).toFixed(1)} deze week. 📊`;
+      // Samen vs apart
+      if (tog.length>0 && apart.length>0) {
+        const diff = avgT - avgA;
+        if (diff > 0.5) insights.push(`${p.name} vindt eten duidelijk leuker als het gezin samen aan tafel zit. 🤝`);
+        else if (diff < -0.5) insights.push(`${p.name} vindt het niet erg om ook wel eens apart te eten. 🍽️`);
+        else insights.push(`Of het gezin nu samen of apart eet maakt voor ${p.name} niet zo veel uit. 🍽️`);
+      }
+      // Sport vs geen sport
+      if (sports.length>0 && noSport.length>0) {
+        const diff = avgNoSport - avgSport;
+        if (diff > 0.5) insights.push(`Op sportdagen is ${p.name} minder enthousiast over het eten — misschien te snel of te laat? ⚽`);
+        else if (diff < -0.5) insights.push(`${p.name} eet juist lekkerder op sportdagen. Honger maakt het eten beter! 💪`);
+      }
+      // Favoriete maaltijd
+      if (bestMeal && mealMap[bestMealId]?.n >= 2) {
+        insights.push(`${p.name} is altijd blij als er ${bestMeal.emoji} ${bestMeal.label} op tafel staat. ${p.name === 'Paul' || p.name === 'Dorres' ? 'Zet dat vaker op het menu!' : ''}`);
+      }
+      // Minst gewaardeerde
+      if (worstMeal && bestMealId !== worstMealId && mealMap[worstMealId]?.n >= 2) {
+        insights.push(`${worstMeal.emoji} ${worstMeal.label} valt minder in de smaak bij ${p.name}. Misschien een tijdje overslaan?`);
       }
     } else {
-      if (tog.length>0&&apart.length>0) {
-        txt = avgT>avgA
-          ? `${p.name} scoort samen eten ${(avgT-avgA).toFixed(1)} punt hoger dan apart. 🤝`
-          : `${p.name} scoort eten vergelijkbaar, samen of apart. 🍽️`;
-      } else {
-        txt = `Blijf inchecken voor persoonlijke inzichten! 📊`;
+      // Kind inzichten
+      if (tog.length>0 && apart.length>0) {
+        const diff = avgT - avgA;
+        if (diff > 0.5) insights.push(`Jij vindt eten lekkerder als jullie samen aan tafel zitten. 🤝`);
+        else insights.push(`Voor jou maakt het niet veel uit of je samen of apart eet. 🍽️`);
+      }
+      if (sports.length>0 && noSport.length>0 && avgSport < avgNoSport - 0.4) {
+        insights.push(`Na sport vind je eten minder lekker. Misschien te moe, of te snel klaar? ⚽`);
+      }
+      if (bestMeal && mealMap[bestMealId]?.n >= 2) {
+        insights.push(`${bestMeal.emoji} ${bestMeal.label} is echt jouw favoriet deze week!`);
+      }
+      if (checkins.length >= 5 && avgAll >= 2.5) {
+        insights.push(`Je hebt deze week bijna alles lekker gevonden. Goed week! 😋`);
+      } else if (checkins.length >= 5 && avgAll < 1.8) {
+        insights.push(`Het eten viel je deze week wat tegen. Hopelijk wordt het volgende week beter! 💪`);
+      }
+      if (insights.length === 0) {
+        insights.push(`Blijf inchecken — dan zie je straks wat jij het liefst eet! 📊`);
       }
     }
+
+    // Toon het meest relevante inzicht (eerste)
+    const txt = insights[0] || '';
     document.getElementById('insight-text').textContent = txt;
     unhide(document.getElementById('insight-block'));
   } else hide(document.getElementById('insight-block'));
@@ -1528,24 +1565,24 @@ function renderInlineVote() {
   const grid = document.getElementById('vote-inline-grid');
   if (!grid) return;
   grid.innerHTML = '';
-  getAllMeals().slice(0,6).forEach(m => {
+  const meals = availableMeals.length > 0 ? availableMeals.slice(0,6) : getAllMeals().slice(0,6);
+  meals.forEach(m => {
     const btn = document.createElement('button');
-    btn.className = 'vote-inline-btn'+(inlineVoteChoices.includes(m.id)?' selected':'');
-    btn.innerHTML = '<span class="vi-emoji">'+m.emoji+'</span>'+m.label;
+    const sel = inlineVoteChoices.includes(m.id);
+    btn.style.cssText = 'padding:10px 8px;border:2px solid '+(sel?'#FFB830':'#ECEAF8')+';border-radius:16px;background:'+(sel?'#FFF4D6':'white')+';cursor:pointer;font-family:Nunito,sans-serif;font-weight:700;font-size:13px;color:'+(sel?'#C47F00':'#1A1A2E')+';text-align:center;transition:all 0.2s';
+    btn.innerHTML = '<span style="font-size:22px;display:block;margin-bottom:3px">'+m.emoji+'</span>'+m.label;
     btn.onclick = () => {
-      if (inlineVoteChoices.includes(m.id)) {
-        inlineVoteChoices = inlineVoteChoices.filter(x=>x!==m.id);
-      } else if (inlineVoteChoices.length < 2) {
-        inlineVoteChoices.push(m.id);
-      }
+      if (inlineVoteChoices.includes(m.id)) inlineVoteChoices = inlineVoteChoices.filter(x=>x!==m.id);
+      else if (inlineVoteChoices.length < 2) inlineVoteChoices.push(m.id);
       renderInlineVote();
     };
     grid.appendChild(btn);
   });
   const info = document.getElementById('vote-inline-info');
+  if (!info) return;
   if (inlineVoteChoices.length===0) info.textContent='Kies tot 2 maaltijden voor volgende week';
   else if (inlineVoteChoices.length===1) info.textContent='Nog 1 keuze mogelijk';
-  else info.textContent='✓ '+inlineVoteChoices.length+' maaltijden gekozen';
+  else info.textContent='✓ '+inlineVoteChoices.length+' maaltijden gekozen voor volgende week';
 }
 
 function selectDrink(d) {
@@ -1593,31 +1630,73 @@ async function doCheckin() {
 // ── VOTE ───────────────────────────────────────────────────────
 function renderVoteOptions() {
   const container = document.getElementById('vote-options');
+  if (!container) return;
   container.innerHTML = '';
   const meals = availableMeals.length > 0 ? availableMeals : getAllMeals().slice(0,8);
+
   meals.forEach(opt => {
+    const isSelected = voteChoices.includes(opt.id);
     const div = document.createElement('div');
-    div.className = 'vote-item' + (voteChoices.includes(opt.id) ? ' selected' : '');
+    // Inline styles zodat het altijd werkt ongeacht CSS
+    div.style.cssText = 'display:flex;align-items:center;gap:14px;padding:14px 16px;background:'+(isSelected?'#FFF4D6':'white')+';border:2px solid '+(isSelected?'#FFB830':'#ECEAF8')+';border-radius:16px;margin-bottom:10px;cursor:pointer;transition:all 0.2s';
     div.innerHTML =
-      '<span class="vote-item-emoji">'+opt.emoji+'</span>'+
-      '<span class="vote-item-name">'+opt.label+'</span>'+
-      '<div class="vote-item-check">'+(voteChoices.includes(opt.id)?'✓':'')+'</div>';
+      '<span style="font-size:28px">'+opt.emoji+'</span>'+
+      '<span style="font-weight:800;font-size:15px;flex:1">'+opt.label+'</span>'+
+      '<div style="width:24px;height:24px;border-radius:50%;border:2px solid '+(isSelected?'#FFB830':'#ECEAF8')+';background:'+(isSelected?'#FFB830':'transparent')+';display:flex;align-items:center;justify-content:center;font-size:12px;color:white">'+(isSelected?'✓':'')+'</div>';
     div.onclick = () => toggleVote(opt.id);
     container.appendChild(div);
   });
+
+  updateVoteStatus();
+}
+
+function updateVoteStatus() {
   const rem = 2 - voteChoices.length;
-  document.getElementById('vote-remaining').textContent = rem;
-  document.getElementById('vote-status').innerHTML =
-    rem > 0
-      ? 'Kies nog <span style="color:var(--amber);font-weight:800">'+rem+'</span> maaltijd'+(rem===1?'':'en')
-      : '✓ Keuze compleet — voeg optioneel een suggestie toe';
-  document.getElementById('vote-btn').disabled = voteChoices.length !== 2;
+  const statusEl = document.getElementById('vote-status');
+  const btnEl = document.getElementById('vote-btn');
+  const remEl = document.getElementById('vote-remaining');
+
+  if (remEl) remEl.textContent = rem;
+  if (statusEl) {
+    statusEl.innerHTML = rem > 0
+      ? 'Kies nog <span style="color:#FFB830;font-weight:800">'+rem+'</span> maaltijd'+(rem===1?'':'en')
+      : '<span style="color:#22C9A0;font-weight:700">✓ Keuze compleet!</span>';
+  }
+  if (btnEl) {
+    btnEl.disabled = voteChoices.length !== 2;
+    btnEl.style.opacity = voteChoices.length === 2 ? '1' : '0.5';
+    btnEl.style.cursor = voteChoices.length === 2 ? 'pointer' : 'not-allowed';
+  }
 }
 
 function toggleVote(id) {
-  if (voteChoices.includes(id)) voteChoices=voteChoices.filter(c=>c!==id);
-  else if (voteChoices.length<2) voteChoices.push(id);
-  renderVoteOptions();
+  if (voteChoices.includes(id)) {
+    voteChoices = voteChoices.filter(c=>c!==id);
+  } else if (voteChoices.length < 2) {
+    voteChoices.push(id);
+  }
+  // Update alleen de visuele staat, herbouw niet de hele lijst
+  const container = document.getElementById('vote-options');
+  if (container) {
+    Array.from(container.children).forEach(div => {
+      const nameEl = div.querySelector('span:nth-child(2)');
+      if (!nameEl) return;
+      // Vind de meal op basis van label
+      const meals = availableMeals.length > 0 ? availableMeals : getAllMeals().slice(0,8);
+      const meal = meals.find(m => m.label === nameEl.textContent);
+      if (!meal) return;
+      const isSelected = voteChoices.includes(meal.id);
+      div.style.background = isSelected ? '#FFF4D6' : 'white';
+      div.style.borderColor = isSelected ? '#FFB830' : '#ECEAF8';
+      const check = div.querySelector('div');
+      if (check) {
+        check.style.background = isSelected ? '#FFB830' : 'transparent';
+        check.style.borderColor = isSelected ? '#FFB830' : '#ECEAF8';
+        check.textContent = isSelected ? '✓' : '';
+      }
+    });
+  }
+  updateVoteStatus();
 }
 
 async function doVote() {
@@ -1730,17 +1809,33 @@ async function renderStats() {
   // AI tekst
   const aiEl = document.getElementById('stats-ai-text');
   if (cis.length>=5) {
-    const togAvg = togCis.length ? togCis.reduce((a,b)=>a+b.score,0)/togCis.length : 0;
-    const apaAvg = cis.filter(c=>!c.ate_together).length ?
-      cis.filter(c=>!c.ate_together).reduce((a,b)=>a+b.score,0)/cis.filter(c=>!c.ate_together).length : 0;
-    if (togCis.length>0 && cis.filter(c=>!c.ate_together).length>0) {
-      aiEl.textContent = togAvg>apaAvg
-        ? 'Jullie gezin scoort samen eten gemiddeld '+togAvg.toFixed(1)+' vs '+apaAvg.toFixed(1)+' apart — samen aan tafel maakt het eten lekkerder.'
-        : 'Samen of apart eten heeft weinig invloed op de scores in jullie gezin.';
-    } else if (sortedMeals.length>0) {
-      const best = getAllMeals().find(x=>x.id===sortedMeals[0][0]);
-      aiEl.textContent = best ? best.emoji+' '+best.label+' is jullie meest gewaardeerde maaltijd met een gemiddelde van '+(sortedMeals[0][1].total/sortedMeals[0][1].count).toFixed(1)+' uit 3.' : 'Meer data verzamelen voor AI inzichten.';
+    const togCisAll = cis.filter(c=>c.ate_together);
+    const apaAll = cis.filter(c=>!c.ate_together);
+    const togAvg = togCisAll.length ? togCisAll.reduce((a,b)=>a+b.score,0)/togCisAll.length : 0;
+    const apaAvg = apaAll.length ? apaAll.reduce((a,b)=>a+b.score,0)/apaAll.length : 0;
+    const statsInsights = [];
+
+    if (togCisAll.length>0 && apaAll.length>0) {
+      if (togAvg > apaAvg + 0.4) {
+        statsInsights.push('Jullie kinderen zijn duidelijk blij als het gezin samen aan tafel zit — dat maakt het eten aantoonbaar lekkerder. 🤝');
+      } else {
+        statsInsights.push('Of het gezin samen of apart eet maakt voor de kinderen niet zo veel uit. 🍽️');
+      }
     }
+    if (sortedMeals.length>0) {
+      const best = getAllMeals().find(x=>x.id===sortedMeals[0][0]);
+      const worst = sortedMeals.length>1 ? getAllMeals().find(x=>x.id===sortedMeals[sortedMeals.length-1][0]) : null;
+      if (best) statsInsights.push(best.emoji+' '+best.label+' is de grote favoriet in jullie gezin deze periode.');
+      if (worst && worst.id !== best?.id) statsInsights.push(worst.emoji+' '+worst.label+' valt minder in de smaak — misschien een tijdje overslaan of anders bereiden?');
+    }
+    const sportCis = cis.filter(c=>c.had_sport);
+    const noSportCis = cis.filter(c=>!c.had_sport);
+    if (sportCis.length>2 && noSportCis.length>2) {
+      const sAvg = sportCis.reduce((a,b)=>a+b.score,0)/sportCis.length;
+      const nsAvg = noSportCis.reduce((a,b)=>a+b.score,0)/noSportCis.length;
+      if (nsAvg > sAvg + 0.4) statsInsights.push('Op sportdagen wordt het eten minder gewaardeerd — snelle of late maaltijden helpen niet. ⚽');
+    }
+    aiEl.textContent = statsInsights[0] || 'Verzamel meer data voor een persoonlijke analyse van jullie gezin.';
   }
 }
 
