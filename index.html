@@ -782,13 +782,17 @@ function getMealDisplay(id) {
 
 // ── TEST BAR ───────────────────────────────────────────────────
 function initTestBar() {
-  unhide(document.getElementById('test-bar'));
+  const bar = document.getElementById('test-bar');
+  if (bar) bar.style.display = '';
   renderTestPersons();
   updateTestDayDisplay();
-  // Highlight huidig scenario
-  const map = {[-8]:'sc-stemdag',[-7]:'sc-menu',[-6]:'sc-ma',[-5]:'sc-di',[-4]:'sc-wo',[-3]:'sc-do',[-2]:'sc-vr',[0]:'sc-today'};
+  updateScenarioHighlight();
+}
+
+function updateScenarioHighlight() {
   document.querySelectorAll('.test-scenario').forEach(b=>b.classList.remove('active'));
-  const el = document.getElementById(map[testDayOffset]);
+  const map = {'-8':'sc-stemdag','-7':'sc-menu','-6':'sc-ma','-5':'sc-di','-4':'sc-wo','-3':'sc-do','-2':'sc-vr','0':'sc-today'};
+  const el = document.getElementById(map[String(testDayOffset)]);
   if (el) el.classList.add('active');
 }
 
@@ -831,11 +835,7 @@ function testStepDay(delta) {
 function testScenario(offset) {
   testDayOffset = offset;
   updateTestDayDisplay();
-  // Highlight actief scenario
-  document.querySelectorAll('.test-scenario').forEach(b=>b.classList.remove('active'));
-  const map = {'-8':'sc-stemdag','-7':'sc-menu','-6':'sc-ma','-5':'sc-di','-4':'sc-wo','-3':'sc-do','-2':'sc-vr','0':'sc-today'};
-  const el = document.getElementById(map[String(offset)]);
-  if (el) el.classList.add('active');
+  updateScenarioHighlight();
   loadData().then(()=>{ refreshHome(); });
 }
 
@@ -847,7 +847,8 @@ async function switchTestPerson(id) {
   testPersonId = id;
   const p = TEST_PERSONS.find(x=>x.id===id);
   currentProfile = { id: testUuid(id), name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
-  renderTestPersons();
+  renderTestPersons(); // highlight actieve persoon
+  show('loading'); // toon laadscherm tijdens ophalen
   await loadData();
   refreshHome();
   show('home');
@@ -864,81 +865,161 @@ async function testSetDay(offset) {
 function testStep(delta) { testStepDay(delta); }
 
 async function simulateWeek() {
-  const weekData = [
-    {offset:-6,meal:'pasta',   together:true,  sport:false},
-    {offset:-5,meal:'soep',    together:false, sport:true },
-    {offset:-4,meal:'rijst',   together:true,  sport:false},
-    {offset:-3,meal:'pizza',   together:true,  sport:false},
-    {offset:-2,meal:'nasi',    together:false, sport:true },
-    {offset:-1,meal:'brood',   together:true,  sport:false},
-  ];
+  const btn = document.querySelector('[onclick="simulateWeek()"]');
+  if (btn) { btn.textContent = '⏳ Bezig...'; btn.disabled = true; }
+
+  const familyId = TEST_FAMILY_ID;
+  const kids = TEST_PERSONS.filter(p=>p.role==='child');
   const drinks = ['water','soda','milk','juice'];
+
+  // ── Vorige week: maaltijden + check-ins ──────────────────
+  const weekMeals = [
+    {offset:-6, meal:'pasta',       together:true,  sport:false, note:'met tomatensaus'},
+    {offset:-5, meal:'soep',        together:false, sport:true,  note:'erwtensoep'},
+    {offset:-4, meal:'rijst',       together:true,  sport:false, note:'met kip'},
+    {offset:-3, meal:'pizza',       together:true,  sport:false, note:'zelfgemaakt'},
+    {offset:-2, meal:'nasi',        together:false, sport:true,  note:''},
+    {offset:-1, meal:'brood',       together:true,  sport:false, note:'uitgebreid'},
+  ];
+
+  // Kid scores: realistisch en gevarieerd
   const kidScores = {
     tjeerd: [3,2,3,3,2,3],
     faas:   [2,1,3,3,1,2],
     biek:   [3,3,2,3,3,3],
   };
-  for (const w of weekData) {
+  const kidComments = {
+    tjeerd: ['lekker!','te zout','super!',null,null,'lekker met kaas'],
+    faas:   [null,'vies',null,null,'had liever pizza','ok'],
+    biek:   ['yum!',null,null,'meer!',null,null],
+  };
+  const kidDrinks = {
+    tjeerd: ['water','milk','water','soda','water','milk'],
+    faas:   ['soda','soda','juice','soda','soda','water'],
+    biek:   ['milk','water','milk','water','juice','milk'],
+  };
+
+  for (let i=0; i<weekMeals.length; i++) {
+    const w = weekMeals[i];
     const dateStr = testDateStr(w.offset);
-    const { data: meal } = await sb.from('meals').upsert({
-      family_id: TEST_FAMILY_ID,
+    const {data:meal, error:mealErr} = await sb.from('meals').upsert({
+      family_id: familyId,
       eaten_at: dateStr,
       meal_type: w.meal,
       ate_together: w.together,
       had_sport: w.sport,
-    }, {onConflict:'family_id,eaten_at'}).select().single();
-    if (!meal) continue;
-    const kids = ['tjeerd','faas','biek'];
-    for (const kid of kids) {
-      const idx = weekData.indexOf(w);
+    },{onConflict:'family_id,eaten_at'}).select().single();
+
+    if (!meal) { console.error('Meal error:', mealErr); continue; }
+
+    // Check-ins + ouder check-in
+    const allPersons = TEST_PERSONS;
+    for (const person of allPersons) {
+      let score, drink, comment;
+      if (person.role === 'child') {
+        score = kidScores[person.id]?.[i] ?? (Math.floor(Math.random()*3)+1);
+        drink = kidDrinks[person.id]?.[i] ?? drinks[Math.floor(Math.random()*drinks.length)];
+        comment = kidComments[person.id]?.[i] ?? null;
+      } else {
+        // Ouders: gemiddeld positief
+        score = Math.random() > 0.3 ? 3 : 2;
+        drink = person.id === 'paul' ? 'water' : 'milk';
+        comment = null;
+      }
       await sb.from('checkins').upsert({
-        profile_id: testUuid(kid),
+        profile_id: testUuid(person.id),
         meal_id: meal.id,
-        score: kidScores[kid][idx],
-        drink: drinks[Math.floor(Math.random()*drinks.length)],
-      }, {onConflict:'profile_id,meal_id'});
+        score, drink, comment,
+      },{onConflict:'profile_id,meal_id'});
     }
   }
-  // Maak ook een voorbeeldmenu voor volgende week
+
+  // ── Huidige week: weekmenu ────────────────────────────────
   const nextMon = testMondayOfWeek();
-  const sampleMenu = [
-    {offset:0,meal_id:'pasta',  name:'Pasta bolognese',    emoji:'🍝'},
-    {offset:1,meal_id:'soep',   name:'Tomatensoep',         emoji:'🍲'},
-    {offset:2,meal_id:'rijst',  name:'Nasi goreng',         emoji:'🍛'},
-    {offset:3,meal_id:'pizza',  name:'Zelfgemaakte pizza',  emoji:'🍕'},
-    {offset:4,meal_id:'vlees',  name:'Gehaktballen',        emoji:'🥩'},
-    {offset:5,meal_id:'brood',  name:'Broodmaaltijd',       emoji:'🥪'},
-    {offset:6,meal_id:'anders', name:'Kip prutje',          emoji:'🍗'},
+  const menuItems = [
+    {offset:0, meal_id:'pasta',  name:'Pasta carbonara',   emoji:'🍝', cook:'paul',   corvee:['tjeerd']},
+    {offset:1, meal_id:'soep',   name:'Tomatensoep',        emoji:'🍲', cook:'dorres', corvee:['faas']},
+    {offset:2, meal_id:'rijst',  name:'Nasi goreng',        emoji:'🍛', cook:'dorres', corvee:['biek']},
+    {offset:3, meal_id:'pizza',  name:'Zelfgemaakte pizza', emoji:'🍕', cook:'paul',   corvee:['tjeerd','faas']},
+    {offset:4, meal_id:'vlees',  name:'Gehaktballen',       emoji:'🥩', cook:'dorres', corvee:['biek']},
+    {offset:5, meal_id:'brood',  name:'Broodmaaltijd',      emoji:'🥪', cook:'afhaal', corvee:[]},
+    {offset:6, meal_id:'anders', name:'Kip prutje',         emoji:'🍗', cook:'paul',   corvee:['tjeerd','biek']},
   ];
+
   const baseDate = new Date();
   baseDate.setDate(baseDate.getDate()+testDayOffset);
   const monDate = new Date(baseDate);
   const day = monDate.getDay();
   monDate.setDate(monDate.getDate()-day+(day===0?-6:1));
-  for (const s of sampleMenu) {
-    const d = new Date(monDate); d.setDate(monDate.getDate()+s.offset);
+
+  for (const m of menuItems) {
+    const d = new Date(monDate);
+    d.setDate(monDate.getDate()+m.offset);
+    const dateStr = d.toISOString().split('T')[0];
+
+    const cookMember = TEST_PERSONS.find(p=>p.id===m.cook);
+    const cookName = m.cook==='afhaal' ? 'Afhaal' : m.cook==='uiteten' ? 'Uit eten' : (cookMember?.name||m.cook);
+    const corveeNames = m.corvee.map(id=>TEST_PERSONS.find(p=>p.id===id)?.name).filter(Boolean).join(', ');
+    const corveeIds = m.corvee.map(id=>testUuid(id));
+
     await sb.from('weekly_menu').upsert({
-      family_id: TEST_FAMILY_ID,
+      family_id: familyId,
       week_of: nextMon,
-      day_date: d.toISOString().split('T')[0],
-      meal_id: s.meal_id,
-      meal_name: s.name,
-      meal_emoji: s.emoji,
+      day_date: dateStr,
+      meal_id: m.meal_id,
+      meal_name: m.name,
+      meal_emoji: m.emoji,
+      cook_id: m.cook === 'afhaal' ? 'afhaal' : testUuid(m.cook),
+      cook_name: cookName,
+      corvee_ids: corveeIds.length ? JSON.stringify(corveeIds) : null,
+      corvee_names: corveeNames || null,
       published: true,
     },{onConflict:'family_id,day_date'});
   }
-  alert('✅ Week gesimuleerd voor familie Brentjens!\n\nSchakel nu tussen personen en dagen. Ouders kunnen menu aanpassen, kinderen zien het weekmenu.');
+
+  // ── Kieslijst voor stemmen ────────────────────────────────
+  const availForVote = ['pasta','rijst','pizza','nasi','soep','vlees','brood','anders'];
+  await sb.from('vote_available_meals')
+    .delete().eq('family_id',familyId).eq('week_of',nextMon);
+  await sb.from('vote_available_meals').insert(
+    availForVote.map((id,i)=>({family_id:familyId, week_of:nextMon, meal_id:id, sort_order:i}))
+  );
+
+  // ── Stemmen van kinderen ──────────────────────────────────
+  const voteData = {
+    tjeerd: {c1:'pasta', c2:'pizza',  suggestion:'ik wil ook wel eens sushi!'},
+    faas:   {c1:'nasi',  c2:'pasta',  suggestion:null},
+    biek:   {c1:'pizza', c2:'rijst',  suggestion:'hamburgers zelf maken?'},
+  };
+  for (const [personId, vote] of Object.entries(voteData)) {
+    const {error} = await sb.from('votes').upsert({
+      profile_id: testUuid(personId),
+      family_id: familyId,
+      week_of: nextMon,
+      meal_choice_1: vote.c1,
+      meal_choice_2: vote.c2,
+      suggestion: vote.suggestion,
+    },{onConflict:'profile_id,week_of'});
+    if (error) console.error('Vote error:', personId, error);
+  }
+
+  // ── Gezinsinstellingen ────────────────────────────────────
+  await sb.from('family_settings').upsert({
+    family_id: familyId,
+    vote_day: 6,
+  },{onConflict:'family_id'});
+
   await loadData();
   refreshHome();
+  if (btn) { btn.textContent = '✓ Klaar!'; setTimeout(()=>{ btn.textContent='⚡ Simuleer'; btn.disabled=false; }, 2000); }
+  alert('✅ Complete testweek aangemaakt!\n\n' +
+    '📊 Vorige week: 6 maaltijden + check-ins voor heel gezin\n' +
+    '📅 Deze week: volledig menu met kok + corvee\n' +
+    '🗳️ Stemmen: Tjeerd (pasta+pizza), Faas (nasi+pasta), Biek (pizza+rijst)\n' +
+    '💬 Suggesties: Tjeerd wil sushi, Biek wil hamburgers\n\n' +
+    'Schakel tussen personen om alle perspectieven te zien.');
 }
 
-// ── AUTH ───────────────────────────────────────────────────────
-function authTab(t) {
-  currentAuthTab = t;
-  document.getElementById('tab-login').classList.toggle('active', t==='login');
-  document.getElementById('tab-signup').classList.toggle('active', t==='signup');
-  document.getElementById('auth-btn').textContent = t==='login' ? 'Inloggen →' : 'Account aanmaken →';
-}
 
 async function doAuth() {
   const email = document.getElementById('auth-email').value;
@@ -1004,65 +1085,55 @@ async function loadData() {
   if (!currentProfile) return;
   const familyId = currentProfile.family_id;
   const profileId = currentProfile.id;
-
-  // Maaltijd van vandaag
-  const {data:meal} = await sb.from('meals')
-    .select('*').eq('family_id',familyId).eq('eaten_at',todayStr()).maybeSingle();
-  todayMeal = meal;
-
-  // Check-ins: probeer eerst via view, dan direct via joins
+  const weekStart = testMondayOfWeek();
   const since = new Date();
-  since.setDate(since.getDate()-14);
+  since.setDate(since.getDate()-21);
   const sinceStr = since.toISOString().split('T')[0];
 
-  let {data:cis, error:ciErr} = await sb.from('checkins_with_context')
-    .select('*').eq('profile_id', profileId)
-    .gte('eaten_at', sinceStr)
-    .order('eaten_at',{ascending:false});
+  // Alles parallel ophalen
+  const [
+    mealRes,
+    cisRes,
+    cmRes,
+    wmRes,
+    settingsRes,
+    availRes,
+  ] = await Promise.all([
+    sb.from('meals').select('*').eq('family_id',familyId).eq('eaten_at',todayStr()).maybeSingle(),
+    sb.from('checkins_with_context').select('*').eq('profile_id',profileId).gte('eaten_at',sinceStr).order('eaten_at',{ascending:false}).limit(60),
+    sb.from('custom_meals').select('*').eq('family_id',familyId).order('created_at',{ascending:true}),
+    sb.from('weekly_menu').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('family_settings').select('*').eq('family_id',familyId).maybeSingle(),
+    sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart).order('sort_order'),
+  ]);
 
-  // Als view leeg is (bijv testmodus), probeer direct op checkins tabel
-  if ((!cis || cis.length === 0) && meal) {
-    const {data:directCis} = await sb.from('checkins')
-      .select('*, meals(eaten_at, meal_type, ate_together, had_sport)')
-      .eq('profile_id', profileId)
-      .order('checked_in_at',{ascending:false})
-      .limit(30);
-    if (directCis && directCis.length > 0) {
-      cis = directCis.map(c => ({
+  todayMeal = mealRes.data;
+  customMeals = cmRes.data||[];
+  weeklyMenu = wmRes.data||[];
+  familySettings = settingsRes.data || {vote_day:6, family_id:familyId};
+
+  // Check-ins: als view leeg, direct ophalen
+  let cis = cisRes.data||[];
+  if (cis.length === 0) {
+    const {data:direct} = await sb.from('checkins')
+      .select('id,profile_id,meal_id,score,drink,comment,checked_in_at,meals(eaten_at,meal_type,ate_together,had_sport)')
+      .eq('profile_id',profileId).order('checked_in_at',{ascending:false}).limit(60);
+    if (direct?.length) {
+      cis = direct.map(c=>({
         ...c,
-        eaten_at: c.meals?.eaten_at,
-        meal_type: c.meals?.meal_type,
-        ate_together: c.meals?.ate_together,
-        had_sport: c.meals?.had_sport,
-        child_name: currentProfile.name,
-        family_id: familyId,
+        eaten_at:c.meals?.eaten_at, meal_type:c.meals?.meal_type,
+        ate_together:c.meals?.ate_together, had_sport:c.meals?.had_sport,
+        child_name:currentProfile.name, family_id:familyId,
       }));
     }
   }
-  checkins = cis||[];
+  checkins = cis;
 
-  // Custom meals
-  const {data:cm} = await sb.from('custom_meals')
-    .select('*').eq('family_id',familyId).order('created_at',{ascending:true});
-  customMeals = cm||[];
-
-  // Weekmenu
-  const weekStart = testMondayOfWeek();
-  const {data:wm} = await sb.from('weekly_menu')
-    .select('*').eq('family_id',familyId).eq('week_of',weekStart);
-  weeklyMenu = wm||[];
-
-  // Gezinsinstellingen
-  const {data:settings} = await sb.from('family_settings')
-    .select('*').eq('family_id',familyId).maybeSingle();
-  familySettings = settings || {vote_day: 6, family_id: familyId}; // 6=za default
-
-  // Beschikbare maaltijden voor stemmen
-  const {data:avail} = await sb.from('vote_available_meals')
-    .select('*').eq('family_id',familyId).eq('week_of',weekStart);
-  availableMeals = avail && avail.length > 0
-    ? avail.map(a => getAllMeals().find(m=>m.id===a.meal_id)||{id:a.meal_id,emoji:'🍽️',label:a.meal_id})
-    : getAllMeals().slice(0,8); // fallback: eerste 8 maaltijden
+  // Beschikbare stemmaaltijden
+  const avail = availRes.data||[];
+  availableMeals = avail.length > 0
+    ? avail.map(a=>getAllMeals().find(m=>m.id===a.meal_id)||{id:a.meal_id,emoji:'🍽️',label:a.meal_id})
+    : getAllMeals().slice(0,8);
 }
 
 // ── HOME ───────────────────────────────────────────────────────
