@@ -841,8 +841,10 @@ function testMondayOfWeek() {
 }
 
 function initials(name) { return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
-function getAllMeals() {
-  return [...DEFAULT_MEALS, ...customMeals.map(m=>({id:m.id,emoji:m.emoji,label:m.name,note:m.note}))];
+function getAllMeals(includeDisabled=false) {
+  const disabled = getDisabledMeals();
+  const defaults = includeDisabled ? DEFAULT_MEALS : DEFAULT_MEALS.filter(m=>!disabled.includes(m.id));
+  return [...defaults, ...customMeals.map(m=>({id:m.id,emoji:m.emoji,label:m.name,note:m.note,recipe_url:m.recipe_url}))];
 }
 function getMealDisplay(id) {
   const m = getAllMeals().find(x=>x.id===id);
@@ -1569,7 +1571,8 @@ function renderCustomMealsList() {
           '</div>'+
           (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
         '</div>'+
-        (m.recipe_url?'<a href="'+m.recipe_url+'" target="_blank" style="font-size:18px;text-decoration:none" title="Recept bekijken">📖</a>':'') +
+        (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">📖</button>':'') +
+        '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:#EEF0FF;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">🗑️</button>'+
         '</div>'+
         (lastComment?
@@ -1584,16 +1587,58 @@ function renderCustomMealsList() {
   const div2 = document.createElement('div');
   div2.style.cssText='margin-top:16px';
   div2.innerHTML='<div class="label" style="margin-bottom:8px;opacity:0.6">Standaard maaltijden</div>';
+  const disabledMeals = getDisabledMeals();
+
   DEFAULT_MEALS.forEach(m => {
+    const disabled = disabledMeals.includes(m.id);
+    const usedInMenu = checkins.some(c=>c.meal_type===m.id);
     const item = document.createElement('div');
     item.className='custom-meal-item';
-    item.style.opacity='0.6';
+    item.style.opacity = disabled ? '0.35' : '0.75';
+    if (disabled) item.style.background = '#F9F9F9';
+
     const favOf2 = Object.values(favs).filter(f=>f.mealId===m.id).map(f=>f.personName);
+
     item.innerHTML=
-      '<span class="custom-meal-emoji">'+m.emoji+'</span>'+
-      '<div style="flex:1"><div class="custom-meal-name">'+m.label+'</div></div>'+
-      (favOf2.length>0?'<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700">❤️ '+favOf2.join(' & ')+'</span>':
-      '<span style="font-size:11px;color:var(--muted)">standaard</span>');
+      '<span class="custom-meal-emoji" style="'+(disabled?'filter:grayscale(1)':'')+'">'+m.emoji+'</span>'+
+      '<div style="flex:1">'+
+        '<div style="display:flex;align-items:center;gap:6px">'+
+          '<span class="custom-meal-name" style="'+(disabled?'text-decoration:line-through;color:#aaa':'')+'">'+m.label+'</span>'+
+          (disabled?'<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#F0F0F0;color:#aaa;font-weight:700">uitgeschakeld</span>':'') +
+          (favOf2.length>0&&!disabled?'<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700">❤️ '+favOf2.join(' & ')+'</span>':'') +
+        '</div>'+
+        '<div style="font-size:11px;color:#aaa">'+(usedInMenu?'al gebruikt':'nooit gebruikt')+'</div>'+
+      '</div>';
+
+
+
+    const editBtn = document.createElement("button");
+    editBtn.style.cssText = "font-size:14px;background:#EEF0FF;border:none;border-radius:8px;padding:4px 7px;cursor:pointer";
+    editBtn.textContent = "✏️";
+    editBtn.dataset.mealId = "";
+    editBtn.dataset.mealLabel = m.label;
+    editBtn.dataset.mealEmoji = m.emoji;
+    editBtn.onclick = () => openEditFromBtn(editBtn);
+    item.innerHTML += ""; // flush
+    item.appendChild(editBtn);
+
+    if (disabled) {
+      const enableBtn = document.createElement("button");
+      enableBtn.style.cssText = "font-size:13px;background:#E0FAF4;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
+      item.appendChild(enableBtn);
+    } else {
+      const disableBtn = document.createElement("button");
+      disableBtn.style.cssText = "font-size:13px;background:#FFF4D6;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
+      disableBtn.onclick = () => disableDefaultMeal(m.id);
+      item.appendChild(disableBtn);
+    }
+
+    if (!usedInMenu) {
+      const delBtn = document.createElement("button");
+      delBtn.style.cssText = "font-size:13px;background:#FFEEEE;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
+      delBtn.onclick = () => { if(confirm(m.label+" definitief verwijderen?")) disableDefaultMeal(m.id); };
+    }
+
     div2.appendChild(item);
   });
   list.appendChild(div2);
@@ -2258,6 +2303,129 @@ function showAIProposal() {
   requestAIMenuProposal(testMondayOfWeek(), container);
 }
 
+
+
+// ── GERECHT BEWERKEN ───────────────────────────────────────────
+let editSelectedEmoji = '🍽️';
+
+function openEditMeal(meal) {
+  document.getElementById('edit-meal-id').value = meal.id || '';
+  document.getElementById('edit-meal-name').value = meal.name || meal.label || '';
+  document.getElementById('edit-meal-note').value = meal.note || '';
+  document.getElementById('edit-meal-url').value = meal.recipe_url || '';
+  editSelectedEmoji = meal.emoji || '🍽️';
+  document.getElementById('edit-meal-emoji-val').value = editSelectedEmoji;
+
+  // Emoji picker
+  const picker = document.getElementById('edit-emoji-picker');
+  picker.innerHTML = '';
+  EMOJI_OPTIONS.forEach(e => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'font-size:22px;padding:5px;border-radius:8px;border:2px solid '+(e===editSelectedEmoji?'#7C6FF7':'transparent')+';background:'+(e===editSelectedEmoji?'#EEF0FF':'white')+';cursor:pointer';
+    btn.textContent = e;
+    btn.onclick = () => {
+      editSelectedEmoji = e;
+      document.getElementById('edit-meal-emoji-val').value = e;
+      picker.querySelectorAll('button').forEach(b=>{
+        b.style.borderColor = b.textContent===e?'#7C6FF7':'transparent';
+        b.style.background = b.textContent===e?'#EEF0FF':'white';
+      });
+    };
+    picker.appendChild(btn);
+  });
+
+  const modal = document.getElementById('edit-meal-modal');
+  modal.style.display = 'flex';
+}
+
+
+function openEditFromBtn(btn) {
+  const meal = {
+    id: btn.dataset.mealId || '',
+    label: btn.dataset.mealLabel || '',
+    name: btn.dataset.mealLabel || '',
+    emoji: btn.dataset.mealEmoji || '🍽️',
+    note: btn.dataset.mealNote || '',
+    recipe_url: btn.dataset.mealUrl || '',
+  };
+  openEditMeal(meal);
+}
+
+function closeEditMeal() {
+  document.getElementById('edit-meal-modal').style.display = 'none';
+}
+
+async function saveEditMeal() {
+  const id = document.getElementById('edit-meal-id').value;
+  const name = document.getElementById('edit-meal-name').value.trim();
+  const note = document.getElementById('edit-meal-note').value.trim();
+  const url = document.getElementById('edit-meal-url').value.trim();
+  const emoji = document.getElementById('edit-meal-emoji-val').value || editSelectedEmoji;
+  if (!name) return;
+
+  if (id) {
+    // Bestaand custom gerecht updaten
+    await sb.from('custom_meals').update({
+      name, note: note||null, recipe_url: url||null, emoji,
+    }).eq('id', id);
+  } else {
+    // Standaard gerecht overschrijven als custom versie
+    await sb.from('custom_meals').insert({
+      family_id: currentProfile.family_id,
+      name, note: note||null, recipe_url: url||null, emoji,
+    });
+  }
+  closeEditMeal();
+  await loadData();
+  renderCustomMealsList();
+}
+
+function deleteDefaultMeal(btn) {
+  const id = btn.dataset.mealId;
+  if (confirm('Dit gerecht definitief verwijderen uit de standaardlijst?')) {
+    disableDefaultMeal(id);
+  }
+}
+
+async function disableDefaultMeal(mealId) {
+  // Sla op als "disabled" in family settings
+  const current = familySettings.disabled_meals || [];
+  if (!current.includes(mealId)) {
+    const newDisabled = [...current, mealId];
+    await sb.from('family_settings').upsert({
+      family_id: currentProfile.family_id,
+      vote_day: familySettings.vote_day || 6,
+      disabled_meals: JSON.stringify(newDisabled),
+    },{onConflict:'family_id'});
+    familySettings.disabled_meals = newDisabled;
+  }
+  renderCustomMealsList();
+}
+
+async function enableDefaultMeal(mealId) {
+  const current = familySettings.disabled_meals || [];
+  const newDisabled = current.filter(id=>id!==mealId);
+  await sb.from('family_settings').upsert({
+    family_id: currentProfile.family_id,
+    vote_day: familySettings.vote_day || 6,
+    disabled_meals: JSON.stringify(newDisabled),
+  },{onConflict:'family_id'});
+  familySettings.disabled_meals = newDisabled;
+  renderCustomMealsList();
+}
+
+function isDisabled(mealId) {
+  const disabled = familySettings.disabled_meals || [];
+  return Array.isArray(disabled) ? disabled.includes(mealId) : 
+    (typeof disabled === 'string' ? JSON.parse(disabled).includes(mealId) : false);
+}
+
+function getDisabledMeals() {
+  const d = familySettings.disabled_meals;
+  if (!d) return [];
+  if (Array.isArray(d)) return d;
+  try { return JSON.parse(d); } catch { return []; }
+}
 
 // ── LIEVELINGSGERECHTEN ─────────────────────────────────────────
 function getFavorites(cisData) {
@@ -3129,5 +3297,31 @@ async function boot() {
 
 boot();
 </script>
+
+<div id="edit-meal-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-weight:900;font-size:18px">Gerecht bewerken</div>
+      <button onclick="closeEditMeal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#7B7A8E">✕</button>
+    </div>
+    <div id="edit-emoji-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Naam</label>
+      <input type="text" id="edit-meal-name" maxlength="40" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-family:Nunito,sans-serif;font-size:15px;outline:none" />
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
+      <input type="text" id="edit-meal-note" maxlength="60" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-family:Nunito,sans-serif;font-size:15px;outline:none" />
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Recept URL</label>
+      <input type="url" id="edit-meal-url" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-family:Nunito,sans-serif;font-size:15px;outline:none" placeholder="https://..." />
+    </div>
+    <input type="hidden" id="edit-meal-id" />
+    <input type="hidden" id="edit-meal-emoji-val" />
+    <button onclick="saveEditMeal()" style="width:100%;padding:14px;border:none;border-radius:14px;background:#7C6FF7;color:white;font-family:Nunito,sans-serif;font-weight:800;font-size:16px;cursor:pointer;margin-bottom:8px">Opslaan ✓</button>
+    <button onclick="closeEditMeal()" style="width:100%;padding:12px;border:none;border-radius:14px;background:transparent;color:#7B7A8E;font-family:Nunito,sans-serif;font-weight:700;font-size:15px;cursor:pointer">Annuleren</button>
+  </div>
+</div>
 </body>
 </html>
