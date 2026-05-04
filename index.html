@@ -1338,7 +1338,7 @@ function testStepDay(delta) {
 
 function testScenario(offset) {
   testDayOffset = offset;
-  homeDayOffset = 0; // reset naar huidige dag bij scenario wissel
+  homeDayOffset = -offset; // compenseer zodat echte datum getoond wordt
   updateTestDayDisplay();
   updateScenarioHighlight();
   loadData().then(()=>{ refreshHome(); });
@@ -1352,8 +1352,9 @@ async function switchTestPerson(id) {
   testPersonId = id;
   const p = TEST_PERSONS.find(x=>x.id===id);
   currentProfile = { id: testUuid(id), name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
-  renderTestPersons(); // highlight actieve persoon
-  show('loading'); // toon laadscherm tijdens ophalen
+  homeDayOffset = -testDayOffset; // compenseer
+  renderTestPersons();
+  show('loading');
   await loadData();
   refreshHome();
   show('home');
@@ -1683,14 +1684,17 @@ function refreshHome() {
   const dateEl = document.getElementById('home-date');
   if (dateEl) dateEl.textContent = simDate.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
   const dayLabelEl = document.getElementById('home-day-label');
+  const daysFromToday = (-testDayOffset) - homeDayOffset;
   if (dayLabelEl) dayLabelEl.textContent =
-    homeDayOffset === 0 ? 'vandaag' :
-    homeDayOffset === -1 ? 'gisteren' :
-    Math.abs(homeDayOffset) + ' dagen geleden';
+    daysFromToday === 0 ? 'vandaag' :
+    daysFromToday === 1 ? 'gisteren' :
+    daysFromToday + ' dagen geleden';
   const nextBtn = document.getElementById('home-next-btn');
+  const todayOffset = -testDayOffset; // de "vandaag" offset
   if (nextBtn) {
-    nextBtn.style.opacity = homeDayOffset >= 0 ? '0.3' : '1';
-    nextBtn.style.pointerEvents = homeDayOffset >= 0 ? 'none' : '';
+    const atToday = homeDayOffset >= todayOffset;
+    nextBtn.style.opacity = atToday ? '0.3' : '1';
+    nextBtn.style.pointerEvents = atToday ? 'none' : '';
   }
 
   if (p.role==='parent') {
@@ -4496,8 +4500,8 @@ let homeDayOffset = 0; // 0 = vandaag, -1 = gisteren, etc.
 
 function homeStepDay(delta) {
   const newOffset = homeDayOffset + delta;
-  // Niet verder dan vandaag
-  if (newOffset > 0) return;
+  // Niet verder dan de echte vandaag (= -testDayOffset)
+  if (newOffset > -testDayOffset) return;
   homeDayOffset = newOffset;
   loadData().then(() => refreshHome());
 }
@@ -4851,7 +4855,7 @@ async function boot() {
     testDayOffset = -8;
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
     currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
-    homeDayOffset = 0; // altijd starten op vandaag
+    homeDayOffset = -testDayOffset; // compenseer testDayOffset zodat echte datum getoond wordt
     console.log('[Boot] profile:', currentProfile.name, currentProfile.id);
     updateScenarioHighlight();
     try {
