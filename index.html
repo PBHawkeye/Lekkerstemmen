@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v15:15</title>
+  <title>Lekkerstemmen v15:34</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -539,6 +539,14 @@
     <div id="comment-section" class="comment-section hidden">
       <div class="drink-title" id="comment-label">Wil je nog iets zeggen? <span class="optional">optioneel</span></div>
       <textarea class="comment-textarea" id="checkin-comment" placeholder="bijv. te zout, lekker met kaassaus..." maxlength="200"></textarea>
+    </div>
+    <!-- Sport voeding sectie -->
+    <div id="sport-nutrition-section" class="hidden" style="padding:0 24px 16px">
+      <div class="drink-title" style="margin-bottom:10px">⚽ Jij had sport vandaag! <span class="optional">optioneel</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Wat at of dronk je vóór het sporten?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="pre-sport-options"></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">En erna?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="post-sport-options"></div>
     </div>
     <!-- Inline stem sectie -->
     <div id="vote-inline-section" class="vote-inline hidden">
@@ -1990,10 +1998,12 @@ function resetCheckin() {
   unhide(document.getElementById('checkin-skip'));
   if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
   selectedComment=''; inlineVoteChoices=[];
+  preSportFood=null; postSportFood=null;
   const commentEl=document.getElementById('checkin-comment');
   if(commentEl) commentEl.value='';
   hide(document.getElementById('comment-section'));
   hide(document.getElementById('vote-inline-section'));
+  hide(document.getElementById('sport-nutrition-section'));
 }
 
 function selectSmiley(score) {
@@ -2016,7 +2026,20 @@ function selectSmiley(score) {
   unhide(document.getElementById('checkin-autosave'));
   hide(document.getElementById('checkin-skip'));
 
-  // Auto-save na 2 seconden als gebruiker niets meer doet
+  // Sport voeding sectie - toon als iemand vandaag sport heeft
+  preSportFood = null;
+  postSportFood = null;
+  checkSportToday().then(hasSport => {
+    const sportSection = document.getElementById('sport-nutrition-section');
+    if (hasSport) {
+      renderSportNutritionOptions('pre-sport-options', null, (id) => { preSportFood = id; });
+      renderSportNutritionOptions('post-sport-options', null, (id) => { postSportFood = id; });
+      unhide(sportSection);
+    } else {
+      hide(sportSection);
+    }
+  });
+
   clearTimeout(window._checkinTimer);
   document.getElementById('checkin-autosave-msg').textContent = 'Tik op opslaan, of voeg optioneel drankje/opmerking toe';
 }
@@ -2069,6 +2092,8 @@ async function doCheckin() {
     profile_id:currentProfile.id, meal_id:todayMeal.id,
     score:selectedScore, drink:selectedDrink,
     comment: commentVal||null,
+    pre_sport_food: preSportFood||null,
+    post_sport_food: postSportFood||null,
   },{onConflict:'profile_id,meal_id'});
   if (ciError) {
     console.error('Checkin error:', ciError);
@@ -3519,6 +3544,56 @@ async function generateMealAI(meal, cis, votes, menuHistory) {
   } catch(e) {
     aiEl.textContent = 'Kon geen analyse genereren. Probeer het opnieuw.';
   }
+}
+
+
+// ── SPORT VOEDING ────────────────────────────────────────────────
+const SPORT_FOODS = [
+  {id:'water',       emoji:'💧', label:'Water'},
+  {id:'banaan',      emoji:'🍌', label:'Banaan'},
+  {id:'boterham',    emoji:'🥪', label:'Boterham'},
+  {id:'energiereep', emoji:'🍫', label:'Reep'},
+  {id:'fruit',       emoji:'🍎', label:'Fruit'},
+  {id:'sportdrank',  emoji:'🥤', label:'Sportdrank'},
+  {id:'niks',        emoji:'🚫', label:'Niets'},
+  {id:'anders',      emoji:'❓', label:'Anders'},
+];
+
+let preSportFood = null;
+let postSportFood = null;
+
+function renderSportNutritionOptions(containerId, selectedId, onSelect) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  SPORT_FOODS.forEach(food => {
+    const btn = document.createElement('button');
+    const isSelected = selectedId === food.id;
+    btn.style.cssText = 'padding:8px 12px;border-radius:99px;border:1.5px solid ' +
+      (isSelected ? 'var(--green)' : 'var(--border)') +
+      ';background:' + (isSelected ? 'var(--green-bg)' : 'white') +
+      ';cursor:pointer;font-size:13px;font-weight:600;color:' +
+      (isSelected ? 'var(--green-dark)' : 'var(--text)') +
+      ';display:flex;align-items:center;gap:5px;transition:all 0.15s';
+    btn.innerHTML = '<span>' + food.emoji + '</span><span>' + food.label + '</span>';
+    btn.onclick = () => {
+      onSelect(food.id);
+      renderSportNutritionOptions(containerId, food.id, onSelect);
+    };
+    container.appendChild(btn);
+  });
+}
+
+async function checkSportToday() {
+  // Controleer of de huidige gebruiker vandaag sport heeft
+  const today = todayStr();
+  const {data} = await sb.from('sport_schedule')
+    .select('*')
+    .eq('family_id', currentProfile.family_id)
+    .eq('profile_id', currentProfile.id)
+    .eq('sport_date', today)
+    .maybeSingle();
+  return data && data.has_sport;
 }
 
 // ── VOTE SETUP ─────────────────────────────────────────────────
