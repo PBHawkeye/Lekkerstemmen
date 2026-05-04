@@ -1363,9 +1363,9 @@ function goScreen(name) {
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
   else if (name==='stats') { renderStats(); show('stats'); }
   else if (name==='menu') { renderMenuScreen(); show('menu'); }
-  else if (name==='vote-setup') { voteSetupWeekOffset = Math.round(-testDayOffset/7); renderVoteSetup().then(()=>show('vote-setup')); }
+  else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
   else if (name==='status') { renderStatus(); show('status'); }
-  else if (name==='sport') { sportWeekOffset = Math.round(-testDayOffset/7); renderSportSchedule(); show('sport'); }
+  else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
 }
@@ -2625,6 +2625,8 @@ function getFavoritesFromCheckins() {
 // ── SPORT AGENDA ────────────────────────────────────────────────
 let sportWeekOffset = 0;
 let voteSetupWeekOffset = 0;
+let voteSetupBaseOffset = 0;
+let sportBaseOffset = 0; // offset bij openen = huidige week
 let sportScheduleData = {}; // {dateStr: {profileId: bool}}
 
 function getSportWeekDates(offset) {
@@ -2653,10 +2655,12 @@ async function renderSportSchedule() {
   const fmt = {day:'numeric',month:'short'};
   document.getElementById('sport-week-label').textContent =
     mon.toLocaleDateString('nl-NL',fmt) + ' – ' + sun.toLocaleDateString('nl-NL',fmt);
-  document.getElementById('sport-week-sub').textContent =
-    sportWeekOffset === 0 ? 'huidige week' :
-    sportWeekOffset > 0 ? 'over '+sportWeekOffset+' week'+(sportWeekOffset>1?'en':'') :
-    Math.abs(sportWeekOffset)+' week'+(Math.abs(sportWeekOffset)>1?'en':'')+' geleden';
+  const sportRealOffset = sportWeekOffset - sportBaseOffset;
+  const sportSubLabel = sportRealOffset === 0 ? 'huidige week' :
+    sportRealOffset === 1 ? 'volgende week' :
+    sportRealOffset > 1 ? 'over '+sportRealOffset+' weken' :
+    sportRealOffset === -1 ? 'vorige week' : Math.abs(sportRealOffset)+' weken geleden';
+  document.getElementById('sport-week-sub').textContent = sportSubLabel;
 
   // Haal sportdata op
   const {data:existing} = await sb.from('sport_schedule')
@@ -3075,6 +3079,26 @@ async function renderVoteSetupSportGrid(weekStart) {
 const DAY_NAMES = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
 const DAY_NAMES_FULL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
 
+
+function getRealWeekOffset() {
+  // Bereken hoeveel weken de gesimuleerde datum verschilt van de echte datum
+  // zodat we altijd op de echte huidige week uitkomen
+  const realToday = new Date();
+  const realDay = realToday.getDay();
+  const realMon = new Date(realToday);
+  realMon.setDate(realToday.getDate() - (realDay===0?6:realDay-1));
+  realMon.setHours(0,0,0,0);
+
+  const simToday = new Date();
+  simToday.setDate(simToday.getDate() + testDayOffset);
+  const simDay = simToday.getDay();
+  const simMon = new Date(simToday);
+  simMon.setDate(simToday.getDate() - (simDay===0?6:simDay-1));
+  simMon.setHours(0,0,0,0);
+
+  return Math.round((realMon - simMon) / (7 * 24 * 60 * 60 * 1000));
+}
+
 function getVoteSetupWeekStart() {
   const base = new Date();
   base.setDate(base.getDate() + testDayOffset + (voteSetupWeekOffset * 7));
@@ -3103,13 +3127,15 @@ async function renderVoteSetup() {
   if (el) el.textContent = weekLabel;
 
   // Sub-label: huidige/volgende/vorige week
-  const realOffset = voteSetupWeekOffset + Math.round(testDayOffset/7);
+  const realOffset = voteSetupWeekOffset - voteSetupBaseOffset;
   const weekSubText = realOffset === 0 ? 'huidige week' :
     realOffset === 1 ? 'volgende week' :
     realOffset > 1 ? 'over '+realOffset+' weken' :
     realOffset === -1 ? 'vorige week' : Math.abs(realOffset)+' weken geleden';
   const subEl = document.getElementById('votesetup-week-sub');
-  if (subEl) subEl.innerHTML = weekSubText+' · stemmen op <span id="votesetup-stemdag-label" style="font-weight:700;color:var(--green)">zaterdag</span>';
+  const DAY_NL2 = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+  const stemdagNaam = DAY_NL2[familySettings.vote_day||6];
+  if (subEl) subEl.innerHTML = weekSubText + ' &nbsp;·&nbsp; stemmen op <strong style="color:var(--green)">' + stemdagNaam + '</strong>';
 
   // Stemdag label
   const DAY_NL = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
