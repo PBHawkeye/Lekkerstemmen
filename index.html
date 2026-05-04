@@ -568,7 +568,7 @@
         <input type="text" id="new-meal-name" placeholder="Naam, bijv. 'Stamppot boerenkool'" maxlength="40" />
       </div>
       <div class="field" style="margin-bottom:8px">
-        <input type="text" id="new-meal-note" placeholder="Notitie, bijv. 'met spekjes en worst'" maxlength="60" />
+        <textarea id="new-meal-note" placeholder="Notitie, bijv. 'met spekjes en worst'" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:80px;transition:border-color 0.2s"></textarea>
       </div>
       <div class="field" style="margin-bottom:10px">
         <input type="url" id="new-meal-url" placeholder="Recept URL (optioneel), bijv. https://..." />
@@ -666,7 +666,7 @@
 
     <div style="margin-top:12px">
       <div class="label" style="margin-bottom:6px">Notitie (optioneel)</div>
-      <input type="text" id="meal-picker-note" placeholder="bijv. met gehaktballen, vroeg eten ivm sport" maxlength="80" />
+      <textarea id="meal-picker-note" placeholder="bijv. met gehaktballen, vroeg eten ivm sport" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:80px;transition:border-color 0.2s"></textarea>
     </div>
     <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Opslaan ✓</button>
   </div>
@@ -777,6 +777,12 @@
     <div class="settings-row">
       <div><div class="settings-label">Stemdag</div><div class="settings-sub">Wanneer mogen kinderen stemmen?</div></div>
       <div class="day-picker" id="stemdag-picker"></div>
+    </div>
+
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px;margin:0 16px 12px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">⚽ Wie heeft sport deze week?</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Tik een dag aan als een kind sport heeft — dan wordt er rekening mee gehouden bij het menuvoorstel.</p>
+      <div id="vote-sport-grid"></div>
     </div>
 
     <div class="vote-col-title" style="margin-top:8px">
@@ -1068,7 +1074,7 @@ async function simulateWeek() {
   if (btn) { btn.textContent = '⏳ Bezig...'; btn.disabled = true; }
 
   const familyId = TEST_FAMILY_ID;
-  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const kids = getFamilyMembers().filter(p=>p.role==='child');
   const drinks = ['water','soda','milk','juice'];
 
   // ── Vorige week: maaltijden + check-ins ──────────────────
@@ -1357,7 +1363,7 @@ function goScreen(name) {
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
   else if (name==='stats') { renderStats(); show('stats'); }
   else if (name==='menu') { renderMenuScreen(); show('menu'); }
-  else if (name==='vote-setup') { renderVoteSetup(); show('vote-setup'); }
+  else if (name==='vote-setup') { voteSetupWeekOffset=0; renderVoteSetup().then(()=>show('vote-setup')); }
   else if (name==='status') { renderStatus(); show('status'); }
   else if (name==='sport') { sportWeekOffset=0; renderSportSchedule(); show('sport'); }
   else if (name==='meal-picker') { show('meal-picker'); }
@@ -2135,9 +2141,15 @@ async function renderStats() {
 
 function getFamilyMembers() {
   if (typeof TEST_PERSONS !== 'undefined' && testModeActive) {
-    return TEST_PERSONS.map(p => ({id: 'test-'+p.id, name: p.name, emoji: p.emoji, role: p.role}));
+    return TEST_PERSONS.map(p => ({
+      id: testUuid(p.id),
+      shortId: p.id,
+      name: p.name,
+      emoji: p.emoji,
+      role: p.role
+    }));
   }
-  return [{id: currentProfile.id, name: currentProfile.name, emoji: '👤', role: currentProfile.role}];
+  return [{id: currentProfile.id, shortId: currentProfile.id, name: currentProfile.name, emoji: '👤', role: currentProfile.role}];
 }
 
 function renderPersonGrid(containerId, selectedId, onClickFn, highlightClass='selected') {
@@ -2612,6 +2624,7 @@ function getFavoritesFromCheckins() {
 
 // ── SPORT AGENDA ────────────────────────────────────────────────
 let sportWeekOffset = 0;
+let voteSetupWeekOffset = 0;
 let sportScheduleData = {}; // {dateStr: {profileId: bool}}
 
 function getSportWeekDates(offset) {
@@ -2692,7 +2705,7 @@ function sportWeekStep(delta) {
 }
 
 async function saveSportSchedule() {
-  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const kids = getFamilyMembers().filter(p=>p.role==='child');
   const dates = getSportWeekDates(sportWeekOffset);
   const familyId = currentProfile.family_id;
   const rows = [];
@@ -2910,13 +2923,105 @@ async function applyAllProposal() {
   show('menu');
 }
 
+
+async function renderVoteSetupSportGrid(weekStart) {
+  const grid = document.getElementById('vote-sport-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const kids = getFamilyMembers().filter(p=>p.role==='child');
+  if (kids.length === 0) return;
+
+  // Haal sportdata op voor deze week
+  const dates = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(weekStart+'T12:00:00');
+    d.setDate(d.getDate()+i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+
+  const {data:existing} = await sb.from('sport_schedule')
+    .select('*')
+    .eq('family_id', currentProfile.family_id)
+    .gte('sport_date', dates[0])
+    .lte('sport_date', dates[6]);
+
+  const sportMap = {};
+  (existing||[]).forEach(s => {
+    if (!sportMap[s.sport_date]) sportMap[s.sport_date] = {};
+    sportMap[s.sport_date][s.profile_id] = s.has_sport;
+  });
+
+  const DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'display:grid;grid-template-columns:70px repeat(7,1fr);gap:3px;margin-bottom:4px';
+  header.innerHTML = '<div></div>' + dates.map((d,i) => {
+    const date = new Date(d+'T12:00:00');
+    return '<div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted)">'+
+      DAYS_SHORT[i]+'<br><span style="font-size:9px">'+date.getDate()+'</span></div>';
+  }).join('');
+  grid.appendChild(header);
+
+  // Rij per kind
+  kids.forEach(kid => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:70px repeat(7,1fr);gap:3px;margin-bottom:4px;align-items:center';
+
+    const nameCell = document.createElement('div');
+    nameCell.style.cssText = 'font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px';
+    nameCell.textContent = kid.emoji+' '+kid.name;
+    row.appendChild(nameCell);
+
+    dates.forEach(d => {
+      const hasSport = sportMap[d]?.[kid.id] ?? false;
+      const cell = document.createElement('div');
+      cell.style.cssText = 'height:32px;border-radius:8px;background:'+(hasSport?'var(--green-bg)':'#F4FAF7')+
+        ';border:1.5px solid '+(hasSport?'var(--green)':'var(--border)')+
+        ';display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all 0.15s';
+      cell.textContent = hasSport ? '⚽' : '';
+      cell.onclick = async () => {
+        const newVal = !hasSport;
+        if (!sportMap[d]) sportMap[d] = {};
+        sportMap[d][kid.id] = newVal;
+        await sb.from('sport_schedule').upsert({
+          family_id: currentProfile.family_id,
+          profile_id: kid.id,
+          sport_date: d,
+          has_sport: newVal,
+        },{onConflict:'family_id,profile_id,sport_date'});
+        cell.style.background = newVal ? 'var(--green-bg)' : '#F4FAF7';
+        cell.style.borderColor = newVal ? 'var(--green)' : 'var(--border)';
+        cell.textContent = newVal ? '⚽' : '';
+      };
+      row.appendChild(cell);
+    });
+    grid.appendChild(row);
+  });
+}
+
 // ── VOTE SETUP ─────────────────────────────────────────────────
 const DAY_NAMES = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
 const DAY_NAMES_FULL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
 
-function renderVoteSetup() {
+function getVoteSetupWeekStart() {
+  const base = new Date();
+  base.setDate(base.getDate() + testDayOffset + (voteSetupWeekOffset * 7));
+  const day = base.getDay();
+  const mon = new Date(base);
+  mon.setDate(base.getDate() - day + (day===0?-6:1));
+  return mon.toISOString().split('T')[0];
+}
+
+async function voteSetupWeekStep(delta) {
+  voteSetupWeekOffset += delta;
+  await renderVoteSetup();
+}
+
+async function renderVoteSetup() {
   const allMeals = getAllMeals();
-  const weekStart = testMondayOfWeek();
+  const weekStart = getVoteSetupWeekStart();
 
   // Week label
   const monDate = new Date(weekStart+'T12:00:00');
@@ -2926,6 +3031,14 @@ function renderVoteSetup() {
   const weekLabel = monDate.toLocaleDateString('nl-NL',fmt)+' t/m '+sunDate.toLocaleDateString('nl-NL',fmt);
   const el = document.getElementById('votesetup-week-label');
   if (el) el.textContent = weekLabel;
+
+  // Indiceer of het huidige of toekomstige week is
+  const weekOffsetLabel = voteSetupWeekOffset === 0 ? 'huidige week' :
+    voteSetupWeekOffset === 1 ? 'volgende week' :
+    voteSetupWeekOffset > 1 ? 'over '+voteSetupWeekOffset+' weken' :
+    voteSetupWeekOffset === -1 ? 'vorige week' : Math.abs(voteSetupWeekOffset)+' weken geleden';
+  const weekLabelEl = document.getElementById('votesetup-week-label');
+  if (weekLabelEl) weekLabelEl.title = weekOffsetLabel;
 
   // Stemdag label
   const DAY_NL = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
@@ -2950,8 +3063,20 @@ function renderVoteSetup() {
   }
 
   // Beschikbare maaltijden
-  const availIds = availableMeals.map(m=>m.id);
+  // Laad kieslijst voor de geselecteerde week (kan andere week zijn dan huidige)
+  const {data:weekAvail} = await sb.from('vote_available_meals')
+    .select('*').eq('family_id', currentProfile.family_id).eq('week_of', weekStart).order('sort_order');
+  const weekAvailMeals = weekAvail && weekAvail.length > 0
+    ? weekAvail.map(a => getAllMeals().find(m=>m.id===a.meal_id)||{id:a.meal_id,emoji:'🍽️',label:a.meal_id})
+    : availableMeals.length > 0 && voteSetupWeekOffset === 0 ? availableMeals : [];
+
+  // Gebruik week-specifieke lijst voor de render
+  const availIds = weekAvailMeals.map(m=>m.id);
   const unavailable = allMeals.filter(m=>!availIds.includes(m.id));
+  availableMeals = weekAvailMeals;
+
+  // Sport grid voor deze week
+  await renderVoteSetupSportGrid(weekStart);
 
   renderDragList('available-list', availableMeals, true);
   renderDragList('unavailable-list', unavailable, false);
@@ -3040,7 +3165,7 @@ function updateAvailableCount() {
 
 async function saveVoteSetup() {
   const familyId = currentProfile.family_id;
-  const weekStart = testMondayOfWeek();
+  const weekStart = getVoteSetupWeekStart();
 
   // Sla stemdag op in settings
   await sb.from('family_settings').upsert({
@@ -3456,7 +3581,7 @@ boot();
     </div>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
-      <input type="text" id="edit-meal-note" maxlength="60" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-size:15px;outline:none" />
+      <textarea id="edit-meal-note" maxlength="200" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Recept URL</label>
