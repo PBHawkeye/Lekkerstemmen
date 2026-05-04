@@ -1540,13 +1540,15 @@ function renderEmojiPicker() {
 
 function renderCustomMealsList() {
   const list = document.getElementById('custom-meals-list');
+  if (!list) return;
   list.innerHTML = '';
+
+  // Favorieten altijd bovenaan berekenen
+  const favs = getFavoritesFromCheckins();
+
   if (customMeals.length===0) {
     list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:16px">Nog geen eigen maaltijden. Voeg er een toe!</p>';
   } else {
-    const favs = getFavoritesFromCheckins();
-    const favMealIds = Object.values(favs).map(f=>f.mealId);
-
     customMeals.forEach(m => {
       const div = document.createElement('div');
       div.className = 'custom-meal-item';
@@ -1577,6 +1579,7 @@ function renderCustomMealsList() {
       list.appendChild(div);
     });
   }
+
   // Standaard lijst
   const div2 = document.createElement('div');
   div2.style.cssText='margin-top:16px';
