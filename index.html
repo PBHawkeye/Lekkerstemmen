@@ -2664,7 +2664,8 @@ async function renderSportSchedule() {
   sportScheduleData = {};
   (existing||[]).forEach(s => {
     if (!sportScheduleData[s.sport_date]) sportScheduleData[s.sport_date] = {};
-    sportScheduleData[s.sport_date][s.profile_id] = s.has_sport;
+    // Gebruik note als event type, fallback naar 'sport' als has_sport=true
+    sportScheduleData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
   });
 
   const grid = document.getElementById('sport-schedule-grid');
@@ -2688,14 +2689,63 @@ async function renderSportSchedule() {
   kids.forEach(kid => {
     const row = document.createElement('div');
     row.style.cssText = 'display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;margin-bottom:6px;align-items:center';
-    const kidId = testUuid(kid.id);
+    const kidId = kid.id; // al een UUID via getFamilyMembers()
+
+    // Naam cel
+    const nameCell = document.createElement('div');
+    nameCell.style.cssText = 'font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px';
+    nameCell.textContent = kid.emoji + ' ' + kid.name;
+    row.appendChild(nameCell);
+
+    // Sport cel per dag
+    dates.forEach(d => {
+      const hasSport = sportScheduleData[d]?.[kidId] ?? false;
+      const cell = document.createElement('div');
+      cell.style.cssText = 'height:36px;border-radius:8px;background:' +
+        (hasSport ? 'var(--green-bg)' : '#F4FAF7') +
+        ';border:1.5px solid ' + (hasSport ? 'var(--green)' : 'var(--border)') +
+        ';display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all 0.15s';
+      cell.textContent = hasSport ? '⚽' : '';
+      const capturedD = d;
+      const capturedId = kidId;
+      cell.onclick = () => toggleSport(capturedD, capturedId);
+      row.appendChild(cell);
+    });
+
     grid.appendChild(row);
   });
 }
 
-function toggleSport(dateStr, profileId) {
+const EVENT_TYPES = {
+  sport:  { emoji:'⚽', label:'Sport',              bg:'var(--green-bg)',    border:'var(--green)',      eetsNiet: false, tip:'Kies snelle/lichte maaltijd' },
+  late:   { emoji:'🕐', label:'Laat thuis',          bg:'var(--amber-light)', border:'var(--amber)',      eetsNiet: false, tip:'Kies snelle maaltijd' },
+  out:    { emoji:'🍽️', label:'Zakelijk diner / weg', bg:'#FFEEEE',           border:'var(--coral)',      eetsNiet: true,  tip:'Eet niet mee thuis' },
+  travel: { emoji:'✈️', label:'Op reis / niet thuis', bg:'#F0EEFF',           border:'#9F8FF7',           eetsNiet: true,  tip:'Eet niet mee thuis' },
+};
+
+const SPORT_CYCLE = [null, 'sport', 'late', 'out', 'travel'];
+
+function cycleSportEvent(dateStr, profileId, cell) {
   if (!sportScheduleData[dateStr]) sportScheduleData[dateStr] = {};
-  sportScheduleData[dateStr][profileId] = !sportScheduleData[dateStr][profileId];
+  const current = sportScheduleData[dateStr][profileId] || null;
+  const currentIdx = SPORT_CYCLE.indexOf(current);
+  const nextType = SPORT_CYCLE[(currentIdx + 1) % SPORT_CYCLE.length];
+  sportScheduleData[dateStr][profileId] = nextType;
+
+  const info = nextType ? EVENT_TYPES[nextType] : null;
+  cell.style.background = info ? info.bg : '#F4FAF7';
+  cell.style.borderColor = info ? info.border : 'var(--border)';
+  cell.textContent = info ? info.emoji : '';
+  cell.title = info ? info.label+' — '+info.tip : 'Klik om in te stellen';
+  // Streep de cel door als persoon niet mee eet
+  cell.style.opacity = (info && info.eetsNiet) ? '0.6' : '1';
+}
+
+function toggleSport(dateStr, profileId) {
+  // Legacy - gebruik cycleSportEvent
+  if (!sportScheduleData[dateStr]) sportScheduleData[dateStr] = {};
+  const hasSport = sportScheduleData[dateStr][profileId] === 'sport';
+  sportScheduleData[dateStr][profileId] = hasSport ? null : 'sport';
   renderSportSchedule();
 }
 
@@ -2709,11 +2759,18 @@ async function saveSportSchedule() {
   const dates = getSportWeekDates(sportWeekOffset);
   const familyId = currentProfile.family_id;
   const rows = [];
+  const allMembers = getFamilyMembers();
   dates.forEach(d => {
-    kids.forEach(kid => {
-      const kidId = testUuid(kid.id);
-      const hasSport = sportScheduleData[d]?.[kidId] ?? false;
-      rows.push({family_id:familyId, profile_id:kidId, sport_date:d, has_sport:hasSport});
+    allMembers.forEach(member => {
+      const eventType = sportScheduleData[d]?.[member.id] || null;
+      const hasSport = eventType !== null;
+      rows.push({
+        family_id: familyId,
+        profile_id: member.id,
+        sport_date: d,
+        has_sport: hasSport,
+        note: eventType, // sla type op als note
+      });
     });
   });
   await sb.from('sport_schedule').upsert(rows, {onConflict:'family_id,profile_id,sport_date'});
