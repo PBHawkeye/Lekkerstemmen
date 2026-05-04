@@ -2,38 +2,56 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen 🍽️</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet" />
+  <title>Lekkerstemmen</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --purple: #7C6FF7; --purple-light: #EEF0FF; --purple-dark: #5148D4;
-      --teal: #22C9A0; --teal-light: #E0FAF4;
-      --amber: #FFB830; --amber-light: #FFF4D6;
-      --coral: #FF6B6B; --coral-light: #FFEEEE;
-      --bg: #F7F6FF; --card: #FFFFFF; --text: #1A1A2E; --muted: #7B7A8E; --border: #ECEAF8; --r: 16px;
+      /* Lekkerstemmen huisstijl */
+      --green:       #1D9E75;
+      --green-light: #9FE1CB;
+      --green-dark:  #0F6E56;
+      --green-deep:  #085041;
+      --green-bg:    #E8F7F2;
+      --amber:       #F5A623;
+      --amber-light: #FEF3DC;
+      --coral:       #E8604C;
+      --coral-light: #FDECEA;
+      --bg:    #F4FAF7;
+      --card:  #FFFFFF;
+      --text:  #0D2B22;
+      --muted: #5A7A6E;
+      --border:#C8E8DC;
+      --r: 16px;
+      /* Aliassen voor bestaande code */
+      --purple:       #1D9E75;
+      --purple-light: #E8F7F2;
+      --purple-dark:  #0F6E56;
+      --teal:         #1D9E75;
+      --teal-light:   #E8F7F2;
     }
-    html, body { height: 100%; background: var(--bg); font-family: 'Nunito', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+    html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
     .screen { display: none; min-height: 100vh; flex-direction: column; max-width: 420px; margin: 0 auto; padding-bottom: 32px; }
     .screen.active { display: flex; }
     .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 12px; }
-    .logo { font-weight: 900; font-size: 22px; color: var(--purple); }
-    .logo span { color: var(--text); }
-    .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--purple-light); border: none; cursor: pointer; font-weight: 800; font-size: 14px; color: var(--purple); }
+    .logo { display:flex; align-items:center; }
+    .logo-text-lekker { font-family:'Fraunces',serif; font-weight:700; font-size:20px; color:var(--text); }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--green-bg); border: 1.5px solid var(--border); cursor: pointer; font-weight: 600; font-size: 14px; color: var(--green-dark); }
     .field { margin-bottom: 16px; }
     .label { font-weight: 700; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
-    input, select { width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: var(--r); font-family: 'Nunito', sans-serif; font-size: 15px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.2s; }
+    input, select { width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: var(--r); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.2s; }
     input:focus, select:focus { border-color: var(--purple); background: white; }
     input::placeholder { color: #C0BEDD; }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: var(--r); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: var(--r); font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 16px; cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
     .btn:active { transform: scale(0.97); }
-    .btn-primary { background: var(--purple); color: white; box-shadow: 0 4px 16px rgba(124,111,247,0.3); }
-    .btn-primary:hover { background: var(--purple-dark); }
-    .btn-primary:disabled { background: #C5C2F5; box-shadow: none; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: white; box-shadow: 0 4px 16px rgba(29,158,117,0.3); }
+    .btn-primary:hover { background: var(--green-dark); }
+    .btn-primary:disabled { background: #9FE1CB; box-shadow: none; cursor: not-allowed; }
     .btn-ghost { background: transparent; color: var(--muted); }
-    .btn-white { background: white; color: var(--purple); padding: 12px 24px; width: auto; border-radius: var(--r); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; border: none; cursor: pointer; }
+    .btn-white { background: white; color: var(--green-dark); padding: 12px 24px; width: auto; border-radius: var(--r); font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px; border: none; cursor: pointer; }
     .msg-error { background: var(--coral-light); color: var(--coral); border-radius: var(--r); padding: 12px 16px; font-size: 14px; font-weight: 700; margin-bottom: 16px; text-align: center; }
     .msg-success { background: var(--teal-light); color: #0F9E78; border-radius: var(--r); padding: 12px 16px; font-size: 14px; font-weight: 700; margin-bottom: 16px; text-align: center; }
     .hidden { display: none !important; }
@@ -45,52 +63,52 @@
     .test-bar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #FFB830; }
     .test-day-display { font-size: 11px; color: #ccc; font-weight: 600; }
     .test-persons { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-    .test-person { padding: 5px 10px; border-radius: 99px; border: 1.5px solid #444; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; color: #aaa; cursor: pointer; transition: all 0.2s; }
+    .test-person { padding: 5px 10px; border-radius: 99px; border: 1.5px solid #444; background: transparent; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; color: #aaa; cursor: pointer; transition: all 0.2s; }
     .test-person.active { background: var(--purple); border-color: var(--purple); color: white; }
     .test-days { display: flex; gap: 8px; align-items: center; }
-    .test-scenario { padding:4px 10px; border-radius:99px; border:1px solid #444; background:transparent; font-family:'Nunito',sans-serif; font-weight:700; font-size:11px; color:#aaa; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .test-scenario { padding:4px 10px; border-radius:99px; border:1px solid #444; background:transparent; font-weight:700; font-size:11px; color:#aaa; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
     .test-scenario:hover { border-color:#aaa; color:white; }
     .test-scenario.active { background:var(--amber); border-color:var(--amber); color:#1A1A2E; }
     .test-day-display { font-size:11px; }
-    .test-sim { padding: 3px 10px; border-radius: 99px; border: 1px solid #22C9A0; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; color: #22C9A0; cursor: pointer; }
+    .test-sim { padding: 3px 10px; border-radius: 99px; border: 1px solid #22C9A0; background: transparent; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #22C9A0; cursor: pointer; }
     .test-sim:hover { background: #22C9A0; color: #1A1A2E; }
-    .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
+    .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
     .test-toggle.off { background: transparent; color: #666; border-color: #444; }
-    .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
+    .test-toggle { padding: 3px 12px; border-radius: 99px; border: 1.5px solid #FFB830; background: #FFB830; font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 11px; color: #1A1A2E; cursor: pointer; transition: all 0.2s; }
     .test-toggle.off { background: transparent; color: #666; border-color: #444; }
 
     /* AUTH */
     .auth-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 24px; }
     .auth-emoji { font-size: 64px; text-align: center; display: block; margin-bottom: 16px; animation: bounce 2s ease-in-out infinite; }
     @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-    .auth-title { font-weight: 900; font-size: 32px; text-align: center; margin-bottom: 8px; }
-    .auth-title span { color: var(--purple); }
+    .auth-title { font-family:'Fraunces',serif; font-weight: 900; font-size: 32px; text-align: center; margin-bottom: 4px; }
+    .auth-title span { color: var(--green); }
     .auth-sub { font-size: 15px; color: var(--muted); text-align: center; margin-bottom: 32px; line-height: 1.6; }
-    .tabs { display: flex; background: var(--purple-light); border-radius: var(--r); padding: 4px; margin-bottom: 24px; }
-    .tab { flex: 1; padding: 10px; border: none; border-radius: 12px; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
-    .tab.active { background: white; color: var(--purple); box-shadow: 0 2px 8px rgba(124,111,247,0.15); }
+    .tabs { display: flex; background: var(--green-bg); border-radius: var(--r); padding: 4px; margin-bottom: 24px; }
+    .tab { flex: 1; padding: 10px; border: none; border-radius: 12px; background: transparent; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .tab.active { background: white; color: var(--green); box-shadow: 0 2px 8px rgba(124,111,247,0.15); }
 
     /* SETUP */
     .setup-wrap { padding: 24px; flex: 1; }
-    .page-title { font-weight: 900; font-size: 26px; margin-bottom: 6px; }
+    .page-title { font-family:'Fraunces',serif; font-weight: 900; font-size: 26px; margin-bottom: 6px; }
     .page-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
     .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
     .role-card { border: 2px solid var(--border); border-radius: var(--r); padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.2s; background: white; }
-    .role-card.selected { border-color: var(--purple); background: var(--purple-light); }
+    .role-card.selected { border-color: var(--green); background: var(--green-bg); }
     .role-emoji { font-size: 36px; display: block; margin-bottom: 8px; }
     .role-name { font-weight: 800; font-size: 15px; }
     .role-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
     /* HOME */
     .greeting { padding: 8px 24px 20px; }
-    .greeting h1 { font-weight: 900; font-size: 28px; line-height: 1.2; }
-    .greeting h1 span { color: var(--purple); }
+    .greeting h1 { font-family:'Fraunces',serif; font-weight: 700; font-size: 28px; line-height: 1.2; }
+    .greeting h1 span { color: var(--green); }
     .greeting p { font-size: 14px; color: var(--muted); margin-top: 4px; }
-    .streak { display: inline-flex; align-items: center; gap: 6px; background: var(--amber-light); border: 1.5px solid #FFD97A; border-radius: 99px; padding: 6px 14px; font-weight: 800; font-size: 14px; color: #C47F00; margin-top: 12px; }
-    .today-card { background: linear-gradient(135deg, var(--purple) 0%, #9B8FF9 100%); border-radius: var(--r); margin: 0 16px 16px; padding: 24px; color: white; position: relative; overflow: hidden; }
+    .streak { display: inline-flex; align-items: center; gap: 6px; background: var(--amber-light); border: 1.5px solid var(--amber); border-radius: 99px; padding: 6px 14px; font-weight: 600; font-size: 14px; color: #8A5E00; margin-top: 12px; }
+    .today-card { background: linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%); border-radius: var(--r); margin: 0 16px 16px; padding: 24px; color: white; position: relative; overflow: hidden; }
     .today-card::after { content:''; position:absolute; right:-20px; top:-20px; width:120px; height:120px; background:rgba(255,255,255,0.08); border-radius:50%; }
     .today-badge { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; margin-bottom: 6px; }
-    .today-q { font-weight: 900; font-size: 22px; line-height: 1.2; margin-bottom: 20px; }
+    .today-q { font-family:'Fraunces',serif; font-weight: 700; font-size: 22px; line-height: 1.2; margin-bottom: 20px; }
     .today-done { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); border-radius: var(--r); padding: 10px 16px; font-weight: 700; font-size: 15px; }
     .section-title { font-weight: 800; font-size: 16px; padding: 0 24px; margin-bottom: 12px; }
     .week-row { display: flex; gap: 6px; padding: 0 24px; margin-bottom: 20px; }
@@ -99,10 +117,10 @@
     .day-dot.s1 { background: var(--coral-light); border-color: #FFB5B5; }
     .day-dot.s2 { background: var(--amber-light); border-color: #FFD97A; }
     .day-dot.s3 { background: var(--teal-light); border-color: #7EECD4; }
-    .day-dot.today-ring { box-shadow: 0 0 0 3px var(--purple); }
+    .day-dot.today-ring { box-shadow: 0 0 0 3px var(--green); }
     .day-label { font-size: 10px; color: var(--muted); font-weight: 700; }
-    .insight { background: var(--purple-light); border-radius: var(--r); margin: 0 16px 16px; padding: 20px; border: 1.5px solid #D8D4FF; }
-    .insight-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--purple); margin-bottom: 6px; }
+    .insight { background: var(--green-bg); border-radius: var(--r); margin: 0 16px 16px; padding: 20px; border: 1.5px solid var(--border); }
+    .insight-badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); margin-bottom: 6px; }
     .insight-text { font-weight: 700; font-size: 15px; line-height: 1.4; }
 
     /* CHECKIN */
@@ -120,8 +138,8 @@
     .drink-title { font-weight: 800; font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .optional { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--bg); padding: 2px 8px; border-radius: 99px; }
     .drink-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .drink-btn { padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--r); background: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); }
-    .drink-btn.selected { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
+    .drink-btn { padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--r); background: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); }
+    .drink-btn.selected { border-color: var(--green); background: var(--green-bg); color: var(--green-dark); }
     .drink-emoji { font-size: 22px; }
     .actions { padding: 0 24px; }
 
@@ -129,13 +147,13 @@
     .success-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
     .success-emoji { font-size: 80px; display: block; margin-bottom: 24px; animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
-    .success-title { font-weight: 900; font-size: 30px; margin-bottom: 8px; }
+    .success-title { font-family:'Fraunces',serif; font-weight: 900; font-size: 30px; margin-bottom: 8px; }
     .success-sub { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 32px; }
 
     /* LOG */
     .log-wrap { flex: 1; padding: 16px; padding-bottom: 100px; }
     .meal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-    .meal-btn { padding: 10px 6px; border: 2px solid var(--border); border-radius: var(--r); background: white; cursor: pointer; transition: all 0.2s; text-align: center; font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; color: var(--text); }
+    .meal-btn { padding: 10px 6px; border: 2px solid var(--border); border-radius: var(--r); background: white; cursor: pointer; transition: all 0.2s; text-align: center; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; color: var(--text); }
     .meal-btn:hover { border-color: var(--teal); }
     .meal-btn.selected { border-color: var(--teal); background: var(--teal-light); color: #0F9E78; }
     .meal-emoji-big { font-size: 22px; display: block; margin-bottom: 3px; }
@@ -176,8 +194,8 @@
 
     /* BOTTOM NAV */
     .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 420px; background: white; border-top: 1.5px solid var(--border); display: flex; padding: 8px 0 20px; z-index: 100; }
-    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border: none; background: transparent; cursor: pointer; color: var(--muted); font-family: 'Nunito', sans-serif; }
-    .nav-btn.active { color: var(--purple); }
+    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border: none; background: transparent; cursor: pointer; color: var(--muted); font-family: 'DM Sans', sans-serif; }
+    .nav-btn.active { color: var(--green); }
     .nav-icon { font-size: 22px; line-height: 1; }
     .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
     .loading-wrap { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; min-height: 100vh; }
@@ -187,25 +205,25 @@
     /* STEMLIJST BEHEER */
     .vote-setup-wrap { flex:1; padding:0 0 100px; }
     .vote-col-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:0 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
-    .vote-col-count { background:var(--purple-light); color:var(--purple); border-radius:99px; padding:1px 8px; font-size:10px; font-weight:700; }
+    .vote-col-count { background:var(--green-bg); color:var(--green); border-radius:99px; padding:1px 8px; font-size:10px; font-weight:700; }
     .meal-drag-list { min-height:60px; padding:0 16px; margin-bottom:4px; }
     .meal-drag-item { display:flex; align-items:center; gap:10px; padding:10px 14px; background:white; border-radius:var(--r); border:1.5px solid var(--border); margin-bottom:6px; cursor:grab; transition:all 0.15s; user-select:none; }
     .meal-drag-item:active { cursor:grabbing; opacity:0.7; transform:scale(0.98); }
     .meal-drag-item.dragging { opacity:0.4; border-style:dashed; }
-    .meal-drag-item.drag-over { border-color:var(--purple); background:var(--purple-light); }
+    .meal-drag-item.drag-over { border-color:var(--green); background:var(--green-bg); }
     .meal-drag-item.available { border-color:var(--teal); background:var(--teal-light); }
     .drag-emoji { font-size:22px; flex-shrink:0; }
     .drag-name { font-weight:700; font-size:14px; flex:1; }
     .drag-handle { color:var(--muted); font-size:16px; flex-shrink:0; }
     .drag-zone { min-height:80px; border:2px dashed var(--border); border-radius:var(--r); margin:0 16px 16px; padding:12px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
-    .drag-zone.active-zone { border-color:var(--purple); background:var(--purple-light); }
+    .drag-zone.active-zone { border-color:var(--green); background:var(--green-bg); }
     .drag-zone-label { font-size:13px; color:var(--muted); font-weight:600; }
     .settings-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:white; border-radius:var(--r); border:1.5px solid var(--border); margin:0 16px 10px; }
     .settings-label { font-weight:700; font-size:14px; }
     .settings-sub { font-size:12px; color:var(--muted); }
     .day-picker { display:flex; gap:6px; flex-wrap:wrap; }
-    .day-pill { padding:5px 12px; border-radius:99px; border:1.5px solid var(--border); background:white; font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; color:var(--text); cursor:pointer; transition:all 0.15s; }
-    .day-pill.selected { background:var(--purple); border-color:var(--purple); color:white; }
+    .day-pill { padding:5px 12px; border-radius:99px; border:1.5px solid var(--border); background:white; font-weight:700; font-size:12px; color:var(--text); cursor:pointer; transition:all 0.15s; }
+    .day-pill.selected { background:var(--green); border-color:var(--green); color:white; }
     /* STEMMEN KIND */
     .vote-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:white; border:2px solid var(--border); border-radius:var(--r); margin-bottom:10px; cursor:pointer; transition:all 0.2s; }
     .vote-item:hover { border-color:var(--amber); }
@@ -214,8 +232,8 @@
     .vote-item-name { font-weight:800; font-size:15px; flex:1; }
     .vote-item-check { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
     .vote-item.selected .vote-item-check { background:var(--amber); border-color:var(--amber); color:white; }
-    .suggestion-box { background:var(--purple-light); border-radius:var(--r); padding:14px 16px; margin-bottom:16px; border:1.5px solid #D8D4FF; }
-    .suggestion-textarea { width:100%; border:none; background:transparent; font-family:'Nunito',sans-serif; font-size:14px; color:var(--text); outline:none; resize:none; min-height:56px; }
+    .suggestion-box { background:var(--green-bg); border-radius:var(--r); padding:14px 16px; margin-bottom:16px; border:1.5px solid var(--border); }
+    .suggestion-textarea { width:100%; border:none; background:transparent; font-size:14px; color:var(--text); outline:none; resize:none; min-height:56px; }
     .suggestion-textarea::placeholder { color:#C0BEDD; }
     .week-dot.missed { border:2px dashed #FFB5B5; background:transparent; cursor:pointer; }
     .week-dot.missed:hover { background:var(--coral-light); }
@@ -224,22 +242,22 @@
     .picker-sheet { background:white; border-radius:20px 20px 0 0; padding:20px; width:100%; max-width:420px; }
     .picker-sheet-title { font-weight:900; font-size:18px; margin-bottom:16px; }
     .person-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
-    .person-btn { padding:10px 6px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; text-align:center; transition:all 0.2s; }
-    .person-btn:hover { border-color:var(--purple); }
-    .person-btn.selected { border-color:var(--purple); background:var(--purple-light); color:var(--purple); }
+    .person-btn { padding:10px 6px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-weight:700; font-size:12px; text-align:center; transition:all 0.2s; }
+    .person-btn:hover { border-color:var(--green); }
+    .person-btn.selected { border-color:var(--green); background:var(--green-bg); color:var(--green); }
     .person-btn.selected-teal { border-color:var(--teal); background:var(--teal-light); color:#0F6E56; }
     .person-emoji-big { font-size:24px; display:block; margin-bottom:3px; }
-    .special-btn { padding:10px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; font-size:13px; transition:all 0.2s; display:flex; align-items:center; gap:8px; margin-bottom:8px; width:100%; }
+    .special-btn { padding:10px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-weight:700; font-size:13px; transition:all 0.2s; display:flex; align-items:center; gap:8px; margin-bottom:8px; width:100%; }
     .special-btn:hover { border-color:var(--amber); }
     .special-btn.selected { border-color:var(--amber); background:var(--amber-light); }
     .menu-day-detail { font-size:11px; color:var(--muted); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; }
     .detail-pill { background:var(--bg); border-radius:99px; padding:1px 7px; font-size:10px; font-weight:600; border:0.5px solid var(--border); }
-    .detail-pill.cook { background:#EEF0FF; color:var(--purple); border-color:#D8D4FF; }
+    .detail-pill.cook { background:var(--green-bg); color:var(--green); border-color:#D8D4FF; }
     .detail-pill.corvee { background:var(--teal-light); color:#0F6E56; border-color:#9FE1CB; }
     .detail-pill.special { background:var(--amber-light); color:#C47F00; border-color:#FFD97A; }
     .detail-pill.me { background:var(--coral-light); color:var(--coral); border-color:#FFB5B5; font-weight:800; }
     .menu-day-row { background:white; border-radius:var(--r); border:1.5px solid var(--border); padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:12px; }
-    .menu-day-row:hover { border-color:var(--purple); }
+    .menu-day-row:hover { border-color:var(--green); }
     .menu-day-row.has-meal { border-color:var(--teal); }
     .menu-day-row.my-choice { border-color:var(--amber); background:var(--amber-light); }
     .menu-day-date { font-size:11px; font-weight:700; color:var(--muted); width:32px; flex-shrink:0; text-align:center; }
@@ -250,19 +268,19 @@
     .menu-day-emoji { font-size:28px; flex-shrink:0; }
     .menu-day-badge { font-size:10px; padding:2px 7px; border-radius:99px; font-weight:700; margin-left:auto; flex-shrink:0; }
     .badge-mine { background:var(--amber-light); color:#C47F00; border:1px solid #FFD97A; }
-    .badge-votes { background:var(--purple-light); color:var(--purple); border:1px solid #D8D4FF; }
+    .badge-votes { background:var(--green-bg); color:var(--green); border:1px solid #D8D4FF; }
     .badge-published { background:var(--teal-light); color:#0F6E56; border:1px solid #7EECD4; }
     /* COMMENT */
     .comment-section { padding: 0 24px 20px; }
-    .comment-textarea { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:var(--r); font-family:'Nunito',sans-serif; font-size:14px; color:var(--text); background:var(--bg); outline:none; resize:none; transition:border-color 0.2s; min-height:72px; }
-    .comment-textarea:focus { border-color:var(--purple); background:white; }
+    .comment-textarea { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:var(--r); font-size:14px; color:var(--text); background:var(--bg); outline:none; resize:none; transition:border-color 0.2s; min-height:72px; }
+    .comment-textarea:focus { border-color:var(--green); background:white; }
     .comment-textarea::placeholder { color:#C0BEDD; }
 
     /* VOTE INLINE */
     .vote-inline { padding:0 24px 20px; }
     .vote-inline-title { font-weight:800; font-size:15px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
     .vote-inline-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .vote-inline-btn { padding:10px 8px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; font-size:13px; color:var(--text); text-align:center; transition:all 0.2s; }
+    .vote-inline-btn { padding:10px 8px; border:2px solid var(--border); border-radius:var(--r); background:white; cursor:pointer; font-weight:700; font-size:13px; color:var(--text); text-align:center; transition:all 0.2s; }
     .vote-inline-btn:hover { border-color:var(--amber); }
     .vote-inline-btn.selected { border-color:var(--amber); background:var(--amber-light); color:#C47F00; }
     .vote-inline-btn .vi-emoji { font-size:22px; display:block; margin-bottom:3px; }
@@ -277,8 +295,8 @@
     .stat-bar { height:8px; border-radius:4px; transition:width 0.6s ease; }
     .stat-val { font-size:12px; font-weight:700; width:28px; text-align:right; color:var(--muted); flex-shrink:0; }
     .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .stat-metric { background:var(--purple-light); border-radius:var(--r); padding:14px; text-align:center; }
-    .stat-metric-val { font-weight:900; font-size:28px; color:var(--purple); display:block; }
+    .stat-metric { background:var(--green-bg); border-radius:var(--r); padding:14px; text-align:center; }
+    .stat-metric-val { font-weight:900; font-size:28px; color:var(--green); display:block; }
     .stat-metric-lbl { font-size:11px; color:var(--muted); font-weight:700; margin-top:2px; text-transform:uppercase; letter-spacing:0.04em; }
     .stat-ai-box { background:linear-gradient(135deg,var(--purple) 0%,#9B8FF9 100%); border-radius:var(--r); padding:20px; color:white; margin-bottom:12px; }
     .stat-ai-label { font-size:11px; font-weight:700; opacity:0.8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
@@ -324,7 +342,21 @@
 <div id="s-auth" class="screen">
   <div class="auth-wrap">
     <span class="auth-emoji">🍽️</span>
+    <div style="text-align:center;margin-bottom:16px">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="56" height="74">
+        <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+        <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+        <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+        <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+        <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+        <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+      </svg>
+    </div>
     <h1 class="auth-title">Lekker<span>stemmen</span></h1>
+    <p style="font-size:11px;font-weight:500;letter-spacing:4px;text-transform:uppercase;color:var(--green);text-align:center;margin-bottom:8px">Samen kiezen</p>
     <p class="auth-sub">Jij kiest wat er vanavond op tafel komt.</p>
     <div class="tabs">
       <button class="tab active" onclick="authTab('login')" id="tab-login">Inloggen</button>
@@ -339,7 +371,17 @@
 </div>
 
 <div id="s-setup" class="screen">
-  <div class="topbar"><div class="logo">Lekker<span>stemmen</span></div></div>
+  <div class="topbar"><div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div></div>
   <div class="setup-wrap">
     <h2 class="page-title">Welkom! 👋</h2>
     <p class="page-sub">Vertel ons even wie je bent.</p>
@@ -357,7 +399,17 @@
 
 <div id="s-home" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" id="home-avatar" onclick="doSignOut()">?</button>
   </div>
   <div class="greeting">
@@ -382,7 +434,7 @@
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Menu deze week</div>
       <div id="today-menu-preview-list"></div>
-      <button class="btn" style="background:var(--purple-light);color:var(--purple);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="goScreen('menu')">Heel menu bekijken →</button>
+      <button class="btn" style="background:var(--green-bg);color:var(--green);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="goScreen('menu')">Heel menu bekijken →</button>
     </div>
   </div>
   <div id="today-parent" class="today-card hidden">
@@ -495,7 +547,17 @@
 
 <div id="s-meals" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div class="meals-wrap">
@@ -522,22 +584,32 @@
 
 <div id="s-menu" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div id="menu-parent-view" class="hidden">
     <div style="padding:0 24px 12px">
       <h2 style="font-weight:900;font-size:20px;margin-bottom:4px">Menu vaststellen 📅</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Stemmen van de kinderen staan als suggestie. Klik een dag om de maaltijd te kiezen.</p>
-      <div id="vote-summary" style="background:var(--purple-light);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;border:1.5px solid #D8D4FF">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple);margin-bottom:8px">Stemmen kinderen</div>
+      <div id="vote-summary" style="background:var(--green-bg);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;border:1.5px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:8px">Stemmen kinderen</div>
         <div id="vote-summary-list" style="font-size:13px;color:var(--text)"></div>
       </div>
     </div>
     <div id="menu-days-list" style="padding:0 16px 20px"></div>
     <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:8px">
       <div style="padding:0 16px 8px">
-      <button class="btn" style="background:var(--purple-light);color:var(--purple);margin-bottom:8px" onclick="goScreen('vote-setup')">⚙️ Kieslijst instellen →</button>
+      <button class="btn" style="background:var(--green-bg);color:var(--green);margin-bottom:8px" onclick="goScreen('vote-setup')">⚙️ Kieslijst instellen →</button>
       <button class="btn" style="background:#E0FAF4;color:#0F6E56;margin-bottom:8px" onclick="showAIProposal()">✨ AI menuvoorstel →</button>
     </div>
     <div id="ai-proposal-container" style="margin:0 16px 12px;display:none"></div>
@@ -604,7 +676,17 @@
 
 <div id="s-sport" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div style="flex:1;padding:0 16px 100px">
@@ -629,7 +711,17 @@
 </div>
 <div id="s-status" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div style="flex:1;padding:0 16px 100px">
@@ -659,15 +751,25 @@
 </div>
 <div id="s-vote-setup" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div class="vote-setup-wrap">
     <div style="padding:0 16px 14px">
-      <div style="background:var(--purple-light);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;border:1.5px solid #D8D4FF">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple);margin-bottom:3px">Kieslijst voor de week van</div>
+      <div style="background:var(--green-bg);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;border:1.5px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:3px">Kieslijst voor de week van</div>
         <div style="font-size:16px;font-weight:800;color:var(--text)" id="votesetup-week-label">—</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">Kinderen stemmen op <span id="votesetup-stemdag-label" style="font-weight:700;color:var(--purple)">zaterdag</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Kinderen stemmen op <span id="votesetup-stemdag-label" style="font-weight:700;color:var(--green)">zaterdag</span></div>
       </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.5">Sleep maaltijden naar "Beschikbaar" om kinderen hieruit te laten kiezen. Max 10 opties.</p>
     </div>
@@ -705,7 +807,7 @@
     </p>
     <div id="vote-options"></div>
     <div class="suggestion-box">
-      <div style="font-size:12px;font-weight:700;color:var(--purple);margin-bottom:6px">Vrije suggestie <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">Vrije suggestie <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
       <textarea class="suggestion-textarea" id="vote-suggestion" placeholder="Ik wil graag ook... (bijv. lasagne, surinaams, sushi)"></textarea>
     </div>
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px" id="vote-status">Kies nog <span id="vote-remaining" style="color:var(--amber);font-weight:800">2</span> maaltijden</div>
@@ -716,7 +818,17 @@
 
 <div id="s-stats" class="screen">
   <div class="topbar">
-    <div class="logo">Lekker<span>stemmen</span></div>
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div class="stats-wrap">
@@ -880,7 +992,15 @@ function renderTestPersons() {
   TEST_PERSONS.forEach(p => {
     const btn = document.createElement('button');
     const isActive = p.id === testPersonId;
-    btn.style.cssText = 'padding:5px 10px;border-radius:99px;border:1.5px solid '+(isActive?'#7C6FF7':'#444')+';background:'+(isActive?'#7C6FF7':'transparent')+';font-family:Nunito,sans-serif;font-weight:700;font-size:12px;color:'+(isActive?'white':'#aaa')+';cursor:pointer';
+    btn.style.padding = '5px 10px';
+    btn.style.borderRadius = '99px';
+    btn.style.border = '1.5px solid '+(isActive?'#1D9E75':'#444');
+    btn.style.background = isActive?'#1D9E75':'transparent';
+    btn.style.fontFamily = "'DM Sans',sans-serif";
+    btn.style.fontWeight = '700';
+    btn.style.fontSize = '12px';
+    btn.style.color = isActive?'white':'#aaa';
+    btn.style.cursor = 'pointer';
     btn.textContent = p.emoji + ' ' + p.name;
     btn.onclick = () => switchTestPerson(p.id);
     el.appendChild(btn);
@@ -1189,7 +1309,12 @@ async function loadData() {
   todayMeal = mealRes.data;
   customMeals = cmRes.data||[];
   weeklyMenu = wmRes.data||[];
-  familySettings = settingsRes.data || {vote_day:6, family_id:familyId};
+  const newSettings = settingsRes.data || {vote_day:6, family_id:familyId};
+  // Bewaar disabled_meals als die al lokaal bekend zijn en de DB ze niet heeft
+  if (!newSettings.disabled_meals && familySettings?.disabled_meals) {
+    newSettings.disabled_meals = familySettings.disabled_meals;
+  }
+  familySettings = newSettings;
 
   // Check-ins: als view leeg, direct ophalen
   let cis = cisRes.data||[];
@@ -1572,7 +1697,7 @@ function renderCustomMealsList() {
           (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">📖</button>':'') +
-        '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:#EEF0FF;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
+        '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">🗑️</button>'+
         '</div>'+
         (lastComment?
@@ -1613,7 +1738,7 @@ function renderCustomMealsList() {
 
 
     const editBtn = document.createElement("button");
-    editBtn.style.cssText = "font-size:14px;background:#EEF0FF;border:none;border-radius:8px;padding:4px 7px;cursor:pointer";
+    editBtn.style.cssText = "font-size:14px;background:var(--green-bg);border:none;border-radius:8px;padding:4px 7px;cursor:pointer";
     editBtn.textContent = "✏️";
     editBtn.dataset.mealId = "";
     editBtn.dataset.mealLabel = m.label;
@@ -1628,7 +1753,7 @@ function renderCustomMealsList() {
       item.appendChild(enableBtn);
     } else {
       const disableBtn = document.createElement("button");
-      disableBtn.style.cssText = "font-size:13px;background:#FFF4D6;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
+      disableBtn.style.cssText = "font-size:13px;background:var(--amber-light);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
       disableBtn.onclick = () => disableDefaultMeal(m.id);
       item.appendChild(disableBtn);
     }
@@ -1726,7 +1851,17 @@ function renderInlineVote() {
   meals.forEach(m => {
     const btn = document.createElement('button');
     const sel = inlineVoteChoices.includes(m.id);
-    btn.style.cssText = 'padding:10px 8px;border:2px solid '+(sel?'#FFB830':'#ECEAF8')+';border-radius:16px;background:'+(sel?'#FFF4D6':'white')+';cursor:pointer;font-family:Nunito,sans-serif;font-weight:700;font-size:13px;color:'+(sel?'#C47F00':'#1A1A2E')+';text-align:center;transition:all 0.2s';
+    btn.style.padding = '10px 8px';
+    btn.style.border = '2px solid '+(sel?'#F5A623':'#C8E8DC');
+    btn.style.borderRadius = '16px';
+    btn.style.background = sel?'#FEF3DC':'white';
+    btn.style.cursor = 'pointer';
+    btn.style.fontFamily = "'DM Sans',sans-serif";
+    btn.style.fontWeight = '700';
+    btn.style.fontSize = '13px';
+    btn.style.color = sel?'#8A5E00':'#0D2B22';
+    btn.style.textAlign = 'center';
+    btn.style.transition = 'all 0.2s';
     btn.innerHTML = '<span style="font-size:22px;display:block;margin-bottom:3px">'+m.emoji+'</span>'+m.label;
     btn.onclick = () => {
       if (inlineVoteChoices.includes(m.id)) inlineVoteChoices = inlineVoteChoices.filter(x=>x!==m.id);
@@ -2192,9 +2327,9 @@ async function renderStatus() {
         '<div style="flex:1">'+
           '<div style="font-weight:700;font-size:14px;color:'+(step.done?'#1A1A2E':step.partial?'#1A1A2E':'#aaa')+'">'+step.label+'</div>'+
           '<div style="font-size:12px;color:'+textColor+';margin-top:2px">'+step.detail+'</div>'+
-          (step.action ? '<button onclick="'+step.action+'" style="margin-top:6px;padding:4px 12px;border-radius:99px;border:1.5px solid #7C6FF7;background:transparent;color:#7C6FF7;font-family:Nunito,sans-serif;font-weight:700;font-size:11px;cursor:pointer">'+step.actionLabel+'</button>' : '')+
+          (step.action ? '<button onclick="'+step.action+'" style="margin-top:6px;padding:4px 12px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:11px;cursor:pointer">'+step.actionLabel+'</button>' : '')+
         '</div>'+
-        (step.waiting ? '<div style="font-size:10px;padding:2px 8px;border-radius:99px;background:'+(step.waiting==='ouder'?'#EEF0FF':'#FFF4D6')+';color:'+(step.waiting==='ouder'?'#5148D4':'#C47F00')+';font-weight:700;flex-shrink:0;align-self:center">wacht op '+step.waiting+'</div>' : '');
+        (step.waiting ? '<div style="font-size:10px;padding:2px 8px;border-radius:99px;background:'+(step.waiting==='ouder'?'#EEF0FF':'#FFF4D6')+';color:'+(step.waiting==='ouder'?'var(--green-dark)':'#C47F00')+';font-weight:700;flex-shrink:0;align-self:center">wacht op '+step.waiting+'</div>' : '');
       stepsEl.appendChild(row);
     });
   }
@@ -2376,7 +2511,13 @@ async function saveEditMeal() {
     });
   }
   closeEditMeal();
+  // Bewaar disabled state voor loadData
+  const savedDisabled = getDisabledMeals();
   await loadData();
+  // Herstel disabled state na loadData (loadData overschrijft familySettings)
+  if (savedDisabled.length > 0 && getDisabledMeals().length === 0) {
+    familySettings = {...familySettings, disabled_meals: savedDisabled};
+  }
   renderCustomMealsList();
 }
 
@@ -2388,29 +2529,30 @@ function deleteDefaultMeal(btn) {
 }
 
 async function disableDefaultMeal(mealId) {
-  // Sla op als "disabled" in family settings
-  const current = familySettings.disabled_meals || [];
-  if (!current.includes(mealId)) {
-    const newDisabled = [...current, mealId];
+  const disabled = getDisabledMeals();
+  if (!disabled.includes(mealId)) {
+    const newDisabled = [...disabled, mealId];
     await sb.from('family_settings').upsert({
       family_id: currentProfile.family_id,
       vote_day: familySettings.vote_day || 6,
       disabled_meals: JSON.stringify(newDisabled),
     },{onConflict:'family_id'});
-    familySettings.disabled_meals = newDisabled;
+    // Update local state direct — niet via loadData om verlies te voorkomen
+    familySettings = {...familySettings, disabled_meals: newDisabled};
   }
   renderCustomMealsList();
 }
 
 async function enableDefaultMeal(mealId) {
-  const current = familySettings.disabled_meals || [];
-  const newDisabled = current.filter(id=>id!==mealId);
+  const disabled = getDisabledMeals();
+  const newDisabled = disabled.filter(id=>id!==mealId);
   await sb.from('family_settings').upsert({
     family_id: currentProfile.family_id,
     vote_day: familySettings.vote_day || 6,
     disabled_meals: JSON.stringify(newDisabled),
   },{onConflict:'family_id'});
-  familySettings.disabled_meals = newDisabled;
+  // Update local state direct
+  familySettings = {...familySettings, disabled_meals: newDisabled};
   renderCustomMealsList();
 }
 
@@ -2421,10 +2563,13 @@ function isDisabled(mealId) {
 }
 
 function getDisabledMeals() {
-  const d = familySettings.disabled_meals;
+  const d = familySettings?.disabled_meals;
   if (!d) return [];
   if (Array.isArray(d)) return d;
-  try { return JSON.parse(d); } catch { return []; }
+  if (typeof d === 'string') {
+    try { return JSON.parse(d); } catch { return []; }
+  }
+  return [];
 }
 
 // ── LIEVELINGSGERECHTEN ─────────────────────────────────────────
@@ -2724,7 +2869,7 @@ async function requestAIMenuProposal(weekStart, targetContainer) {
         targetContainer.appendChild(row);
       });
       const applyBtn = document.createElement('button');
-      applyBtn.style.cssText = 'width:100%;margin-top:8px;padding:10px;border-radius:12px;border:none;background:#22C9A0;color:white;font-family:Nunito,sans-serif;font-weight:800;font-size:13px;cursor:pointer';
+      applyBtn.style.cssText = 'width:100%;margin-top:8px;padding:10px;border-radius:12px;border:none;background:#22C9A0;color:white;font-weight:800;font-size:13px;cursor:pointer';
       applyBtn.textContent = 'Heel voorstel overnemen \u2192';
       applyBtn.onclick = applyAllProposal;
       targetContainer.appendChild(applyBtn);
@@ -2990,13 +3135,13 @@ async function renderMenuScreen() {
         const m = getAllMeals().find(x=>x.id===mealId)||{emoji:'🍽️',label:mealId};
         return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
           '<span>'+m.emoji+'</span><span style="font-weight:700">'+m.label+'</span>'+
-          '<span style="margin-left:auto;background:var(--purple);color:white;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:700">'+count+'x</span></div>';
+          '<span style="margin-left:auto;background:var(--green);color:white;border-radius:99px;padding:1px 8px;font-size:11px;font-weight:700">'+count+'x</span></div>';
       }).join('');
     }
     // Vrije suggesties tonen
     const suggestions = votes.filter(v=>v.suggestion&&v.suggestion.trim());
     if (suggestions.length > 0) {
-      voteSummary.innerHTML += '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #D8D4FF"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple);margin-bottom:6px">Vrije suggesties</div>';
+      voteSummary.innerHTML += '<div style="margin-top:10px;padding-top:10px;border-top:0.5px solid #D8D4FF"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:6px">Vrije suggesties</div>';
       suggestions.forEach(v => {
         const member = getFamilyMembers().find(m=>m.id===v.profile_id);
         const name = member?.name || 'Kind';
@@ -3105,7 +3250,7 @@ async function renderMenuScreen() {
         '<span style="font-size:28px">'+(entry?entry.meal_emoji:'❓')+'</span>'+
         '<div style="flex:1"><div class="menu-day-name">'+(entry?entry.meal_name:'Nog niet bekend')+'</div>'+
         (childDetailHtml?'<div class="menu-day-detail">'+childDetailHtml+'</div>':'')+
-        (isToday?'<div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:3px">Vandaag!</div>':'')+
+        (isToday?'<div style="font-size:11px;color:var(--green);font-weight:700;margin-top:3px">Vandaag!</div>':'')+
         '</div>'+
         (isMyChoice?'<span class="menu-day-badge badge-mine">Jouw keuze!</span>':'');
       childDays.appendChild(row);
@@ -3307,20 +3452,20 @@ boot();
     <div id="edit-emoji-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Naam</label>
-      <input type="text" id="edit-meal-name" maxlength="40" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-family:Nunito,sans-serif;font-size:15px;outline:none" />
+      <input type="text" id="edit-meal-name" maxlength="40" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-size:15px;outline:none" />
     </div>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
-      <input type="text" id="edit-meal-note" maxlength="60" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-family:Nunito,sans-serif;font-size:15px;outline:none" />
+      <input type="text" id="edit-meal-note" maxlength="60" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-size:15px;outline:none" />
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Recept URL</label>
-      <input type="url" id="edit-meal-url" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-family:Nunito,sans-serif;font-size:15px;outline:none" placeholder="https://..." />
+      <input type="url" id="edit-meal-url" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-size:15px;outline:none" placeholder="https://..." />
     </div>
     <input type="hidden" id="edit-meal-id" />
     <input type="hidden" id="edit-meal-emoji-val" />
-    <button onclick="saveEditMeal()" style="width:100%;padding:14px;border:none;border-radius:14px;background:#7C6FF7;color:white;font-family:Nunito,sans-serif;font-weight:800;font-size:16px;cursor:pointer;margin-bottom:8px">Opslaan ✓</button>
-    <button onclick="closeEditMeal()" style="width:100%;padding:12px;border:none;border-radius:14px;background:transparent;color:#7B7A8E;font-family:Nunito,sans-serif;font-weight:700;font-size:15px;cursor:pointer">Annuleren</button>
+    <button onclick="saveEditMeal()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--green);color:white;font-weight:800;font-size:16px;cursor:pointer;margin-bottom:8px">Opslaan ✓</button>
+    <button onclick="closeEditMeal()" style="width:100%;padding:12px;border:none;border-radius:14px;background:transparent;color:#7B7A8E;font-weight:700;font-size:15px;cursor:pointer">Annuleren</button>
   </div>
 </div>
 </body>
