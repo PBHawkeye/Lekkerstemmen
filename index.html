@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v13:30</title>
+  <title>Lekkerstemmen v14:46</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -439,6 +439,36 @@
       <button class="btn" style="background:var(--green-bg);color:var(--green);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="goScreen('menu')">Heel menu bekijken →</button>
     </div>
   </div>
+  <!-- Vanavond kaart - toont menu item voor vandaag aan iedereen -->
+  <div id="tonight-card" class="hidden" style="margin:0 16px 16px">
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <span style="font-size:36px" id="tonight-emoji">🍽️</span>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Vanavond</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text)" id="tonight-name">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px" id="tonight-meta"></div>
+        </div>
+        <button id="tonight-recipe-btn" onclick="openTonightRecipe()" style="display:none;width:36px;height:36px;border-radius:50%;background:var(--green-bg);border:1.5px solid var(--border);font-size:18px;cursor:pointer" title="Recept bekijken">📖</button>
+      </div>
+      <div id="tonight-cook-row" style="display:none;padding:8px 0;border-top:0.5px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="tonight-cook-emoji" style="font-size:16px">👨‍🍳</span>
+          <div style="flex:1">
+            <span style="font-size:13px;font-weight:700" id="tonight-cook-name">Jij kookt vanavond!</span>
+            <span style="font-size:12px;color:var(--muted)" id="tonight-cook-sub"></span>
+          </div>
+        </div>
+      </div>
+      <div id="tonight-corvee-row" style="display:none;padding:8px 0;border-top:0.5px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">🧹</span>
+          <span style="font-size:13px;font-weight:700">Corvee: <span id="tonight-corvee-names" style="font-weight:400;color:var(--muted)"></span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="today-parent" class="today-card hidden">
     <div class="today-badge">Vandaag</div>
     <div class="today-q">Wat eten jullie vanavond?</div>
@@ -676,6 +706,61 @@
 
 
 
+<div id="s-sport" class="screen">
+  <div class="topbar">
+    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
+  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
+  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
+  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div style="flex:1;padding:0 16px 100px">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">
+      Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
+    </div>
+
+    <!-- Week navigatie -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <button onclick="sportWeekStep(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #ECEAF8;background:white;font-size:16px;cursor:pointer">←</button>
+      <div style="flex:1;text-align:center">
+        <div style="font-weight:800;font-size:15px" id="sport-week-label">—</div>
+        <div style="font-size:11px;color:var(--muted)" id="sport-week-sub">week van</div>
+      </div>
+      <button onclick="sportWeekStep(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #ECEAF8;background:white;font-size:16px;cursor:pointer">→</button>
+    </div>
+
+    <div id="sport-schedule-grid"></div>
+
+    <button class="btn btn-primary" onclick="saveSportSchedule()" style="margin-top:16px">Sportdagen opslaan ✓</button>
+  </div>
+</div>
+<div id="s-status" class="screen">
+  <div class="topbar">
+    <div class="logo" style="display:flex;align-items:center">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="22" height="29" style="margin-right:6px"><line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/><path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/><path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/><path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/><path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/><line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/><path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/><path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/><path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/></svg>
+      <span style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--text)">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:18px;color:var(--green)">stemmen</span>
+    </div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div style="flex:1;padding:0 16px 100px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <button onclick="statusWeekStep(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">←</button>
+      <div style="flex:1;text-align:center">
+        <div style="font-weight:800;font-size:16px;color:var(--text)" id="status-week-label">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="status-week-sub">huidige week</div>
+      </div>
+      <button onclick="statusWeekStep(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">→</button>
+    </div>
+    <div id="status-items"></div>
+  </div>
+</div>
 <div id="s-sport" class="screen">
   <div class="topbar">
     <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
@@ -1370,7 +1455,7 @@ function goScreen(name) {
   else if (name==='stats') { renderStats(); show('stats'); }
   else if (name==='menu') { renderMenuScreen(); show('menu'); }
   else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
-  else if (name==='status') { renderStatus(); show('status'); }
+  else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus(); show('status'); }
   else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
@@ -1561,6 +1646,9 @@ function refreshHome() {
     document.getElementById('insight-text').textContent = txt;
     unhide(document.getElementById('insight-block'));
   } else hide(document.getElementById('insight-block'));
+
+  // ── Vanavond kaart ─────────────────────────────────────────
+  renderTonightCard(p);
 
   // Menu preview voor kinderen
   const menuPreview = document.getElementById('today-menu-preview');
@@ -2248,38 +2336,39 @@ function openMissedCheckin(dateStr) {
 
 
 // ── STATUS SCHERM ───────────────────────────────────────────────
+let statusWeekOffset = 0;
+let statusBaseOffset = 0;
+
+function statusWeekStep(delta) {
+  statusWeekOffset += delta;
+  renderStatus();
+}
+
+function getStatusWeekStart() {
+  const base = new Date();
+  base.setDate(base.getDate() + testDayOffset + (statusWeekOffset * 7));
+  const day = base.getDay();
+  const mon = new Date(base);
+  mon.setDate(base.getDate() - day + (day===0?-6:1));
+  return mon.toISOString().split('T')[0];
+}
+
 async function renderStatus() {
   const familyId = currentProfile.family_id;
-  const weekStart = testMondayOfWeek();
+  const weekStart = getStatusWeekStart();
+  const allMembers = getFamilyMembers();
+  const kids = allMembers.filter(p=>p.role==='child');
 
-  // Week label
+  // Week labels
   const monDate = new Date(weekStart+'T12:00:00');
   const sunDate = new Date(weekStart+'T12:00:00');
   sunDate.setDate(sunDate.getDate()+6);
   const fmt = {day:'numeric',month:'long'};
-  const weekLabel = monDate.toLocaleDateString('nl-NL',fmt)+' t/m '+sunDate.toLocaleDateString('nl-NL',fmt);
-  const weekLabelEl = document.getElementById('status-week-label');
-  if (weekLabelEl) weekLabelEl.textContent = weekLabel;
-
-  // Haal data op
-  const [votesRes, menuRes, availRes, allCisRes] = await Promise.all([
-    sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',weekStart),
-    sb.from('weekly_menu').select('*').eq('family_id',familyId).eq('week_of',weekStart),
-    sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart),
-    sb.from('checkins_with_context').select('*').eq('family_id',familyId).order('eaten_at',{ascending:false}).limit(100),
-  ]);
-
-  const votes = votesRes.data||[];
-  const menu = menuRes.data||[];
-  const avail = availRes.data||[];
-  const allCis = allCisRes.data||[];
-
-  const kids = TEST_PERSONS.filter(p=>p.role==='child');
-  const parents = TEST_PERSONS.filter(p=>p.role==='parent');
-  const menuPublished = menu.some(m=>m.published);
-  const menuDays = menu.filter(m=>m.published).length;
-  const kieslijstKlaar = avail.length > 0;
-  const DAY_NL = ['zo','ma','di','wo','do','vr','za'];
+  const wLabel = document.getElementById('status-week-label');
+  if (wLabel) wLabel.textContent = monDate.toLocaleDateString('nl-NL',fmt)+' t/m '+sunDate.toLocaleDateString('nl-NL',fmt);
+  const realOff = statusWeekOffset - statusBaseOffset;
+  const wSub = document.getElementById('status-week-sub');
+  if (wSub) wSub.textContent = realOff===0?'huidige week':realOff===1?'volgende week':realOff>1?'over '+realOff+' weken':realOff===-1?'vorige week':Math.abs(realOff)+' weken geleden';
 
   // Weekdagen ma-zo
   const weekDates = [];
@@ -2288,162 +2377,156 @@ async function renderStatus() {
     d.setDate(d.getDate()+i);
     weekDates.push(d.toISOString().split('T')[0]);
   }
+  const today = todayStr();
+  const isCurrentWeek = weekDates.includes(today);
+  const isFuture = weekDates[0] > today;
+  const isPast = weekDates[6] < today;
 
-  // ── Voortgangsstappen ──────────────────────────────────────
-  const steps = [
-    {
-      label: 'Kieslijst instellen',
-      done: kieslijstKlaar,
-      waiting: !kieslijstKlaar ? 'ouder' : null,
-      detail: kieslijstKlaar ? avail.length+' maaltijden beschikbaar' : 'Nog niet gedaan',
-      action: kieslijstKlaar ? null : "goScreen('vote-setup')",
-      actionLabel: 'Instellen →',
-    },
-    {
-      label: 'Kinderen laten stemmen',
-      done: votes.length >= kids.length,
-      partial: votes.length > 0 && votes.length < kids.length,
-      waiting: votes.length < kids.length ? 'kinderen' : null,
-      detail: votes.length === 0
-        ? 'Nog niemand gestemd'
-        : votes.length === kids.length
-          ? 'Iedereen heeft gestemd ✓'
-          : votes.length+' van '+kids.length+' kinderen gestemd',
-    },
-    {
-      label: 'Weekmenu vaststellen',
-      done: menuPublished,
-      waiting: !menuPublished && votes.length > 0 ? 'ouder' : null,
-      detail: menuPublished
-        ? menuDays+' van 7 dagen ingevuld'
-        : !kieslijstKlaar ? 'Eerst kieslijst instellen'
-        : votes.length === 0 ? 'Wacht op stemmen kinderen'
-        : 'Stemmen binnen — menu kan worden vastgesteld',
-      action: votes.length > 0 && !menuPublished ? "goScreen('menu')" : null,
-      actionLabel: 'Menu opstellen →',
-    },
-    {
-      label: 'Menu gepubliceerd',
-      done: menuPublished,
-      waiting: null,
-      detail: menuPublished ? 'Kinderen kunnen het menu zien' : 'Nog niet gepubliceerd',
-    },
-  ];
+  // Volgende 2 weken
+  const nw = new Date(weekStart+'T12:00:00'); nw.setDate(nw.getDate()+7);
+  const nextWeekStart = nw.toISOString().split('T')[0];
+  const tw = new Date(weekStart+'T12:00:00'); tw.setDate(tw.getDate()+14);
+  const twoWeeksStart = tw.toISOString().split('T')[0];
 
-  const stepsEl = document.getElementById('status-progress-steps');
-  if (stepsEl) {
-    stepsEl.innerHTML = '';
-    steps.forEach((step, i) => {
-      const color = step.done ? '#22C9A0' : step.partial ? '#FFB830' : '#ECEAF8';
-      const textColor = step.done ? '#0F6E56' : step.partial ? '#C47F00' : '#7B7A8E';
-      const icon = step.done ? '✓' : step.partial ? '◑' : (i+1).toString();
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid #ECEAF8';
-      if (i === steps.length-1) row.style.borderBottom = 'none';
-      row.innerHTML =
-        '<div style="width:28px;height:28px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:'+(step.done||step.partial?'white':'#aaa')+';flex-shrink:0">'+icon+'</div>'+
-        '<div style="flex:1">'+
-          '<div style="font-weight:700;font-size:14px;color:'+(step.done?'#1A1A2E':step.partial?'#1A1A2E':'#aaa')+'">'+step.label+'</div>'+
-          '<div style="font-size:12px;color:'+textColor+';margin-top:2px">'+step.detail+'</div>'+
-          (step.action ? '<button onclick="'+step.action+'" style="margin-top:6px;padding:4px 12px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:11px;cursor:pointer">'+step.actionLabel+'</button>' : '')+
-        '</div>'+
-        (step.waiting ? '<div style="font-size:10px;padding:2px 8px;border-radius:99px;background:'+(step.waiting==='ouder'?'#EEF0FF':'#FFF4D6')+';color:'+(step.waiting==='ouder'?'var(--green-dark)':'#C47F00')+';font-weight:700;flex-shrink:0;align-self:center">wacht op '+step.waiting+'</div>' : '');
-      stepsEl.appendChild(row);
-    });
+  const [votesRes, menuRes, availRes, cisRes, avail2Res, avail3Res] = await Promise.all([
+    sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('weekly_menu').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('vote_available_meals').select('id,meal_id').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('checkins_with_context').select('*').eq('family_id',familyId).in('eaten_at',weekDates),
+    sb.from('vote_available_meals').select('id').eq('family_id',familyId).eq('week_of',nextWeekStart).limit(1),
+    sb.from('vote_available_meals').select('id').eq('family_id',familyId).eq('week_of',twoWeeksStart).limit(1),
+  ]);
+
+  const votes = votesRes.data||[];
+  const menu = menuRes.data||[];
+  const avail = availRes.data||[];
+  const cis = cisRes.data||[];
+  const menuPublished = menu.some(m=>m.published);
+  const kieslijstKlaar = avail.length > 0;
+
+  const container = document.getElementById('status-items');
+  if (!container) return;
+  container.innerHTML = '';
+  let hasUrgent = false;
+
+  function addCard(html, urgent=false) {
+    const el = document.createElement('div');
+    el.style.cssText = 'background:white;border-radius:var(--r);border:1.5px solid '+(urgent?'var(--coral)':'var(--border)')+';padding:14px 16px;margin-bottom:10px';
+    el.innerHTML = html;
+    container.appendChild(el);
   }
 
-  // ── Op wie wacht het ──────────────────────────────────────
-  const waitingEl = document.getElementById('status-waiting-list');
-  const waitingCard = document.getElementById('status-waiting-card');
-  if (waitingEl) {
-    const waiting = [];
-    if (!kieslijstKlaar) waiting.push({who:'ouder', what:'Kieslijst voor stemmen nog niet ingesteld', urgent:true});
-    kids.forEach(kid => {
-      if (!votes.find(v=>v.profile_id===testUuid(kid.id))) {
-        waiting.push({who:kid.name, what:'Heeft nog niet gestemd', urgent:false});
+  function row(emoji, title, sub, btnLabel, btnAction, urgent=false) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0">'+
+      '<div style="width:32px;height:32px;border-radius:50%;background:'+(urgent?'#FFEEEE':'var(--green-bg)')+
+      ';display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">'+emoji+'</div>'+
+      '<div style="flex:1"><div style="font-weight:700;font-size:13px">'+title+'</div>'+
+      (sub?'<div style="font-size:11px;color:var(--muted)">'+sub+'</div>':'')+
+      '</div>'+
+      (btnLabel?'<button onclick="'+btnAction+'" style="padding:4px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:11px;cursor:pointer;flex-shrink:0">'+btnLabel+'</button>':'')+
+      '</div>';
+  }
+
+  // ── 1. KIESLIJST ONTBREEKT ─────────────────────────────────
+  if (!kieslijstKlaar && !isPast) {
+    hasUrgent = true;
+    addCard(
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Actie vereist</div>'+
+      row('📋','Kieslijst nog niet ingesteld','Kinderen kunnen niet stemmen voor deze week','Instellen →',"goScreen('vote-setup')",true), true);
+  }
+
+  // ── 2. STEMMEN ─────────────────────────────────────────────
+  if (kieslijstKlaar && !menuPublished && !isPast) {
+    const notVoted = kids.filter(k=>!votes.find(v=>v.profile_id===testUuid(k.id)));
+    const voted = kids.filter(k=>votes.find(v=>v.profile_id===testUuid(k.id)));
+    if (notVoted.length > 0) {
+      hasUrgent = true;
+      let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Nog niet gestemd</div>';
+      notVoted.forEach(k => { html += row('🗳️',k.emoji+' '+k.name,'Stem voor het weekmenu ontbreekt',null,null,false); });
+      if (voted.length > 0) html += '<div style="font-size:11px;color:var(--muted);margin-top:6px">✓ '+voted.map(k=>k.name).join(', ')+' al gestemd</div>';
+      addCard(html);
+    }
+  }
+
+  // ── 3. MENU VASTSTELLEN ────────────────────────────────────
+  if (!menuPublished && votes.length > 0 && !isPast) {
+    hasUrgent = true;
+    addCard(
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Menu opstellen</div>'+
+      row('📅','Stemmen zijn binnen','Menu kan nu worden vastgesteld','Opstellen →',"goScreen('menu')",true), true);
+  }
+
+  // ── 4. CHECK-INS VANDAAG ───────────────────────────────────
+  if (isCurrentWeek && menuPublished) {
+    const todayMenu = menu.find(m=>m.day_date===today&&m.published);
+    if (todayMenu) {
+      const missing = kids.filter(k=>!cis.find(c=>c.eaten_at===today&&c.profile_id===testUuid(k.id)));
+      if (missing.length > 0) {
+        let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Check-in vandaag — '+todayMenu.meal_emoji+' '+todayMenu.meal_name+'</div>';
+        missing.forEach(k => { html += row('⏳',k.emoji+' '+k.name+' nog niet ingecheckt',null,null,null,false); });
+        addCard(html);
+        hasUrgent = true;
       }
-    });
-    if (votes.length>0 && !menuPublished) waiting.push({who:'ouder', what:'Stemmen zijn binnen — menu kan vastgesteld worden', urgent:true});
-    if (menuPublished) {
-      // Check wie nog niet ingecheckt heeft deze week
-      const todayIdx = weekDates.indexOf(todayStr());
-      const daysToCheck = todayIdx >= 0 ? weekDates.slice(0, todayIdx+1) : [];
-      daysToCheck.forEach(dateStr => {
-        const dayMenu = menu.find(m=>m.day_date===dateStr&&m.published);
-        if (!dayMenu) return;
-        kids.forEach(kid => {
-          const ci = allCis.find(c=>c.eaten_at===dateStr&&c.profile_id===testUuid(kid.id));
-          if (!ci) waiting.push({who:kid.name, what:'Nog niet ingecheckt voor '+new Date(dateStr+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long'}), urgent:false});
-        });
+    }
+  }
+
+  // ── 5. VERGETEN CHECK-INS ──────────────────────────────────
+  if (menuPublished) {
+    const pastDays = weekDates.filter(d=>d<today);
+    let missed = [];
+    pastDays.forEach(d=>{
+      if (!menu.find(m=>m.day_date===d&&m.published)) return;
+      kids.forEach(k=>{
+        if (!cis.find(c=>c.eaten_at===d&&c.profile_id===testUuid(k.id))) {
+          missed.push({kid:k, date:d, dayName:new Date(d+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long'})});
+        }
       });
-    }
-
-    if (waiting.length === 0) {
-      waitingEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#0F6E56;font-weight:700"><span style="font-size:20px">🎉</span>Alles is op orde deze week!</div>';
-    } else {
-      waitingEl.innerHTML = waiting.map(w =>
-        '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid #ECEAF8">'+
-        '<div style="width:32px;height:32px;border-radius:50%;background:'+(w.urgent?'#FFEEEE':'#EEF0FF')+';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(w.urgent?'⚡':'⏳')+'</div>'+
-        '<div><div style="font-weight:700;font-size:13px">'+w.who+'</div><div style="font-size:12px;color:#7B7A8E">'+w.what+'</div></div>'+
-        '</div>'
-      ).join('');
-    }
-  }
-
-  // ── Lievelingsgerechten per kind ──────────────────────────
-  const favsForStatus = getFavorites(allCis);
-  const favsEl = document.querySelector('#status-checkins')?.parentElement;
-  if (favsEl && Object.keys(favsForStatus).length > 0) {
-    const favCard = document.createElement('div');
-    favCard.style.cssText = 'background:white;border-radius:16px;border:1.5px solid #ECEAF8;padding:16px;margin-bottom:12px';
-    favCard.innerHTML = '<div style="font-size:13px;font-weight:700;color:#7B7A8E;margin-bottom:10px">❤️ Lievelingsgerechten</div>' +
-      Object.values(favsForStatus).map(f=>
-        '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid #ECEAF8">'+
-        '<span style="font-size:20px">'+f.mealEmoji+'</span>'+
-        '<div style="flex:1"><div style="font-weight:700;font-size:13px">'+f.mealLabel+'</div>'+
-        '<div style="font-size:11px;color:#7B7A8E">'+f.personName+'s favoriet</div></div>'+
-        (lastServedMap&&lastServedMap[f.mealId]?
-          '<div style="font-size:11px;color:#7B7A8E">Laatste keer:<br>'+lastServedMap[f.mealId]+'</div>':
-          '<div style="font-size:11px;color:#22C9A0">Nog niet geweest!</div>')+
-        '</div>'
-      ).join('');
-    // Voeg in voor check-ins card
-    const cisCard = document.getElementById('status-checkins')?.parentElement?.querySelector('[id="status-checkins"]')?.parentElement;
-    if (cisCard) favsEl.insertBefore(favCard, cisCard);
-    else favsEl.appendChild(favCard);
-  }
-
-  // ── Check-in overzicht per kind ───────────────────────────
-  const cisEl = document.getElementById('status-checkins');
-  if (cisEl) {
-    cisEl.innerHTML = '';
-    const todayDate = new Date(todayStr()+'T12:00:00');
-
-    kids.forEach(kid => {
-      const kidRow = document.createElement('div');
-      kidRow.style.cssText = 'margin-bottom:14px';
-      const kidCis = allCis.filter(c=>c.profile_id===testUuid(kid.id));
-      const dots = weekDates.map(dateStr => {
-        const d = new Date(dateStr+'T12:00:00');
-        const isPast = d <= todayDate;
-        const ci = kidCis.find(c=>c.eaten_at===dateStr);
-        const hasMenu = menu.find(m=>m.day_date===dateStr&&m.published);
-        const score = ci?.score;
-        const color = score===3?'#22C9A0':score===2?'#FFB830':score===1?'#FF6B6B':isPast&&hasMenu?'#FFEEEE':'#F5F5F3';
-        const emoji = score===3?'😋':score===2?'😐':score===1?'😕':isPast&&hasMenu?'!':'';
-        return '<div style="width:32px;height:32px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:13px;border:1.5px solid '+(score?color:'#ECEAF8')+'" title="'+DAY_NL[(new Date(dateStr+'T12:00:00')).getDay()]+'">'+emoji+'</div>';
-      }).join('');
-
-      const checkedCount = kidCis.filter(c=>weekDates.includes(c.eaten_at)).length;
-      kidRow.innerHTML =
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-        '<span style="font-size:18px">'+kid.emoji+'</span>'+
-        '<span style="font-weight:700;font-size:14px">'+kid.name+'</span>'+
-        '<span style="font-size:11px;color:#7B7A8E;margin-left:auto">'+checkedCount+' check-in'+(checkedCount!==1?'s':'')+'</span>'+
-        '</div>'+
-        '<div style="display:flex;gap:4px">'+dots+'</div>';
-      cisEl.appendChild(kidRow);
     });
+    if (missed.length > 0) {
+      let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Vergeten check-ins</div>';
+      missed.forEach(m=>{ html += row('❗',m.kid.emoji+' '+m.kid.name,m.dayName,null,null,false); });
+      addCard(html);
+    }
+  }
+
+  // ── 6. KIESLIJST KOMENDE WEKEN ────────────────────────────
+  if (realOff >= 0) {
+    const missing2 = !(avail2Res.data&&avail2Res.data.length>0);
+    const missing3 = !(avail3Res.data&&avail3Res.data.length>0);
+    if (missing2 || missing3) {
+      let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Kieslijsten komende weken</div>';
+      if (missing2) html += row('📋','Volgende week ('+nw.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+') — nog niet ingesteld',null,'Instellen →',"goScreen('vote-setup')",false);
+      if (missing3) html += row('📋','Over 2 weken ('+tw.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+') — nog niet ingesteld',null,'Instellen →',"goScreen('vote-setup')",false);
+      addCard(html);
+    }
+  }
+
+  // ── 7. CHECK-IN OVERZICHT ─────────────────────────────────
+  if (menuPublished || cis.length > 0) {
+    const DAYS_S = ['zo','ma','di','wo','do','vr','za'];
+    let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Check-ins deze week</div>';
+    kids.forEach(kid=>{
+      const kidCis = cis.filter(c=>c.profile_id===testUuid(kid.id));
+      const dots = weekDates.map(d=>{
+        const ci = kidCis.find(c=>c.eaten_at===d);
+        const past = d<=today;
+        const hasM = menu.find(m=>m.day_date===d&&m.published);
+        const s = ci?.score;
+        const bg = s===3?'#22C9A0':s===2?'#FFB830':s===1?'var(--coral)':past&&hasM?'#FFEEEE':'var(--bg)';
+        const em = s===3?'😋':s===2?'😐':s===1?'😕':past&&hasM?'!':'·';
+        return '<div style="width:30px;height:30px;border-radius:50%;background:'+bg+';border:1.5px solid '+(s?bg:'var(--border)')+';display:flex;align-items:center;justify-content:center;font-size:11px;color:'+(s?'white':'var(--muted)')+'">'+em+'</div>';
+      }).join('');
+      html += '<div style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+        '<span style="font-size:15px">'+kid.emoji+'</span><span style="font-weight:700;font-size:13px">'+kid.name+'</span>'+
+        '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+kidCis.length+' check-in'+(kidCis.length!==1?'s':'')+'</span></div>'+
+        '<div style="display:flex;gap:3px">'+dots+'</div></div>';
+    });
+    addCard(html);
+  }
+
+  // ── Alles prima ───────────────────────────────────────────
+  if (!hasUrgent && container.children.length <= 1) {
+    addCard('<div style="display:flex;align-items:center;gap:10px;color:var(--green);font-weight:700;font-size:14px"><span style="font-size:24px">🎉</span>Alles is op orde voor deze week!</div>');
   }
 }
 
@@ -3329,6 +3412,101 @@ function addSuggestionAsMeal(btn) {
   convertSuggestion(suggestion, currentProfile.family_id);
 }
 
+
+
+function renderTonightCard(profile) {
+  const tonight = document.getElementById('tonight-card');
+  if (!tonight) return;
+
+  // Zoek vandaag in weekmenu
+  const todayDate = todayStr();
+  const menuEntry = weeklyMenu.find(m => m.day_date === todayDate && m.published);
+
+  if (!menuEntry) {
+    hide(tonight);
+    return;
+  }
+
+  // Vul de kaart
+  document.getElementById('tonight-emoji').textContent = menuEntry.meal_emoji || '🍽️';
+  document.getElementById('tonight-name').textContent = menuEntry.meal_name || '—';
+
+  // Notitie
+  const metaEl = document.getElementById('tonight-meta');
+  metaEl.textContent = menuEntry.note || '';
+
+  // Recept knop — zoek in custom_meals of default
+  const meal = getAllMeals(true).find(m => m.id === menuEntry.meal_id);
+  const recipeUrl = meal?.recipe_url || menuEntry.recipe_url || null;
+  const recipeBtn = document.getElementById('tonight-recipe-btn');
+  if (recipeUrl) {
+    recipeBtn.style.display = '';
+    recipeBtn.dataset.url = recipeUrl;
+  } else {
+    recipeBtn.style.display = 'none';
+  }
+
+  // Kok
+  const cookRow = document.getElementById('tonight-cook-row');
+  if (menuEntry.cook_name) {
+    const isMe = menuEntry.cook_id === profile.id ||
+      menuEntry.cook_name === profile.name;
+    const cookNameEl = document.getElementById('tonight-cook-name');
+    const cookSubEl = document.getElementById('tonight-cook-sub');
+    const cookEmojiEl = document.getElementById('tonight-cook-emoji');
+
+    if (menuEntry.cook_name === 'Afhaal') {
+      cookEmojiEl.textContent = '🛵';
+      cookNameEl.textContent = 'Vanavond afhaal';
+      cookSubEl.textContent = '';
+    } else if (menuEntry.cook_name === 'Uit eten') {
+      cookEmojiEl.textContent = '🍽️';
+      cookNameEl.textContent = 'Vanavond uit eten';
+      cookSubEl.textContent = '';
+    } else if (isMe) {
+      cookEmojiEl.textContent = '👨‍🍳';
+      cookNameEl.textContent = 'Jij kookt vanavond!';
+      cookSubEl.textContent = '';
+      cookNameEl.style.color = 'var(--green)';
+    } else {
+      cookEmojiEl.textContent = '👨‍🍳';
+      cookNameEl.textContent = menuEntry.cook_name + ' kookt';
+      cookNameEl.style.color = 'var(--text)';
+      cookSubEl.textContent = '';
+    }
+    cookRow.style.display = '';
+  } else {
+    cookRow.style.display = 'none';
+  }
+
+  // Corvee
+  const corveeRow = document.getElementById('tonight-corvee-row');
+  if (menuEntry.corvee_names) {
+    const corveeIds = menuEntry.corvee_ids ? JSON.parse(menuEntry.corvee_ids) : [];
+    const isMyCorvee = corveeIds.includes(profile.id);
+    document.getElementById('tonight-corvee-names').textContent = menuEntry.corvee_names;
+    corveeRow.style.display = '';
+    // Markeer als het jouw corvee is
+    if (isMyCorvee) {
+      corveeRow.style.background = '#FEF3DC';
+      corveeRow.style.borderRadius = '8px';
+      corveeRow.style.padding = '8px';
+      corveeRow.style.margin = '0 -2px';
+      document.getElementById('tonight-corvee-names').style.fontWeight = '700';
+      document.getElementById('tonight-corvee-names').style.color = 'var(--text)';
+    }
+  } else {
+    corveeRow.style.display = 'none';
+  }
+
+  unhide(tonight);
+}
+
+function openTonightRecipe() {
+  const btn = document.getElementById('tonight-recipe-btn');
+  const url = btn?.dataset?.url;
+  if (url) window.open(url, '_blank');
+}
 
 // ── MENU SCREEN ────────────────────────────────────────────────
 const WEEK_DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
