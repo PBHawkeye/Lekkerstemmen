@@ -4281,7 +4281,6 @@ async function renderMenuScreen() {
   const p = currentProfile;
   const weekStart = getMenuWeekStart();
   const dates = getWeekDates(weekStart);
-  const published = weeklyMenu.some(m=>m.published);
 
   // Week label
   const monDate = new Date(weekStart+'T12:00:00');
@@ -4298,6 +4297,7 @@ async function renderMenuScreen() {
   const {data:wm} = await sb.from('weekly_menu')
     .select('*').eq('family_id',p.family_id).eq('week_of',weekStart);
   weeklyMenu = wm||[];
+  const published = weeklyMenu.some(m=>m.published);
 
   // Haal stemmen, scores en recent menu op
   const [votesRes, recentMenuRes, cisRes] = await Promise.all([
@@ -4335,10 +4335,14 @@ async function renderMenuScreen() {
     });
   });
 
+  const menuParentView = document.getElementById('menu-parent-view');
+  const menuChildView = document.getElementById('menu-child-view');
+  const menuEmptyView = document.getElementById('menu-empty-view');
+
   if (p.role==='parent') {
-    document.getElementById('menu-parent-view').classList.remove('hidden');
-    document.getElementById('menu-child-view').classList.add('hidden');
-    document.getElementById('menu-empty-view').classList.add('hidden');
+    if (menuParentView) menuParentView.classList.remove('hidden');
+    if (menuChildView) menuChildView.classList.add('hidden');
+    if (menuEmptyView) menuEmptyView.classList.add('hidden');
 
     // Stem samenvatting — uitgebreid met wie stemde + score + laatste keer
     const voteSummary = document.getElementById('vote-summary-list');
@@ -4483,19 +4487,14 @@ async function renderMenuScreen() {
     // Publish knop
     const publishBtn = document.getElementById('menu-publish-btn');
     const updateBtn = document.getElementById('menu-update-btn');
-    if (published) {
-      publishBtn.style.display='none';
-      updateBtn.style.display='';
-    } else {
-      publishBtn.style.display='';
-      updateBtn.style.display='none';
-    }
+    if (publishBtn) publishBtn.style.display = published ? 'none' : '';
+    if (updateBtn) updateBtn.style.display = published ? '' : 'none';
 
   } else {
     // Kind view
-    document.getElementById('menu-parent-view').classList.add('hidden');
-    const childView = document.getElementById('menu-child-view');
-    const emptyView = document.getElementById('menu-empty-view');
+    if (menuParentView) menuParentView.classList.add('hidden');
+    const childView = menuChildView;
+    const emptyView = menuEmptyView;
 
     const publishedMenu = weeklyMenu.filter(m=>m.published);
     if (publishedMenu.length===0) {
