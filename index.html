@@ -412,7 +412,7 @@
   <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
   <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
-    <button class="avatar" id="home-avatar" onclick="doSignOut()">?</button>
+    <button class="avatar" id="home-avatar" onclick="goScreen('profile')">?</button>
   </div>
   <div class="greeting">
     <h1>Hey <span id="home-name">daar</span> &#x1F44B;</h1>
@@ -434,8 +434,24 @@
   </div>
   <div id="today-child-done" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
-    <div class="today-done">✓ Check-in gedaan!</div>
+    <div id="done-meal-name" style="font-weight:800;font-size:20px;margin-bottom:8px">—</div>
+    <div id="done-score-display" style="font-size:28px;margin-bottom:4px"></div>
+    <div id="done-comment-display" style="font-size:13px;opacity:0.85;margin-bottom:0"></div>
   </div>
+  <!-- Morgen preview -->
+  <div id="tomorrow-card" class="hidden" style="margin:0 16px 16px">
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px" id="tomorrow-label">Morgen</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:28px" id="tomorrow-emoji">🍽️</span>
+        <div>
+          <div style="font-weight:800;font-size:16px;color:var(--text)" id="tomorrow-name">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px" id="tomorrow-meta"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op maaltijd van ouder...</div>
@@ -715,6 +731,10 @@
     <div style="margin-top:12px">
       <div class="label" style="margin-bottom:6px">Notitie (optioneel)</div>
       <textarea id="meal-picker-note" placeholder="bijv. met gehaktballen, vroeg eten ivm sport" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:80px;transition:border-color 0.2s"></textarea>
+    </div>
+    <div style="margin-top:10px">
+      <div class="label" style="margin-bottom:6px">Bericht aan het gezin <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(optioneel)</span></div>
+      <textarea id="meal-picker-message" placeholder="bijv. dit keer minder zout, of: jullie mogen kiezen tussen ketchup of mayo" maxlength="120" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:64px"></textarea>
     </div>
     <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Opslaan ✓</button>
   </div>
@@ -1723,6 +1743,15 @@ function refreshHome() {
   if (p.role==='child') {
     if (!todayMeal) unhide(document.getElementById('today-child-wait'));
     else if (hasCheckedIn) unhide(document.getElementById('today-child-done'));
+      // Vul done card met check-in info
+      const myCI = checkins.find(c => c.eaten_at === todayDateStr || c.meal_id === todayMeal?.id);
+      const doneNameEl = document.getElementById('done-meal-name');
+      const doneScoreEl = document.getElementById('done-score-display');
+      const doneCommentEl = document.getElementById('done-comment-display');
+      if (doneNameEl && todayMeal) doneNameEl.textContent = getMealDisplay(todayMeal.meal_type);
+      if (doneScoreEl && myCI) doneScoreEl.textContent = myCI.score===3?'😋 Lekker!':myCI.score===2?'😐 Ging wel':myCI.score===1?'😕 Niet zo lekker':'';
+      if (doneCommentEl && myCI?.comment) doneCommentEl.textContent = '"'+myCI.comment+'"';
+      else if (doneCommentEl) doneCommentEl.textContent = '';
     else {
       document.getElementById('today-child-q').textContent = 'Hoe was '+getMealDisplay(todayMeal.meal_type)+' vanavond?';
       unhide(document.getElementById('today-child'));
@@ -3451,6 +3480,78 @@ async function renderVoteSetupSportGrid(weekStart) {
   grid.appendChild(link);
 }
 
+
+// ── PROFIELSCHERM ───────────────────────────────────────────────
+let profileSelectedEmoji = null;
+
+const PROFILE_EMOJIS = ['😊','😄','😎','🤗','😋','😇','🤩','😍','🥳','🙂','👦','👧','👨','👩','🧑','👴','👵','🐱','🐶','🦊','🐸','🦁','🐼','🐨'];
+
+function openProfileScreen() {
+  const p = currentProfile;
+  if (!p) return;
+
+  // Vul velden
+  document.getElementById('profile-name-input').value = p.name || '';
+  document.getElementById('profile-name-display').textContent = p.name || '';
+  document.getElementById('profile-role-display').textContent = p.role === 'parent' ? 'ouder' : 'kind';
+
+  // Emoji
+  profileSelectedEmoji = p.emoji || '😊';
+  document.getElementById('profile-emoji-display').textContent = profileSelectedEmoji;
+  renderProfileEmojiPicker();
+
+  // Pincode sectie alleen voor kinderen
+  const pinSection = document.getElementById('profile-pin-section');
+  if (pinSection) pinSection.style.display = p.role === 'child' ? '' : 'none';
+
+  show('profile');
+}
+
+function renderProfileEmojiPicker() {
+  const picker = document.getElementById('profile-emoji-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  PROFILE_EMOJIS.forEach(e => {
+    const btn = document.createElement('button');
+    const isSelected = e === profileSelectedEmoji;
+    btn.style.cssText = 'width:40px;height:40px;border-radius:50%;border:2px solid ' +
+      (isSelected ? 'var(--green)' : 'var(--border)') +
+      ';background:' + (isSelected ? 'var(--green-bg)' : 'white') +
+      ';font-size:22px;cursor:pointer;transition:all 0.15s';
+    btn.textContent = e;
+    btn.onclick = async () => {
+      profileSelectedEmoji = e;
+      document.getElementById('profile-emoji-display').textContent = e;
+      renderProfileEmojiPicker();
+      // Direct opslaan
+      await sb.from('profiles').update({emoji: e}).eq('id', currentProfile.id);
+      currentProfile.emoji = e;
+      showProfileSaveMsg();
+    };
+    picker.appendChild(btn);
+  });
+}
+
+async function saveProfileName() {
+  const name = document.getElementById('profile-name-input').value.trim();
+  if (!name) return;
+  await sb.from('profiles').update({name}).eq('id', currentProfile.id);
+  currentProfile.name = name;
+  document.getElementById('profile-name-display').textContent = name;
+  document.getElementById('home-name').textContent = name;
+  // Update avatar initiaal
+  const avatar = document.getElementById('home-avatar');
+  if (avatar) avatar.textContent = initials(name);
+  showProfileSaveMsg();
+}
+
+function showProfileSaveMsg() {
+  const msg = document.getElementById('profile-save-msg');
+  if (!msg) return;
+  msg.style.display = '';
+  setTimeout(() => msg.style.display = 'none', 2000);
+}
+
 // ── MEAL DETAIL ────────────────────────────────────────────────
 let currentMealDetail = null;
 let mealDetailPrevScreen = 'meals';
@@ -4091,7 +4192,68 @@ function renderTonightCard(profile) {
     corveeRow.style.display = 'none';
   }
 
-  unhide(tonight);
+  // Verberg als vandaag al ingecheckt
+  const todayDateStr2 = todayStr();
+  const hasCheckedInToday = checkins.some(c =>
+    c.meal_id === todayMeal?.id ||
+    c.eaten_at === todayDateStr2
+  );
+  // Voor kinderen: verberg na check-in (check-in kaart neemt het over)
+  // Voor ouders: altijd tonen als info (kok/corvee)
+  if (hasCheckedInToday && profile.role === 'child') {
+    hide(tonight);
+  } else {
+    unhide(tonight);
+  }
+}
+
+
+function renderTomorrowCard(profile) {
+  const tomorrowCard = document.getElementById('tomorrow-card');
+  if (!tomorrowCard) return;
+
+  // Bereken de datum van morgen (t.o.v. de gesimuleerde vandaag)
+  const todayDate = new Date();
+  todayDate.setDate(todayDate.getDate() + testDayOffset + homeDayOffset);
+  const tomorrowDate = new Date(todayDate);
+  tomorrowDate.setDate(todayDate.getDate() + 1);
+  const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+
+  // Zoek morgen in weekmenu
+  const tomorrowEntry = weeklyMenu.find(m => m.day_date === tomorrowStr && m.published);
+
+  if (!tomorrowEntry) {
+    hide(tomorrowCard);
+    return;
+  }
+
+  // Label: "Morgen" of dag van de week
+  const dayName = tomorrowDate.toLocaleDateString('nl-NL', {weekday:'long'});
+  const labelEl = document.getElementById('tomorrow-label');
+  const emojiEl = document.getElementById('tomorrow-emoji');
+  const nameEl = document.getElementById('tomorrow-name');
+  const metaEl = document.getElementById('tomorrow-meta');
+
+  if (labelEl) labelEl.textContent = 'Morgen — ' + dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  if (emojiEl) emojiEl.textContent = tomorrowEntry.meal_emoji || '🍽️';
+  if (nameEl) nameEl.textContent = tomorrowEntry.meal_name || '—';
+
+  // Meta: kok info
+  let meta = '';
+  if (tomorrowEntry.cook_name === 'Afhaal') meta = '🛵 Afhaal';
+  else if (tomorrowEntry.cook_name === 'Uit eten') meta = '🍽️ Uit eten';
+  else if (tomorrowEntry.cook_name) meta = '👨‍🍳 ' + tomorrowEntry.cook_name + ' kookt';
+
+  // Corvee voor dit kind
+  if (tomorrowEntry.corvee_ids && profile.role === 'child') {
+    const corveeIds = JSON.parse(tomorrowEntry.corvee_ids);
+    if (corveeIds.includes(profile.id)) {
+      meta += (meta ? ' · ' : '') + '🧹 Jij corvee!';
+    }
+  }
+  if (metaEl) metaEl.textContent = meta;
+
+  unhide(tomorrowCard);
 }
 
 function openTonightRecipe() {
@@ -4295,6 +4457,7 @@ async function renderMenuScreen() {
         else if (existing.cook_name) detailHtml += '<span class="detail-pill cook">\uD83D\uDC68\uD83C\uDF73 '+existing.cook_name+'</span>';
         if (existing.corvee_names) detailHtml += '<span class="detail-pill corvee">\uD83E\uDDF9 '+existing.corvee_names+'</span>';
         if (existing.note) detailHtml += '<span class="detail-pill">'+existing.note+'</span>';
+        if (existing.message) detailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">💬 '+existing.message+'</span>';
       }
       row.innerHTML=
         '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
@@ -4371,6 +4534,7 @@ async function renderMenuScreen() {
         if (myCorveeDays) childDetailHtml += '<span class="detail-pill me">\uD83E\uDDF9 Jij corvee!</span>';
         else if (entry.corvee_names) childDetailHtml += '<span class="detail-pill corvee">\uD83E\uDDF9 '+entry.corvee_names+'</span>';
         if (entry.note) childDetailHtml += '<span class="detail-pill">'+entry.note+'</span>';
+        if (entry.message) childDetailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">💬 '+entry.message+'</span>';
       }
 
       row.innerHTML=
@@ -4395,6 +4559,8 @@ function openMealPicker(dateStr, dayIndex, existing) {
     : 'Kies een maaltijd voor '+WEEK_DAYS[dayIndex].toLowerCase()+':';
   document.getElementById('meal-picker-custom').value = '';
   document.getElementById('meal-picker-note').value = existing?.note||'';
+  const msgEl = document.getElementById('meal-picker-message');
+  if (msgEl) msgEl.value = existing?.message||'';
   selectedCook = existing?.cook_id||null;
   selectedCorvee = existing?.corvee_ids ? JSON.parse(existing.corvee_ids) : [];
 
@@ -4438,6 +4604,7 @@ async function confirmMealPick() {
   const {dateStr, dayIndex} = currentPickDay;
   const customVal = document.getElementById('meal-picker-custom').value.trim();
   const note = document.getElementById('meal-picker-note').value.trim();
+  const message = document.getElementById('meal-picker-message')?.value?.trim() || null;
   const selectedBtn = document.querySelector('#meal-picker-grid .meal-btn.selected');
 
   let mealId, mealName, mealEmoji;
@@ -4475,6 +4642,7 @@ async function confirmMealPick() {
     meal_name: mealName,
     meal_emoji: mealEmoji,
     note: note||null,
+    message: message||null,
     cook_id: selectedCook||null,
     cook_name: cookName,
     corvee_ids: selectedCorvee.length ? JSON.stringify(selectedCorvee) : null,
@@ -4938,6 +5106,58 @@ boot();
       <input type="url" id="new-meal-url" placeholder="https://..." />
     </div>
     <button class="btn btn-primary" onclick="addCustomMeal()" style="width:100%">Toevoegen ✓</button>
+  </div>
+</div>
+
+<div id="s-profile" class="screen">
+  <div class="topbar">
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">←</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Mijn profiel</div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;padding:0 24px 100px">
+
+    <!-- Avatar groot -->
+    <div style="text-align:center;padding:24px 0 20px">
+      <div id="profile-emoji-display" style="font-size:56px;margin-bottom:8px">😊</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text)" id="profile-name-display">Naam</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px" id="profile-role-display">kind</div>
+    </div>
+
+    <!-- Naam wijzigen -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Naam</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="profile-name-input" maxlength="20"
+          style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:16px;outline:none" />
+        <button onclick="saveProfileName()" class="btn btn-primary" style="padding:12px 16px;white-space:nowrap">Opslaan</button>
+      </div>
+    </div>
+
+    <!-- Emoji kiezen -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Emoji</div>
+      <div id="profile-emoji-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- Pincode wijzigen (als kind) -->
+    <div id="profile-pin-section" style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px;display:none">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Pincode</div>
+      <button onclick="openSetPin({changeOnly:true})" style="padding:10px 16px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text)">🔒 Pincode wijzigen</button>
+    </div>
+
+    <!-- Uitloggen / gezin -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Account</div>
+      <button onclick="goScreen('invite')" style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">👨‍👩‍👧</span><span>Gezin beheren</span>
+      </button>
+      <button onclick="doSignOut()" style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid #FFEEEE;background:#FFEEEE;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--coral);text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">🚪</span><span>Uitloggen</span>
+      </button>
+    </div>
+
+    <div id="profile-save-msg" style="text-align:center;color:var(--green);font-weight:700;font-size:14px;display:none">✓ Opgeslagen!</div>
   </div>
 </div>
 </body>
