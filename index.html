@@ -419,6 +419,7 @@
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">📋</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">🗳️</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">🍽️</span><span class="nav-label">Maaltijden</span></button>
+    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
     <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">📅</span><span class="nav-label">Menu</span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
   </nav>
@@ -593,13 +594,49 @@
   </div>
 </div>
 
+
+<div id="s-status" class="screen">
+  <div class="topbar">
+    <div class="logo">Lekker<span>stemmen</span></div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div style="flex:1;padding:0 16px 100px">
+    <div style="padding:0 0 16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px">Week van</div>
+      <div style="font-size:18px;font-weight:800;color:var(--text)" id="status-week-label">—</div>
+    </div>
+
+    <!-- Voortgangsbalk -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">Weekvoortgang</div>
+      <div id="status-progress-steps"></div>
+    </div>
+
+    <!-- Op wie wacht het -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px" id="status-waiting-card">
+      <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px">Actie vereist</div>
+      <div id="status-waiting-list"></div>
+    </div>
+
+    <!-- Check-in overzicht per kind -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">Check-ins deze week</div>
+      <div id="status-checkins"></div>
+    </div>
+  </div>
+</div>
 <div id="s-vote-setup" class="screen">
   <div class="topbar">
     <div class="logo">Lekker<span>stemmen</span></div>
     <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
   </div>
   <div class="vote-setup-wrap">
-    <div style="padding:0 16px 12px">
+    <div style="padding:0 16px 14px">
+      <div style="background:var(--purple-light);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;border:1.5px solid #D8D4FF">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--purple);margin-bottom:3px">Kieslijst voor de week van</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text)" id="votesetup-week-label">—</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Kinderen stemmen op <span id="votesetup-stemdag-label" style="font-weight:700;color:var(--purple)">zaterdag</span></div>
+      </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.5">Sleep maaltijden naar "Beschikbaar" om kinderen hieruit te laten kiezen. Max 10 opties.</p>
     </div>
 
@@ -1162,6 +1199,7 @@ function goScreen(name) {
   else if (name==='stats') { renderStats(); show('stats'); }
   else if (name==='menu') { renderMenuScreen(); show('menu'); }
   else if (name==='vote-setup') { renderVoteSetup(); show('vote-setup'); }
+  else if (name==='status') { renderStatus(); show('status'); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
 }
@@ -1187,6 +1225,7 @@ function refreshHome() {
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = '';
     document.getElementById('nav-meals').style.display = '';
+    document.getElementById('nav-status').style.display = '';
     document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = '';
   } else {
@@ -1194,6 +1233,7 @@ function refreshHome() {
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-meals').style.display = 'none';
+    document.getElementById('nav-status') && (document.getElementById('nav-status').style.display='none');
     document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = 'none';
     // Stem-knop altijd zichtbaar voor kinderen
@@ -1936,6 +1976,184 @@ function openMissedCheckin(dateStr) {
 }
 
 
+
+// ── STATUS SCHERM ───────────────────────────────────────────────
+async function renderStatus() {
+  const familyId = currentProfile.family_id;
+  const weekStart = testMondayOfWeek();
+
+  // Week label
+  const monDate = new Date(weekStart+'T12:00:00');
+  const sunDate = new Date(weekStart+'T12:00:00');
+  sunDate.setDate(sunDate.getDate()+6);
+  const fmt = {day:'numeric',month:'long'};
+  const weekLabel = monDate.toLocaleDateString('nl-NL',fmt)+' t/m '+sunDate.toLocaleDateString('nl-NL',fmt);
+  const weekLabelEl = document.getElementById('status-week-label');
+  if (weekLabelEl) weekLabelEl.textContent = weekLabel;
+
+  // Haal data op
+  const [votesRes, menuRes, availRes, allCisRes] = await Promise.all([
+    sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('weekly_menu').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('checkins_with_context').select('*').eq('family_id',familyId).order('eaten_at',{ascending:false}).limit(100),
+  ]);
+
+  const votes = votesRes.data||[];
+  const menu = menuRes.data||[];
+  const avail = availRes.data||[];
+  const allCis = allCisRes.data||[];
+
+  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const parents = TEST_PERSONS.filter(p=>p.role==='parent');
+  const menuPublished = menu.some(m=>m.published);
+  const menuDays = menu.filter(m=>m.published).length;
+  const kieslijstKlaar = avail.length > 0;
+  const DAY_NL = ['zo','ma','di','wo','do','vr','za'];
+
+  // Weekdagen ma-zo
+  const weekDates = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(weekStart+'T12:00:00');
+    d.setDate(d.getDate()+i);
+    weekDates.push(d.toISOString().split('T')[0]);
+  }
+
+  // ── Voortgangsstappen ──────────────────────────────────────
+  const steps = [
+    {
+      label: 'Kieslijst instellen',
+      done: kieslijstKlaar,
+      waiting: !kieslijstKlaar ? 'ouder' : null,
+      detail: kieslijstKlaar ? avail.length+' maaltijden beschikbaar' : 'Nog niet gedaan',
+      action: kieslijstKlaar ? null : "goScreen('vote-setup')",
+      actionLabel: 'Instellen →',
+    },
+    {
+      label: 'Kinderen laten stemmen',
+      done: votes.length >= kids.length,
+      partial: votes.length > 0 && votes.length < kids.length,
+      waiting: votes.length < kids.length ? 'kinderen' : null,
+      detail: votes.length === 0
+        ? 'Nog niemand gestemd'
+        : votes.length === kids.length
+          ? 'Iedereen heeft gestemd ✓'
+          : votes.length+' van '+kids.length+' kinderen gestemd',
+    },
+    {
+      label: 'Weekmenu vaststellen',
+      done: menuPublished,
+      waiting: !menuPublished && votes.length > 0 ? 'ouder' : null,
+      detail: menuPublished
+        ? menuDays+' van 7 dagen ingevuld'
+        : !kieslijstKlaar ? 'Eerst kieslijst instellen'
+        : votes.length === 0 ? 'Wacht op stemmen kinderen'
+        : 'Stemmen binnen — menu kan worden vastgesteld',
+      action: votes.length > 0 && !menuPublished ? "goScreen('menu')" : null,
+      actionLabel: 'Menu opstellen →',
+    },
+    {
+      label: 'Menu gepubliceerd',
+      done: menuPublished,
+      waiting: null,
+      detail: menuPublished ? 'Kinderen kunnen het menu zien' : 'Nog niet gepubliceerd',
+    },
+  ];
+
+  const stepsEl = document.getElementById('status-progress-steps');
+  if (stepsEl) {
+    stepsEl.innerHTML = '';
+    steps.forEach((step, i) => {
+      const color = step.done ? '#22C9A0' : step.partial ? '#FFB830' : '#ECEAF8';
+      const textColor = step.done ? '#0F6E56' : step.partial ? '#C47F00' : '#7B7A8E';
+      const icon = step.done ? '✓' : step.partial ? '◑' : (i+1).toString();
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid #ECEAF8';
+      if (i === steps.length-1) row.style.borderBottom = 'none';
+      row.innerHTML =
+        '<div style="width:28px;height:28px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:'+(step.done||step.partial?'white':'#aaa')+';flex-shrink:0">'+icon+'</div>'+
+        '<div style="flex:1">'+
+          '<div style="font-weight:700;font-size:14px;color:'+(step.done?'#1A1A2E':step.partial?'#1A1A2E':'#aaa')+'">'+step.label+'</div>'+
+          '<div style="font-size:12px;color:'+textColor+';margin-top:2px">'+step.detail+'</div>'+
+          (step.action ? '<button onclick="'+step.action+'" style="margin-top:6px;padding:4px 12px;border-radius:99px;border:1.5px solid #7C6FF7;background:transparent;color:#7C6FF7;font-family:Nunito,sans-serif;font-weight:700;font-size:11px;cursor:pointer">'+step.actionLabel+'</button>' : '')+
+        '</div>'+
+        (step.waiting ? '<div style="font-size:10px;padding:2px 8px;border-radius:99px;background:'+(step.waiting==='ouder'?'#EEF0FF':'#FFF4D6')+';color:'+(step.waiting==='ouder'?'#5148D4':'#C47F00')+';font-weight:700;flex-shrink:0;align-self:center">wacht op '+step.waiting+'</div>' : '');
+      stepsEl.appendChild(row);
+    });
+  }
+
+  // ── Op wie wacht het ──────────────────────────────────────
+  const waitingEl = document.getElementById('status-waiting-list');
+  const waitingCard = document.getElementById('status-waiting-card');
+  if (waitingEl) {
+    const waiting = [];
+    if (!kieslijstKlaar) waiting.push({who:'ouder', what:'Kieslijst voor stemmen nog niet ingesteld', urgent:true});
+    kids.forEach(kid => {
+      if (!votes.find(v=>v.profile_id===testUuid(kid.id))) {
+        waiting.push({who:kid.name, what:'Heeft nog niet gestemd', urgent:false});
+      }
+    });
+    if (votes.length>0 && !menuPublished) waiting.push({who:'ouder', what:'Stemmen zijn binnen — menu kan vastgesteld worden', urgent:true});
+    if (menuPublished) {
+      // Check wie nog niet ingecheckt heeft deze week
+      const todayIdx = weekDates.indexOf(todayStr());
+      const daysToCheck = todayIdx >= 0 ? weekDates.slice(0, todayIdx+1) : [];
+      daysToCheck.forEach(dateStr => {
+        const dayMenu = menu.find(m=>m.day_date===dateStr&&m.published);
+        if (!dayMenu) return;
+        kids.forEach(kid => {
+          const ci = allCis.find(c=>c.eaten_at===dateStr&&c.profile_id===testUuid(kid.id));
+          if (!ci) waiting.push({who:kid.name, what:'Nog niet ingecheckt voor '+new Date(dateStr+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long'}), urgent:false});
+        });
+      });
+    }
+
+    if (waiting.length === 0) {
+      waitingEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#0F6E56;font-weight:700"><span style="font-size:20px">🎉</span>Alles is op orde deze week!</div>';
+    } else {
+      waitingEl.innerHTML = waiting.map(w =>
+        '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid #ECEAF8">'+
+        '<div style="width:32px;height:32px;border-radius:50%;background:'+(w.urgent?'#FFEEEE':'#EEF0FF')+';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(w.urgent?'⚡':'⏳')+'</div>'+
+        '<div><div style="font-weight:700;font-size:13px">'+w.who+'</div><div style="font-size:12px;color:#7B7A8E">'+w.what+'</div></div>'+
+        '</div>'
+      ).join('');
+    }
+  }
+
+  // ── Check-in overzicht per kind ───────────────────────────
+  const cisEl = document.getElementById('status-checkins');
+  if (cisEl) {
+    cisEl.innerHTML = '';
+    const todayDate = new Date(todayStr()+'T12:00:00');
+
+    kids.forEach(kid => {
+      const kidRow = document.createElement('div');
+      kidRow.style.cssText = 'margin-bottom:14px';
+      const kidCis = allCis.filter(c=>c.profile_id===testUuid(kid.id));
+      const dots = weekDates.map(dateStr => {
+        const d = new Date(dateStr+'T12:00:00');
+        const isPast = d <= todayDate;
+        const ci = kidCis.find(c=>c.eaten_at===dateStr);
+        const hasMenu = menu.find(m=>m.day_date===dateStr&&m.published);
+        const score = ci?.score;
+        const color = score===3?'#22C9A0':score===2?'#FFB830':score===1?'#FF6B6B':isPast&&hasMenu?'#FFEEEE':'#F5F5F3';
+        const emoji = score===3?'😋':score===2?'😐':score===1?'😕':isPast&&hasMenu?'!':'';
+        return '<div style="width:32px;height:32px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:13px;border:1.5px solid '+(score?color:'#ECEAF8')+'" title="'+DAY_NL[(new Date(dateStr+'T12:00:00')).getDay()]+'">'+emoji+'</div>';
+      }).join('');
+
+      const checkedCount = kidCis.filter(c=>weekDates.includes(c.eaten_at)).length;
+      kidRow.innerHTML =
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<span style="font-size:18px">'+kid.emoji+'</span>'+
+        '<span style="font-weight:700;font-size:14px">'+kid.name+'</span>'+
+        '<span style="font-size:11px;color:#7B7A8E;margin-left:auto">'+checkedCount+' check-in'+(checkedCount!==1?'s':'')+'</span>'+
+        '</div>'+
+        '<div style="display:flex;gap:4px">'+dots+'</div>';
+      cisEl.appendChild(kidRow);
+    });
+  }
+}
+
 // ── VOTE SETUP ─────────────────────────────────────────────────
 const DAY_NAMES = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
 const DAY_NAMES_FULL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
@@ -1943,6 +2161,20 @@ const DAY_NAMES_FULL = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vri
 function renderVoteSetup() {
   const allMeals = getAllMeals();
   const weekStart = testMondayOfWeek();
+
+  // Week label
+  const monDate = new Date(weekStart+'T12:00:00');
+  const sunDate = new Date(weekStart+'T12:00:00');
+  sunDate.setDate(sunDate.getDate()+6);
+  const fmt = {day:'numeric',month:'long'};
+  const weekLabel = monDate.toLocaleDateString('nl-NL',fmt)+' t/m '+sunDate.toLocaleDateString('nl-NL',fmt);
+  const el = document.getElementById('votesetup-week-label');
+  if (el) el.textContent = weekLabel;
+
+  // Stemdag label
+  const DAY_NL = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+  const stemdagEl = document.getElementById('votesetup-stemdag-label');
+  if (stemdagEl) stemdagEl.textContent = DAY_NL[familySettings.vote_day||6];
 
   // Stemdag picker
   const picker = document.getElementById('stemdag-picker');
