@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v14:59</title>
+  <title>Lekkerstemmen v15:06</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -416,7 +416,15 @@
   </div>
   <div class="greeting">
     <h1>Hey <span id="home-name">daar</span> 👋</h1>
-    <p id="home-date"></p>
+    <!-- Dag navigatie -->
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <button onclick="homeStepDay(-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.4);background:transparent;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">←</button>
+      <div style="flex:1;text-align:center">
+        <p id="home-date" style="margin:0;font-size:14px;opacity:0.9"></p>
+        <span id="home-day-label" style="font-size:11px;opacity:0.7"></span>
+      </div>
+      <button id="home-next-btn" onclick="homeStepDay(1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.4);background:transparent;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">→</button>
+    </div>
     <div id="home-streak" class="streak hidden">🔥 <span id="streak-num">0</span> dagen op rij!</div>
   </div>
   <div id="today-child" class="today-card hidden">
@@ -1855,6 +1863,7 @@ function renderCustomMealsList() {
           (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">📖</button>':'') +
+        '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">📊</button>'+
         '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">🗑️</button>'+
         '</div>'+
@@ -4133,6 +4142,25 @@ async function publishMenu() {
   renderMenuScreen();
   document.getElementById('menu-publish-btn').style.display='none';
   document.getElementById('menu-update-btn').style.display='';
+}
+
+
+
+// ── HOME DAG NAVIGATIE ──────────────────────────────────────────
+let homeDayOffset = 0; // 0 = vandaag, -1 = gisteren, etc.
+
+function homeStepDay(delta) {
+  const newOffset = homeDayOffset + delta;
+  // Niet verder dan vandaag
+  if (newOffset > 0) return;
+  homeDayOffset = newOffset;
+  loadData().then(() => refreshHome());
+}
+
+function homeGetDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + testDayOffset + homeDayOffset);
+  return d.toISOString().split('T')[0];
 }
 
 
