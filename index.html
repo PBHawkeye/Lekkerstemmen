@@ -782,27 +782,35 @@ function getMealDisplay(id) {
 
 // ── TEST BAR ───────────────────────────────────────────────────
 function initTestBar() {
-  const bar = document.getElementById('test-bar');
-  if (bar) bar.style.display = '';
+  console.log('[TestBar] Initializing...');
   renderTestPersons();
   updateTestDayDisplay();
   updateScenarioHighlight();
+  console.log('[TestBar] Done, persons:', TEST_PERSONS.map(p=>p.name));
 }
 
 function updateScenarioHighlight() {
-  document.querySelectorAll('.test-scenario').forEach(b=>b.classList.remove('active'));
-  const map = {'-8':'sc-stemdag','-7':'sc-menu','-6':'sc-ma','-5':'sc-di','-4':'sc-wo','-3':'sc-do','-2':'sc-vr','0':'sc-today'};
-  const el = document.getElementById(map[String(testDayOffset)]);
-  if (el) el.classList.add('active');
+  const ids = ['sc-stemdag','sc-menu','sc-ma','sc-di','sc-wo','sc-do','sc-vr','sc-today'];
+  const activeId = {'-8':'sc-stemdag','-7':'sc-menu','-6':'sc-ma','-5':'sc-di','-4':'sc-wo','-3':'sc-do','-2':'sc-vr','0':'sc-today'}[String(testDayOffset)];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const isActive = id === activeId;
+    el.style.background = isActive ? '#FFB830' : 'transparent';
+    el.style.borderColor = isActive ? '#FFB830' : '#444';
+    el.style.color = isActive ? '#1A1A2E' : '#aaa';
+  });
 }
 
 function renderTestPersons() {
   const el = document.getElementById('test-persons');
+  if (!el) return;
   el.innerHTML = '';
   TEST_PERSONS.forEach(p => {
     const btn = document.createElement('button');
-    btn.className = 'test-person' + (p.id===testPersonId?' active':'');
-    btn.textContent = p.emoji+' '+p.name;
+    const isActive = p.id === testPersonId;
+    btn.style.cssText = 'padding:5px 10px;border-radius:99px;border:1.5px solid '+(isActive?'#7C6FF7':'#444')+';background:'+(isActive?'#7C6FF7':'transparent')+';font-family:Nunito,sans-serif;font-weight:700;font-size:12px;color:'+(isActive?'white':'#aaa')+';cursor:pointer';
+    btn.textContent = p.emoji + ' ' + p.name;
     btn.onclick = () => switchTestPerson(p.id);
     el.appendChild(btn);
   });
@@ -1984,15 +1992,14 @@ async function convertSuggestion(suggestionText, familyId) {
   if (!name) return;
   const emoji = prompt('Emoji:', '🍽️') || '🍽️';
   const {error} = await sb.from('custom_meals').insert({
-    family_id: familyId,
-    name: name,
-    emoji: emoji,
-    note: 'Via suggestie kind',
+    family_id: familyId, name, emoji, note: 'Via suggestie kind',
   });
-  if (!error) {
-    await loadData();
-    alert('✓ '+name+' toegevoegd aan jullie maaltijdenlijst!');
-  }
+  if (!error) { await loadData(); alert('✓ '+name+' toegevoegd!'); }
+}
+
+function addSuggestionAsMeal(btn) {
+  const suggestion = decodeURIComponent(btn.dataset.suggestion);
+  convertSuggestion(suggestion, currentProfile.family_id);
 }
 
 
@@ -2059,7 +2066,7 @@ async function renderMenuScreen() {
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;background:white;border-radius:8px;padding:6px 10px">'+
           '<span style="font-size:13px;flex:1">💬 <em>'+v.suggestion+'</em></span>'+
           '<span style="font-size:11px;color:var(--muted)">'+name+'</span>'+
-          '<button onclick="convertSuggestion(''+v.suggestion.replace(/'/g,"\'")+'',''+currentProfile.family_id+'')" '+
+          '<button onclick="addSuggestionAsMeal(this)" data-suggestion="'+encodeURIComponent(v.suggestion)+'" '+
           'style="background:var(--teal-light);color:#0F6E56;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Toevoegen</button>'+
           '</div>';
       });
@@ -2322,32 +2329,32 @@ function toggleTestMode() {
 // ── BOOT ───────────────────────────────────────────────────────
 async function boot() {
   show('loading');
-  // Altijd testbar tonen
   initTestBar();
 
   if (testModeActive) {
-    // Start in testmodus
+    testDayOffset = -8;
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
-    // UUID format: 00000000-0000-0000-0000-00000000paul
     currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
-    console.log('[Test] Profile:', currentProfile);
-    await loadData();
+    console.log('[Boot] profile:', currentProfile.name, currentProfile.id);
+    updateScenarioHighlight();
+    try {
+      await loadData();
+    } catch(e) {
+      console.error('[Boot] loadData error:', e);
+    }
     refreshHome();
     show('home');
   } else {
-    // Start met echte account
     const {data:{session}} = await sb.auth.getSession();
     if (session) { currentUser=session.user; await loadProfile(); show('home'); }
     else show('auth');
+    sb.auth.onAuthStateChange(async(event,session)=>{
+      if (!testModeActive) {
+        if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); show('home'); }
+        else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
+      }
+    });
   }
-
-  // Auth listener altijd actief voor als testmodus uit staat
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if (!testModeActive) {
-      if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); show('home'); }
-      else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
-    }
-  });
 }
 
 boot();
