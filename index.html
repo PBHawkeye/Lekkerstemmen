@@ -419,6 +419,7 @@
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">📋</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">🗳️</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">🍽️</span><span class="nav-label">Maaltijden</span></button>
+    <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label">Sport</span></button>
     <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
     <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">📅</span><span class="nav-label">Menu</span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
@@ -504,8 +505,11 @@
       <div class="field" style="margin-bottom:8px">
         <input type="text" id="new-meal-name" placeholder="Naam, bijv. 'Stamppot boerenkool'" maxlength="40" />
       </div>
-      <div class="field" style="margin-bottom:10px">
+      <div class="field" style="margin-bottom:8px">
         <input type="text" id="new-meal-note" placeholder="Notitie, bijv. 'met spekjes en worst'" maxlength="60" />
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <input type="url" id="new-meal-url" placeholder="Recept URL (optioneel), bijv. https://..." />
       </div>
       <button class="btn btn-primary" style="margin-bottom:0" onclick="addCustomMeal()">+ Maaltijd toevoegen</button>
     </div>
@@ -533,8 +537,10 @@
     <div id="menu-days-list" style="padding:0 16px 20px"></div>
     <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:8px">
       <div style="padding:0 16px 8px">
-      <button class="btn" style="background:var(--purple-light);color:var(--purple);margin-bottom:8px" onclick="goScreen('vote-setup')">⚙️ Kieslijst voor kinderen instellen →</button>
+      <button class="btn" style="background:var(--purple-light);color:var(--purple);margin-bottom:8px" onclick="goScreen('vote-setup')">⚙️ Kieslijst instellen →</button>
+      <button class="btn" style="background:#E0FAF4;color:#0F6E56;margin-bottom:8px" onclick="showAIProposal()">✨ AI menuvoorstel →</button>
     </div>
+    <div id="ai-proposal-container" style="margin:0 16px 12px;display:none"></div>
     <button class="btn btn-primary" id="menu-publish-btn" onclick="publishMenu()">Menu publiceren voor kinderen →</button>
       <button class="btn" style="background:var(--teal-light);color:#0F6E56" id="menu-update-btn" onclick="publishMenu()" style="display:none">Menu bijwerken ✓</button>
       <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
@@ -595,6 +601,32 @@
 </div>
 
 
+
+<div id="s-sport" class="screen">
+  <div class="topbar">
+    <div class="logo">Lekker<span>stemmen</span></div>
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">✕</button>
+  </div>
+  <div style="flex:1;padding:0 16px 100px">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">
+      Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
+    </div>
+
+    <!-- Week navigatie -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <button onclick="sportWeekStep(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #ECEAF8;background:white;font-size:16px;cursor:pointer">←</button>
+      <div style="flex:1;text-align:center">
+        <div style="font-weight:800;font-size:15px" id="sport-week-label">—</div>
+        <div style="font-size:11px;color:var(--muted)" id="sport-week-sub">week van</div>
+      </div>
+      <button onclick="sportWeekStep(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #ECEAF8;background:white;font-size:16px;cursor:pointer">→</button>
+    </div>
+
+    <div id="sport-schedule-grid"></div>
+
+    <button class="btn btn-primary" onclick="saveSportSchedule()" style="margin-top:16px">Sportdagen opslaan ✓</button>
+  </div>
+</div>
 <div id="s-status" class="screen">
   <div class="topbar">
     <div class="logo">Lekker<span>stemmen</span></div>
@@ -1200,6 +1232,7 @@ function goScreen(name) {
   else if (name==='menu') { renderMenuScreen(); show('menu'); }
   else if (name==='vote-setup') { renderVoteSetup(); show('vote-setup'); }
   else if (name==='status') { renderStatus(); show('status'); }
+  else if (name==='sport') { sportWeekOffset=0; renderSportSchedule(); show('sport'); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
 }
@@ -1225,6 +1258,7 @@ function refreshHome() {
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = '';
     document.getElementById('nav-meals').style.display = '';
+    document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
     document.getElementById('nav-status').style.display = '';
     document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = '';
@@ -1510,10 +1544,36 @@ function renderCustomMealsList() {
   if (customMeals.length===0) {
     list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:16px">Nog geen eigen maaltijden. Voeg er een toe!</p>';
   } else {
+    const favs = getFavoritesFromCheckins();
+    const favMealIds = Object.values(favs).map(f=>f.mealId);
+
     customMeals.forEach(m => {
       const div = document.createElement('div');
       div.className = 'custom-meal-item';
-      div.innerHTML = `<span class="custom-meal-emoji">${m.emoji}</span><div style="flex:1"><div class="custom-meal-name">${m.name}</div>${m.note?`<div class="custom-meal-note">${m.note}</div>`:''}</div><button class="del-btn" onclick="deleteCustomMeal('${m.id}')">🗑️</button>`;
+      div.style.cssText = 'flex-direction:column;align-items:flex-start;gap:4px';
+
+      const lastComment = checkins.find(c=>c.meal_type===m.id&&c.comment);
+      // Wie vindt dit hun favoriet?
+      const favoriteOf = Object.values(favs).filter(f=>f.mealId===m.id).map(f=>f.personName);
+
+      div.innerHTML =
+        '<div style="display:flex;align-items:center;gap:12px;width:100%">'+
+        '<span class="custom-meal-emoji">'+m.emoji+'</span>'+
+        '<div style="flex:1">'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            '<span class="custom-meal-name">'+m.name+'</span>'+
+            (favoriteOf.length>0?
+              '<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700;white-space:nowrap">❤️ '+favoriteOf.join(' & ')+'</span>':'')+
+          '</div>'+
+          (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
+        '</div>'+
+        (m.recipe_url?'<a href="'+m.recipe_url+'" target="_blank" style="font-size:18px;text-decoration:none" title="Recept bekijken">📖</a>':'') +
+        '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">🗑️</button>'+
+        '</div>'+
+        (lastComment?
+          '<div style="background:#F7F6FF;border-radius:8px;padding:6px 10px;font-size:11px;color:#7B7A8E;width:100%;border-left:2px solid #7C6FF7">'+
+          '💬 '+lastComment.child_name+': "'+lastComment.comment+'"</div>':''
+        );
       list.appendChild(div);
     });
   }
@@ -1524,8 +1584,13 @@ function renderCustomMealsList() {
   DEFAULT_MEALS.forEach(m => {
     const item = document.createElement('div');
     item.className='custom-meal-item';
-    item.style.opacity='0.5';
-    item.innerHTML=`<span class="custom-meal-emoji">${m.emoji}</span><div style="flex:1"><div class="custom-meal-name">${m.label}</div></div><span style="font-size:11px;color:var(--muted)">standaard</span>`;
+    item.style.opacity='0.6';
+    const favOf2 = Object.values(favs).filter(f=>f.mealId===m.id).map(f=>f.personName);
+    item.innerHTML=
+      '<span class="custom-meal-emoji">'+m.emoji+'</span>'+
+      '<div style="flex:1"><div class="custom-meal-name">'+m.label+'</div></div>'+
+      (favOf2.length>0?'<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700">❤️ '+favOf2.join(' & ')+'</span>':
+      '<span style="font-size:11px;color:var(--muted)">standaard</span>');
     div2.appendChild(item);
   });
   list.appendChild(div2);
@@ -1537,8 +1602,10 @@ async function addCustomMeal() {
   const errEl = document.getElementById('meals-error');
   hide(errEl);
   if (!name) { unhide(errEl); errEl.textContent='Geef de maaltijd een naam.'; return; }
+  const url = document.getElementById('new-meal-url')?.value?.trim()||null;
   const {error} = await sb.from('custom_meals').insert({
-    family_id:currentProfile.family_id, name, emoji:selectedEmoji, note:note||null
+    family_id:currentProfile.family_id, name, emoji:selectedEmoji, note:note||null,
+    recipe_url: url||null,
   });
   if (error) {
     unhide(errEl);
@@ -1549,6 +1616,8 @@ async function addCustomMeal() {
   }
   document.getElementById('new-meal-name').value='';
   document.getElementById('new-meal-note').value='';
+  const urlEl = document.getElementById('new-meal-url');
+  if (urlEl) urlEl.value='';
   selectedEmoji='🍽️';
   await loadData();
   renderMealsScreen();
@@ -2120,6 +2189,29 @@ async function renderStatus() {
     }
   }
 
+  // ── Lievelingsgerechten per kind ──────────────────────────
+  const favsForStatus = getFavorites(allCis);
+  const favsEl = document.querySelector('#status-checkins')?.parentElement;
+  if (favsEl && Object.keys(favsForStatus).length > 0) {
+    const favCard = document.createElement('div');
+    favCard.style.cssText = 'background:white;border-radius:16px;border:1.5px solid #ECEAF8;padding:16px;margin-bottom:12px';
+    favCard.innerHTML = '<div style="font-size:13px;font-weight:700;color:#7B7A8E;margin-bottom:10px">❤️ Lievelingsgerechten</div>' +
+      Object.values(favsForStatus).map(f=>
+        '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid #ECEAF8">'+
+        '<span style="font-size:20px">'+f.mealEmoji+'</span>'+
+        '<div style="flex:1"><div style="font-weight:700;font-size:13px">'+f.mealLabel+'</div>'+
+        '<div style="font-size:11px;color:#7B7A8E">'+f.personName+'s favoriet</div></div>'+
+        (lastServedMap&&lastServedMap[f.mealId]?
+          '<div style="font-size:11px;color:#7B7A8E">Laatste keer:<br>'+lastServedMap[f.mealId]+'</div>':
+          '<div style="font-size:11px;color:#22C9A0">Nog niet geweest!</div>')+
+        '</div>'
+      ).join('');
+    // Voeg in voor check-ins card
+    const cisCard = document.getElementById('status-checkins')?.parentElement?.querySelector('[id="status-checkins"]')?.parentElement;
+    if (cisCard) favsEl.insertBefore(favCard, cisCard);
+    else favsEl.appendChild(favCard);
+  }
+
   // ── Check-in overzicht per kind ───────────────────────────
   const cisEl = document.getElementById('status-checkins');
   if (cisEl) {
@@ -2152,6 +2244,354 @@ async function renderStatus() {
       cisEl.appendChild(kidRow);
     });
   }
+}
+
+
+
+function showAIProposal() {
+  const container = document.getElementById('ai-proposal-container');
+  if (!container) return;
+  container.style.display = '';
+  requestAIMenuProposal(testMondayOfWeek(), container);
+}
+
+
+// ── LIEVELINGSGERECHTEN ─────────────────────────────────────────
+function getFavorites(cisData) {
+  // Bereken per persoon het hoogst scorende gerecht (min 2 check-ins)
+  const perPerson = {};
+  cisData.forEach(c => {
+    if (!c.meal_type || !c.child_name) return;
+    if (!perPerson[c.profile_id]) perPerson[c.profile_id] = {name: c.child_name, meals: {}};
+    if (!perPerson[c.profile_id].meals[c.meal_type]) perPerson[c.profile_id].meals[c.meal_type] = {total:0, count:0};
+    perPerson[c.profile_id].meals[c.meal_type].total += c.score;
+    perPerson[c.profile_id].meals[c.meal_type].count++;
+  });
+
+  const favorites = {}; // {profile_id: {mealId, mealLabel, avg}}
+  Object.entries(perPerson).forEach(([pid, data]) => {
+    const qualified = Object.entries(data.meals)
+      .filter(([,v]) => v.count >= 2)
+      .map(([mealId, v]) => ({mealId, avg: v.total/v.count}))
+      .sort((a,b) => b.avg - a.avg);
+    if (qualified.length > 0) {
+      const best = qualified[0];
+      const meal = getAllMeals().find(m=>m.id===best.mealId);
+      favorites[pid] = {
+        mealId: best.mealId,
+        mealEmoji: meal?.emoji||'🍽️',
+        mealLabel: meal?.label||best.mealId,
+        avg: best.avg,
+        personName: data.name,
+      };
+    }
+  });
+  return favorites;
+}
+
+function getFavoritesFromCheckins() {
+  // Gebruik globale checkins + eventueel alle gezinsleden
+  return getFavorites(checkins);
+}
+
+// ── SPORT AGENDA ────────────────────────────────────────────────
+let sportWeekOffset = 0;
+let sportScheduleData = {}; // {dateStr: {profileId: bool}}
+
+function getSportWeekDates(offset) {
+  const base = new Date();
+  base.setDate(base.getDate() + testDayOffset + (offset * 7));
+  const day = base.getDay();
+  const mon = new Date(base);
+  mon.setDate(base.getDate() - day + (day===0?-6:1));
+  const dates = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(mon);
+    d.setDate(mon.getDate()+i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+async function renderSportSchedule() {
+  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const dates = getSportWeekDates(sportWeekOffset);
+  const mon = new Date(dates[0]+'T12:00:00');
+  const sun = new Date(dates[6]+'T12:00:00');
+  const fmt = {day:'numeric',month:'short'};
+  document.getElementById('sport-week-label').textContent =
+    mon.toLocaleDateString('nl-NL',fmt) + ' – ' + sun.toLocaleDateString('nl-NL',fmt);
+  document.getElementById('sport-week-sub').textContent =
+    sportWeekOffset === 0 ? 'huidige week' :
+    sportWeekOffset > 0 ? 'over '+sportWeekOffset+' week'+(sportWeekOffset>1?'en':'') :
+    Math.abs(sportWeekOffset)+' week'+(Math.abs(sportWeekOffset)>1?'en':'')+' geleden';
+
+  // Haal bestaande sportdata op
+  const {data:existing} = await sb.from('sport_schedule')
+    .select('*')
+    .eq('family_id', currentProfile.family_id)
+    .gte('sport_date', dates[0])
+    .lte('sport_date', dates[6]);
+  sportScheduleData = {};
+  (existing||[]).forEach(s => {
+    if (!sportScheduleData[s.sport_date]) sportScheduleData[s.sport_date] = {};
+    sportScheduleData[s.sport_date][s.profile_id] = s.has_sport;
+  });
+
+  const grid = document.getElementById('sport-schedule-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+
+  // Header rij
+  const header = document.createElement('div');
+  header.style.cssText = 'display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;margin-bottom:6px';
+  header.innerHTML = '<div></div>' + dates.map((d,i) => {
+    const date = new Date(d+'T12:00:00');
+    const isPast = date < new Date();
+    return '<div style="text-align:center;font-size:11px;font-weight:700;color:'+(isPast?'#C0BEDD':'#7B7A8E')+'">'+
+      DAYS_SHORT[i]+'<br><span style="font-size:10px">'+date.getDate()+'</span></div>';
+  }).join('');
+  grid.appendChild(header);
+
+  // Rij per kind
+  kids.forEach(kid => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;margin-bottom:6px;align-items:center';
+    const kidId = testUuid(kid.id);
+    grid.appendChild(row);
+  });
+}
+
+function toggleSport(dateStr, profileId) {
+  if (!sportScheduleData[dateStr]) sportScheduleData[dateStr] = {};
+  sportScheduleData[dateStr][profileId] = !sportScheduleData[dateStr][profileId];
+  renderSportSchedule();
+}
+
+function sportWeekStep(delta) {
+  sportWeekOffset += delta;
+  renderSportSchedule();
+}
+
+async function saveSportSchedule() {
+  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const dates = getSportWeekDates(sportWeekOffset);
+  const familyId = currentProfile.family_id;
+  const rows = [];
+  dates.forEach(d => {
+    kids.forEach(kid => {
+      const kidId = testUuid(kid.id);
+      const hasSport = sportScheduleData[d]?.[kidId] ?? false;
+      rows.push({family_id:familyId, profile_id:kidId, sport_date:d, has_sport:hasSport});
+    });
+  });
+  await sb.from('sport_schedule').upsert(rows, {onConflict:'family_id,profile_id,sport_date'});
+  const btn = document.querySelector('[onclick="saveSportSchedule()"]');
+  if (btn) { btn.textContent='✓ Opgeslagen!'; setTimeout(()=>btn.textContent='Sportdagen opslaan ✓',1500); }
+}
+
+// ── AI MENUVOORSTEL ──────────────────────────────────────────────
+async function generateMenuProposal(weekStart) {
+  const familyId = currentProfile.family_id;
+
+  // Verzamel context
+  const [votesRes, cisRes, sportRes, availRes, menuRes] = await Promise.all([
+    sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('checkins_with_context').select('*').eq('family_id',familyId).order('eaten_at',{ascending:false}).limit(60),
+    sb.from('sport_schedule').select('*').eq('family_id',familyId).gte('sport_date',weekStart),
+    sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('weekly_menu').select('*').eq('family_id',familyId).order('week_of',{ascending:false}).limit(21),
+  ]);
+
+  const votes = votesRes.data||[];
+  const cis = cisRes.data||[];
+  const sport = sportRes.data||[];
+  const avail = availRes.data||[];
+  const recentMenu = menuRes.data||[];
+  const kids = TEST_PERSONS.filter(p=>p.role==='child');
+  const allMeals = getAllMeals();
+
+  // Bouw weekdagen op
+  const dates = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(weekStart+'T12:00:00');
+    d.setDate(d.getDate()+i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  const DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+
+  // Stem tally
+  const voteTally = {};
+  votes.forEach(v=>[v.meal_choice_1,v.meal_choice_2].forEach(m=>{if(m)voteTally[m]=(voteTally[m]||0)+1;}));
+
+  // Gemiddelde score per maaltijd per kind
+  const mealScores = {};
+  cis.forEach(c=>{
+    if(!mealScores[c.meal_type]) mealScores[c.meal_type]={total:0,count:0,comments:[]};
+    mealScores[c.meal_type].total+=c.score;
+    mealScores[c.meal_type].count++;
+    if(c.comment) mealScores[c.meal_type].comments.push(c.child_name+': '+c.comment);
+  });
+
+  // Recent gebruikte gerechten (vermijd herhaling)
+  const recentMealIds = [...new Set(recentMenu.map(m=>m.meal_id))];
+
+  // Sport per dag
+  const sportPerDay = {};
+  dates.forEach(d=>{
+    sportPerDay[d] = sport.filter(s=>s.sport_date===d&&s.has_sport).map(s=>{
+      const kid = kids.find(k=>testUuid(k.id)===s.profile_id);
+      return kid?.name||'onbekend';
+    });
+  });
+
+  // Beschikbare maaltijden voor deze week
+  const availMealIds = avail.length>0 ? avail.map(a=>a.meal_id) : allMeals.map(m=>m.id);
+  const availMealsData = allMeals.filter(m=>availMealIds.includes(m.id));
+
+  // Bouw prompt
+  const voteLines = Object.entries(voteTally).map(([id,count])=>{
+    const m=allMeals.find(x=>x.id===id);
+    return '- '+(m?.emoji||'')+' '+(m?.label||id)+': '+count+'x gestemd';
+  }).join('\n') || 'Geen stemmen';
+
+  // Bereken lievelingsgerechten per kind
+  const allCisForFavs = cis;
+  const favMap = getFavorites(allCisForFavs);
+  const favLines = Object.values(favMap).map(f=>
+    f.personName+' houdt het meest van: '+f.mealEmoji+' '+f.mealLabel
+  ).join('\n') || 'Nog geen duidelijke favorieten';
+
+  // Wanneer was elk gerecht voor het laatst op het menu?
+  const lastServedMap = {};
+  recentMenu.forEach(m=>{
+    if (!lastServedMap[m.meal_id] || m.day_date > lastServedMap[m.meal_id]) {
+      lastServedMap[m.meal_id] = m.day_date;
+    }
+  });
+
+  const availLines = availMealsData.map(m=>{
+    const score = mealScores[m.id];
+    const avgScore = score ? (score.total/score.count).toFixed(1) : 'onbekend';
+    const comments = score?.comments?.slice(0,2).join('; ')||'geen';
+    const votes = voteTally[m.id]||0;
+    const lastServed = lastServedMap[m.id] || 'nog nooit';
+    const isFavOf = Object.values(favMap).filter(f=>f.mealId===m.id).map(f=>f.personName);
+    const favTag = isFavOf.length>0 ? ' [LIEVELINGSGERECHT van '+isFavOf.join(' en ')+']' : '';
+    return '- '+m.emoji+' '+m.label+favTag+': score '+avgScore+'/3, '+votes+' stemmen, laatste keer: '+lastServed+', commentaar: '+comments;
+  }).join('\n');
+
+  const sportLines = dates.map((d,i)=>{
+    const sporters = sportPerDay[d];
+    return DAYS[i]+': '+(sporters.length>0 ? sporters.join(' en ')+' heeft sport' : 'geen sport');
+  }).join('\n');
+
+  const recentLine = recentMealIds.slice(0,10).map(id=>allMeals.find(m=>m.id===id)?.label||id).join(', ') || 'geen';
+
+  const prompt = 'Je bent een gezinsmenu-assistent voor familie Brentjens.\n' +
+    'Genereer een weekmenu voor de week van '+weekStart+'.\n\n' +
+    'GEZINSLEDEN (kinderen): '+kids.map(k=>k.name).join(', ')+'\n\n' +
+    'LIEVELINGSGERECHTEN PER KIND:\n'+favLines+'\n\n' +
+    'STEMMEN KINDEREN (voor deze week):\n'+voteLines+'\n\n' +
+    'BESCHIKBARE GERECHTEN DEZE WEEK:\n'+availLines+'\n\n' +
+    'SPORTDAGEN:\n'+sportLines+'\n\n' +
+    'RECENT GEBRUIKT (vermijd herhaling):\n'+recentLine+'\n\n' +
+    'REGELS:\n' +
+    '- Kies uit de beschikbare gerechten\n' +
+    '- Gerechten gemarkeerd als [LIEVELINGSGERECHT] moeten elke 2-3 weken terugkomen als ze lang geleden zijn geweest\n' +
+    '- Op sportdagen: kies snelle/lichte gerechten; plan lievelingsgerecht van wie sport NIET op die dag\n' +
+    '- Geef voorkeur aan hoog gestemde en hoog scorende gerechten\n' +
+    '- Varieer: geen herhaling binnen de week, vermijd recent gebruikte gerechten\n' +
+    '- Zaterdag/zondag mag iets speciaals of gezelligs\n\n' +
+    'Geef het menu als JSON array met 7 items (ma t/m zo):\n' +
+    '[{"day": "Maandag", "date": "YYYY-MM-DD", "meal_id": "id", "meal_name": "naam", "meal_emoji": "emoji", "reason": "korte uitleg waarom dit gerecht op deze dag"}]\n\n' +
+    'Geef ALLEEN de JSON array terug, geen andere tekst.';
+
+  return {prompt, dates, DAYS, allMeals};
+}
+
+async function requestAIMenuProposal(weekStart, targetContainer) {
+  if (targetContainer) targetContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#7B7A8E">🤖 AI stelt menu samen...</div>';
+
+  try {
+    const {prompt, dates, DAYS, allMeals} = await generateMenuProposal(weekStart);
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+
+    const data = await response.json();
+    if (!data.content?.[0]?.text) throw new Error('Geen respons van AI');
+
+    const text = data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const proposal = JSON.parse(text);
+
+    // Toon voorstel
+    if (targetContainer) {
+      targetContainer.innerHTML = '';
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:12px;font-weight:700;color:#0F6E56;margin-bottom:10px';
+      hdr.textContent = '\u2728 AI voorstel \u2014 klik op een dag om toe te voegen';
+      targetContainer.appendChild(hdr);
+      proposal.forEach(item => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:12px;border:1.5px solid #E0FAF4;margin-bottom:6px;cursor:pointer';
+        row.title = item.reason;
+        row.innerHTML = '<span style="font-size:20px">'+item.meal_emoji+'</span>'+
+          '<div style="flex:1"><div style="font-weight:700;font-size:13px">'+item.day+': '+item.meal_name+'</div>'+
+          '<div style="font-size:11px;color:#7B7A8E">'+item.reason+'</div></div>'+
+          '<span style="color:#22C9A0;font-size:16px">+</span>';
+        row.onclick = () => applyProposalDay(item.date, item.meal_id, item.meal_name, item.meal_emoji);
+        targetContainer.appendChild(row);
+      });
+      const applyBtn = document.createElement('button');
+      applyBtn.style.cssText = 'width:100%;margin-top:8px;padding:10px;border-radius:12px;border:none;background:#22C9A0;color:white;font-family:Nunito,sans-serif;font-weight:800;font-size:13px;cursor:pointer';
+      applyBtn.textContent = 'Heel voorstel overnemen \u2192';
+      applyBtn.onclick = applyAllProposal;
+      targetContainer.appendChild(applyBtn);
+      window._currentProposal = proposal;
+    }
+  } catch(e) {
+    console.error('AI proposal error:', e);
+    if (targetContainer) targetContainer.innerHTML = '<div style="color:#FF6B6B;font-size:13px;padding:12px">Kan geen voorstel genereren. Stel het menu handmatig in.</div>';
+  }
+}
+
+async function applyProposalDay(dateStr, mealId, mealName, mealEmoji) {
+  const weekStart = testMondayOfWeek();
+  await sb.from('weekly_menu').upsert({
+    family_id: currentProfile.family_id,
+    week_of: weekStart, day_date: dateStr,
+    meal_id: mealId, meal_name: mealName, meal_emoji: mealEmoji,
+    published: false,
+  },{onConflict:'family_id,day_date'});
+  await loadData();
+  renderMenuScreen();
+  show('menu');
+}
+
+async function applyAllProposal() {
+  if (!window._currentProposal) return;
+  const weekStart = testMondayOfWeek();
+  for (const item of window._currentProposal) {
+    await sb.from('weekly_menu').upsert({
+      family_id: currentProfile.family_id,
+      week_of: weekStart, day_date: item.date,
+      meal_id: item.meal_id, meal_name: item.meal_name,
+      meal_emoji: item.meal_emoji, published: false,
+    },{onConflict:'family_id,day_date'});
+  }
+  await loadData();
+  renderMenuScreen();
+  show('menu');
 }
 
 // ── VOTE SETUP ─────────────────────────────────────────────────
