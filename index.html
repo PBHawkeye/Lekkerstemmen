@@ -527,6 +527,7 @@
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label">Maaltijden</span></button>
+    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">🛒</span><span class="nav-label">Inkopen</span></button>
     <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
     <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label">Sport</span></button>
     <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
@@ -1715,6 +1716,7 @@ function refreshHome() {
     document.getElementById('nav-meals').style.display = '';
     document.getElementById('nav-invite') && (document.getElementById('nav-invite').style.display='');
     document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
+    document.getElementById('nav-shopping') && (document.getElementById('nav-shopping').style.display='');
     document.getElementById('nav-status').style.display = '';
     document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = '';
@@ -2065,10 +2067,11 @@ function renderCustomMealsList() {
               '<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700;white-space:nowrap">❤ '+favoriteOf.join(' & ')+'</span>':'')+
           '</div>'+
           (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
+          (m.side_dish?'<div style="font-size:11px;color:var(--muted);margin-top:2px">🥗 '+m.side_dish+'</div>':'')+
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">\uD83D\uDCD6</button>':'') +
         '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>'+
-        '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
+        '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" data-meal-side="'+(m.side_dish||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">\uD83D\uDDD1</button>'+
         '</div>'+
         (lastComment?
@@ -2171,9 +2174,10 @@ async function addCustomMeal() {
   hide(errEl);
   if (!name) { unhide(errEl); errEl.textContent='Geef de maaltijd een naam.'; return; }
   const url = document.getElementById('new-meal-url')?.value?.trim()||null;
+  const side = document.getElementById('new-meal-side')?.value?.trim()||null;
   const {error} = await sb.from('custom_meals').insert({
     family_id:currentProfile.family_id, name, emoji:selectedEmoji, note:note||null,
-    recipe_url: url||null,
+    recipe_url: url||null, side_dish: side||null,
   });
   if (error) {
     unhide(errEl);
@@ -2331,6 +2335,55 @@ async function doCheckin() {
 }
 
 // ── VOTE ───────────────────────────────────────────────────────
+
+async function openVoteScreen() {
+  const familyId = currentProfile.family_id;
+  const weekStart = testMondayOfWeek();
+  const menuPublished = weeklyMenu.some(m=>m.published);
+
+  // Haal bestaande stem op
+  const {data:existingVote} = await sb.from('votes')
+    .select('*').eq('profile_id', currentProfile.id)
+    .eq('week_of', weekStart).maybeSingle();
+
+  if (existingVote) {
+    voteChoices = [existingVote.meal_choice_1, existingVote.meal_choice_2].filter(Boolean);
+    const sugEl = document.getElementById('vote-suggestion');
+    if (sugEl) sugEl.value = existingVote.suggestion || '';
+  } else {
+    voteChoices = [];
+    const sugEl = document.getElementById('vote-suggestion');
+    if (sugEl) sugEl.value = '';
+  }
+
+  const hasVoted = !!existingVote;
+  const isReadOnly = hasVoted && menuPublished;
+
+  // Titel
+  const titleEl = document.querySelector('#s-vote .topbar h2');
+  if (titleEl) titleEl.textContent = isReadOnly ? 'Jouw stem' : hasVoted ? 'Stem wijzigen' : 'Stem voor volgende week';
+
+  // Status tekst
+  const statusEl = document.getElementById('vote-status');
+  if (isReadOnly && statusEl) {
+    statusEl.innerHTML = '<span style="color:var(--green);font-weight:700">✓ Menu is al vastgesteld</span>';
+  }
+
+  // Knop
+  const btn = document.getElementById('vote-btn');
+  if (btn) {
+    btn.style.display = isReadOnly ? 'none' : '';
+    btn.textContent = hasVoted ? 'Stem bijwerken →' : 'Stem versturen →';
+  }
+
+  // Suggestie readonly
+  const sugEl = document.getElementById('vote-suggestion');
+  if (sugEl) sugEl.readOnly = isReadOnly;
+
+  renderVoteOptions(isReadOnly);
+  show('vote');
+}
+
 function renderVoteOptions(readOnly=false) {
   const container = document.getElementById('vote-options');
   if (!container) return;
@@ -2859,6 +2912,8 @@ function openEditMeal(meal) {
   document.getElementById('edit-meal-name').value = meal.name || meal.label || '';
   document.getElementById('edit-meal-note').value = meal.note || '';
   document.getElementById('edit-meal-url').value = meal.recipe_url || '';
+  const sideEl = document.getElementById('edit-meal-side');
+  if (sideEl) sideEl.value = meal.side_dish || '';
   editSelectedEmoji = meal.emoji || '\uD83C\uDF7D';
   document.getElementById('edit-meal-emoji-val').value = editSelectedEmoji;
 
@@ -2905,13 +2960,13 @@ async function saveEditMeal() {
   const name = document.getElementById('edit-meal-name').value.trim();
   const note = document.getElementById('edit-meal-note').value.trim();
   const url = document.getElementById('edit-meal-url').value.trim();
+  const side = document.getElementById('edit-meal-side')?.value?.trim()||null;
   const emoji = document.getElementById('edit-meal-emoji-val').value || editSelectedEmoji;
   if (!name) return;
 
   if (id) {
-    // Bestaand custom gerecht updaten
     await sb.from('custom_meals').update({
-      name, note: note||null, recipe_url: url||null, emoji,
+      name, note: note||null, recipe_url: url||null, emoji, side_dish: side||null,
     }).eq('id', id);
   } else {
     // Standaard gerecht overschrijven als custom versie
@@ -3550,6 +3605,220 @@ function showProfileSaveMsg() {
   if (!msg) return;
   msg.style.display = '';
   setTimeout(() => msg.style.display = 'none', 2000);
+}
+
+
+// ── BOODSCHAPPEN ────────────────────────────────────────────────
+let selectedShoppingDays = [];
+let shoppingListData = null;
+
+async function openShoppingScreen() {
+  selectedShoppingDays = [];
+  shoppingListData = null;
+  document.getElementById('shopping-result').style.display = 'none';
+  document.getElementById('shopping-loading').style.display = 'none';
+
+  // Toon aantal personen
+  const members = getFamilyMembers();
+  const countEl = document.getElementById('shopping-persons-count');
+  if (countEl) countEl.textContent = members.length;
+
+  // Bouw dagkiezer voor de komende 7 dagen van het weekmenu
+  await renderShoppingDayPicker();
+  show('shopping');
+}
+
+async function renderShoppingDayPicker() {
+  const picker = document.getElementById('shopping-days-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+
+  const weekStart = testMondayOfWeek();
+  const {data:menuDays} = await sb.from('weekly_menu')
+    .select('*').eq('family_id', currentProfile.family_id)
+    .eq('week_of', weekStart).eq('published', true)
+    .order('day_date', {ascending:true});
+
+  if (!menuDays || menuDays.length === 0) {
+    picker.innerHTML = '<p style="font-size:13px;color:var(--muted)">Geen gepubliceerd menu gevonden. Stel eerst het weekmenu vast.</p>';
+    return;
+  }
+
+  const DAYS = ['zo','ma','di','wo','do','vr','za'];
+  menuDays.forEach(day => {
+    const d = new Date(day.day_date+'T12:00:00');
+    const dayName = DAYS[d.getDay()];
+    const dateLabel = d.getDate()+' '+d.toLocaleDateString('nl-NL',{month:'short'});
+    const isSelected = selectedShoppingDays.includes(day.day_date);
+
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:8px 12px;border-radius:var(--r);border:1.5px solid '+(isSelected?'var(--green)':'var(--border)')+
+      ';background:'+(isSelected?'var(--green-bg)':'white')+
+      ';cursor:pointer;text-align:center;min-width:64px';
+    btn.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">'+dayName+'</div>'+
+      '<div style="font-size:13px;font-weight:700;color:'+(isSelected?'var(--green)':'var(--text)')+'">'+day.meal_emoji+'</div>'+
+      '<div style="font-size:11px;color:var(--muted)">'+dateLabel+'</div>';
+
+    btn.onclick = () => {
+      if (selectedShoppingDays.includes(day.day_date)) {
+        selectedShoppingDays = selectedShoppingDays.filter(d=>d!==day.day_date);
+      } else {
+        selectedShoppingDays.push(day.day_date);
+      }
+      renderShoppingDayPicker();
+    };
+    picker.appendChild(btn);
+  });
+}
+
+async function generateShoppingList() {
+  if (selectedShoppingDays.length === 0) {
+    alert('Selecteer eerst voor welke dagen je boodschappen wilt doen.');
+    return;
+  }
+
+  document.getElementById('shopping-loading').style.display = '';
+  document.getElementById('shopping-result').style.display = 'none';
+
+  const familyId = currentProfile.family_id;
+  const weekStart = testMondayOfWeek();
+  const members = getFamilyMembers();
+
+  // Haal menu op voor geselecteerde dagen
+  const {data:menuDays} = await sb.from('weekly_menu')
+    .select('*').eq('family_id', familyId)
+    .in('day_date', selectedShoppingDays);
+
+  // Haal bijgerechten op uit custom_meals
+  const {data:customMealsData} = await sb.from('custom_meals')
+    .select('*').eq('family_id', familyId);
+
+  // Bouw context op
+  const dayLines = menuDays.map(m => {
+    const d = new Date(m.day_date+'T12:00:00');
+    const dayName = d.toLocaleDateString('nl-NL',{weekday:'long'});
+    const custom = customMealsData?.find(c=>c.id===m.meal_id);
+    const sideDish = custom?.side_dish || '';
+    const recipeUrl = custom?.recipe_url || '';
+    return dayName+': '+m.meal_emoji+' '+m.meal_name+
+      (sideDish?' + '+sideDish:'')+
+      (m.note?' ('+m.note+')':'')+
+      (recipeUrl?' [recept: '+recipeUrl+']':'');
+  }).join('\n');
+
+  const prompt = [
+    'Genereer een boodschappenlijst voor een gezin van '+members.length+' personen.',
+    'Gerechten deze week:',
+    dayLines,
+    '',
+    'Geef een beknopte boodschappenlijst met ALLEEN de hoofd-ingrediënten.',
+    'Groepeer per categorie: Vlees/Vis, Groente, Zuivel, Droogwaren, Overig.',
+    'Geen exacte hoeveelheden nodig - globaal is prima (bijv. "500g gehakt" of "1 krop sla").',
+    'Typische basisingrediënten (olie, zout, peper, uien, knoflook) WEGLATEN.',
+    'Antwoord als JSON: {"categorieen": [{"naam": "Vlees/Vis", "items": ["500g gehakt", "..."]}]}',
+    'Geef ALLEEN de JSON terug, geen andere tekst.',
+  ].join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text?.trim().replace(/```json|```/g,'').trim();
+    shoppingListData = JSON.parse(text);
+    renderShoppingResult();
+  } catch(e) {
+    console.error('Shopping list error:', e);
+    document.getElementById('shopping-loading').style.display = 'none';
+    alert('Fout bij genereren. Probeer opnieuw.');
+  }
+}
+
+function renderShoppingResult() {
+  document.getElementById('shopping-loading').style.display = 'none';
+  const result = document.getElementById('shopping-result');
+  result.style.display = '';
+
+  const container = document.getElementById('shopping-categories');
+  container.innerHTML = '';
+
+  shoppingListData.categorieen.forEach(cat => {
+    const section = document.createElement('div');
+    section.style.cssText = 'background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px;margin-bottom:10px';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px';
+    title.textContent = cat.naam;
+    section.appendChild(title);
+
+    cat.items.forEach(item => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border);cursor:pointer';
+
+      const check = document.createElement('div');
+      check.style.cssText = 'width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.15s';
+
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:14px;font-weight:500;color:var(--text);flex:1;transition:all 0.15s';
+      label.textContent = item;
+
+      let checked = false;
+      row.onclick = () => {
+        checked = !checked;
+        check.style.background = checked ? 'var(--green)' : 'transparent';
+        check.style.borderColor = checked ? 'var(--green)' : 'var(--border)';
+        check.textContent = checked ? '✓' : '';
+        label.style.textDecoration = checked ? 'line-through' : 'none';
+        label.style.color = checked ? 'var(--muted)' : 'var(--text)';
+      };
+
+      row.appendChild(check);
+      row.appendChild(label);
+      section.appendChild(row);
+    });
+
+    // Verwijder laatste border
+    if (section.lastChild) section.lastChild.style.borderBottom = 'none';
+    container.appendChild(section);
+  });
+}
+
+function getShoppingListText() {
+  if (!shoppingListData) return '';
+  const days = selectedShoppingDays.map(d => {
+    const date = new Date(d+'T12:00:00');
+    return date.toLocaleDateString('nl-NL',{weekday:'long'});
+  }).join(', ');
+
+  let text = '🛒 Boodschappen Lekkerstemmen\n';
+  text += 'Voor: '+days+'\n\n';
+  shoppingListData.categorieen.forEach(cat => {
+    text += '*'+cat.naam+'*\n';
+    cat.items.forEach(item => {
+      // Sla afgestreepte items over
+      text += '• '+item+'\n';
+    });
+    text += '\n';
+  });
+  return text;
+}
+
+function shareShoppingList() {
+  const text = getShoppingListText();
+  window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+}
+
+function copyShoppingList() {
+  navigator.clipboard.writeText(getShoppingListText()).then(() => {
+    const btn = document.querySelector('[onclick="copyShoppingList()"]');
+    if (btn) { btn.textContent='✓ Gekopieerd!'; setTimeout(()=>btn.textContent='Kopieer',2000); }
+  });
 }
 
 // ── MEAL DETAIL ────────────────────────────────────────────────
@@ -5100,6 +5369,10 @@ boot();
     <div class="field" style="margin-bottom:10px">
       <textarea id="new-meal-note" placeholder="bijv. met spekjes en worst" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:72px"></textarea>
     </div>
+    <div class="label" style="margin-bottom:6px">Bijgerecht <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
+    <div class="field" style="margin-bottom:10px">
+      <input type="text" id="new-meal-side" placeholder="bijv. gebakken aardappels, rijst, brood..." maxlength="80" />
+    </div>
     <div class="label" style="margin-bottom:6px">Recept URL <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
     <div class="field" style="margin-bottom:20px">
       <input type="url" id="new-meal-url" placeholder="https://..." />
@@ -5157,6 +5430,48 @@ boot();
     </div>
 
     <div id="profile-save-msg" style="text-align:center;color:var(--green);font-weight:700;font-size:14px;display:none">✓ Opgeslagen!</div>
+  </div>
+</div>
+
+<div id="s-shopping" class="screen">
+  <div class="topbar">
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">←</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Boodschappen</div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+
+    <!-- Voor welke dagen? -->
+    <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Voor welke dagen doe je boodschappen?</div>
+      <div id="shopping-days-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Aantal personen: <span id="shopping-persons-count" style="font-weight:700;color:var(--green)">5</span></div>
+      <button onclick="generateShoppingList()" class="btn btn-primary" style="width:100%">✨ Boodschappenlijst genereren</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="shopping-loading" style="display:none;text-align:center;padding:24px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:8px">🛒</div>
+      <div style="font-weight:700">AI stelt lijst samen...</div>
+    </div>
+
+    <!-- Gegenereerde lijst -->
+    <div id="shopping-result" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Boodschappenlijst</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="shareShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:12px;cursor:pointer">📱 WhatsApp</button>
+          <button onclick="copyShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">Kopieer</button>
+        </div>
+      </div>
+
+      <!-- Categorieën -->
+      <div id="shopping-categories"></div>
+
+      <div style="margin-top:12px;padding:12px;background:var(--green-bg);border-radius:var(--r);font-size:12px;color:var(--muted);line-height:1.5">
+        💡 Tik op een ingredient om het door te strepen als je het al in huis hebt.
+      </div>
+    </div>
   </div>
 </div>
 </body>
