@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v12:13</title>
+  <title>Lekkerstemmen v12:56</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1637,7 +1637,9 @@ async function loadData() {
     sb.from('meals').select('*').eq('family_id',familyId).eq('eaten_at',todayStr()).maybeSingle(),
     sb.from('checkins_with_context').select('*').eq('profile_id',profileId).gte('eaten_at',sinceStr).order('eaten_at',{ascending:false}).limit(60),
     sb.from('custom_meals').select('*').eq('family_id',familyId).order('created_at',{ascending:true}),
-    sb.from('weekly_menu').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('weekly_menu').select('*').eq('family_id',familyId)
+      .gte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset-7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })())
+      .lte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset+7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })()),
     sb.from('family_settings').select('*').eq('family_id',familyId).maybeSingle(),
     sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart).order('sort_order'),
   ]);
@@ -1773,9 +1775,16 @@ function refreshHome() {
 
   if (p.role==='child') {
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
-    if (!todayMeal && !todayMenuEntry) unhide(document.getElementById('today-child-wait'));
-    else if (!todayMeal && todayMenuEntry) {
-      // Menu beschikbaar maar nog niet gegeten - toon check-in prompt met menu info
+    
+    if (!todayMeal && !todayMenuEntry) {
+      // Geen menu voor vandaag/geselecteerde dag
+      if (homeDayOffset === -testDayOffset) {
+        // Alleen "wacht" tonen als het echt vandaag is EN er geen menu is
+        unhide(document.getElementById('today-child-wait'));
+      }
+      // Op andere dagen: niets tonen (geen menu = niets te doen)
+    } else if (!todayMeal && todayMenuEntry) {
+      // Menu beschikbaar maar nog niet ingecheckt
       document.getElementById('today-child-q').textContent = 'Hoe was '+todayMenuEntry.meal_emoji+' '+todayMenuEntry.meal_name+' vanavond?';
       unhide(document.getElementById('today-child'));
     }
@@ -1790,7 +1799,9 @@ function refreshHome() {
       if (doneCommentEl && myCI?.comment) doneCommentEl.textContent = '"'+myCI.comment+'"';
       else if (doneCommentEl) doneCommentEl.textContent = '';
     else {
-      document.getElementById('today-child-q').textContent = 'Hoe was '+getMealDisplay(todayMeal.meal_type)+' vanavond?';
+      const displayName = todayMeal ? getMealDisplay(todayMeal.meal_type) :
+    (todayMenuEntry ? todayMenuEntry.meal_emoji+' '+todayMenuEntry.meal_name : 'het eten');
+  document.getElementById('today-child-q').textContent = 'Hoe was '+displayName+' vanavond?';
       unhide(document.getElementById('today-child'));
     }
   } else {
@@ -1843,21 +1854,21 @@ function refreshHome() {
 
     // Dag label
     const label = document.createElement('div');
-    label.style.cssText = 'font-size:10px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--muted)');
+    label.style.cssText = 'font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--muted)');
     label.textContent = DAYS_SHORT[i];
 
     // Dag nummer
     const num = document.createElement('div');
-    num.style.cssText = 'font-size:11px;color:'+(isToday?'var(--green)':'var(--muted)')+';font-weight:'+(isToday?'800':'400');
+    num.style.cssText = 'font-size:12px;color:'+(isToday?'var(--green)':'var(--muted)')+';font-weight:'+(isToday?'800':'500');
     num.textContent = d.getDate();
 
     // Hoofd cel: maaltijd emoji + score smiley
     const bubble = document.createElement('div');
-    bubble.style.cssText = 'width:100%;aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;transition:all 0.15s;' +
+    bubble.style.cssText = 'width:100%;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;transition:all 0.15s;cursor:pointer;' +
       (isToday ? 'background:var(--green-bg);border:2px solid var(--green);' :
        isPast && menuEntry && !score ? 'background:#FFEEEE;border:1.5px solid var(--coral);' :
        menuEntry ? 'background:white;border:1.5px solid var(--border);' :
-       'background:var(--bg);border:1.5px dashed var(--border);opacity:0.5');
+       'background:var(--bg);border:1.5px dashed var(--border);opacity:0.4');
 
     if (menuEntry) {
       const mealEmoji = document.createElement('div');
@@ -1885,20 +1896,20 @@ function refreshHome() {
       bubble.title = menuEntry.meal_name + (score ? ' · ' + (score===3?'Lekker':score===2?'Ging wel':'Niet lekker') : '');
     }
 
-    // Click: vandaag/verleden → check-in, toekomst → stem of menu
-    cell.onclick = () => {
+    // Click handler
+    const clickHandler = () => {
       if (isFuture) {
-        // Toekomst: open stemscherm
         if (p.role === 'child') goScreen('vote');
         else goScreen('menu');
       } else if (isPast && menuEntry && !score && p.role === 'child') {
-        // Gemiste check-in
         openMissedCheckin(ds);
-      } else if (isToday) {
-        // Vandaag: ga naar check-in of home dag
-        homeStepDay(0);
+      } else if (isToday && menuEntry) {
+        goScreen('log');
       }
     };
+    cell.onclick = clickHandler;
+    bubble.onclick = clickHandler;
+    bubble.style.cursor = menuEntry || isFuture ? 'pointer' : 'default';
 
     cell.appendChild(label);
     cell.appendChild(num);
@@ -2397,11 +2408,34 @@ function selectDrink(d) {
 }
 
 async function doCheckin() {
-  if (!selectedScore||!todayMeal) return;
+  if (!selectedScore) return;
+
+  // Gebruik todayMeal (uit checkins) OF weekmenu entry voor vandaag
+  const todayDateStr2 = todayStr();
+  const menuEntry = weeklyMenu.find(m => m.day_date === todayDateStr2 && m.published);
+  
+  // Bepaal meal_id: eerst todayMeal, anders weekmenu
+  let mealId = todayMeal?.id;
+  if (!mealId && menuEntry) {
+    // Maak eerst een meals record aan voor dit weekmenu item
+    const {data:newMeal, error:mealErr} = await sb.from('meals').upsert({
+      family_id: currentProfile.family_id,
+      meal_type: menuEntry.meal_id,
+      eaten_at: todayDateStr2,
+      ate_together: true,
+    }, {onConflict:'family_id,eaten_at'}).select().single();
+    if (!mealErr && newMeal) mealId = newMeal.id;
+  }
+
+  if (!mealId) {
+    alert('Geen maaltijd gevonden voor vandaag. Log eerst een maaltijd.');
+    return;
+  }
+
   document.getElementById('checkin-btn').textContent='Opslaan...';
   const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
   const {error:ciError} = await sb.from('checkins').upsert({
-    profile_id:currentProfile.id, meal_id:todayMeal.id,
+    profile_id:currentProfile.id, meal_id:mealId,
     score:selectedScore, drink:selectedDrink,
     comment: commentVal||null,
     pre_sport_food: preSportFood||null,
@@ -2858,7 +2892,9 @@ async function renderStatus() {
 
   const [votesRes, menuRes, availRes, cisRes, avail2Res, avail3Res] = await Promise.all([
     sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',weekStart),
-    sb.from('weekly_menu').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('weekly_menu').select('*').eq('family_id',familyId)
+      .gte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset-7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })())
+      .lte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset+7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })()),
     sb.from('vote_available_meals').select('id,meal_id').eq('family_id',familyId).eq('week_of',weekStart),
     sb.from('checkins_with_context').select('*').eq('family_id',familyId).in('eaten_at',weekDates),
     sb.from('vote_available_meals').select('id').eq('family_id',familyId).eq('week_of',nextWeekStart).limit(1),
@@ -3732,8 +3768,10 @@ let shoppingListData = null;
 async function openShoppingScreen() {
   selectedShoppingDays = [];
   shoppingListData = null;
-  document.getElementById('shopping-result').style.display = 'none';
-  document.getElementById('shopping-loading').style.display = 'none';
+  const shopResult = document.getElementById('shopping-result');
+  const shopLoading = document.getElementById('shopping-loading');
+  if (shopResult) shopResult.style.display = 'none';
+  if (shopLoading) shopLoading.style.display = 'none';
 
   // Toon aantal personen
   const members = getFamilyMembers();
@@ -4535,7 +4573,7 @@ function renderTonightCard(profile) {
   if (!tonight) return;
 
   // Zoek vandaag in weekmenu
-  const todayDate = todayStr();
+  const todayDate = todayStr(); // bevat homeDayOffset
   const menuEntry = weeklyMenu.find(m => m.day_date === todayDate && m.published);
 
   if (!menuEntry) {
@@ -5166,8 +5204,26 @@ function openMealPicker(dateStr, dayIndex, existing) {
   const labelEl = document.getElementById('meal-grid-label');
   if (labelEl) labelEl.textContent = 'Wat eten we?';
 
-  // Sla alle maaltijden op voor zoeken
-  allPickerMeals = getAllMeals();
+  // Sla alle maaltijden op voor zoeken, gesorteerd op gebruik dan alfabet
+  const unsorted = getAllMeals();
+
+  // Tel hoe vaak elke maaltijd op het menu heeft gestaan
+  const usageCount = {};
+  (weeklyMenu||[]).forEach(m => {
+    if (m.meal_id) usageCount[m.meal_id] = (usageCount[m.meal_id]||0) + 1;
+  });
+  // Voeg ook checkins mee (als backup als weeklyMenu leeg is)
+  (checkins||[]).forEach(c => {
+    if (c.meal_type) usageCount[c.meal_type] = (usageCount[c.meal_type]||0) + 1;
+  });
+
+  allPickerMeals = unsorted.sort((a, b) => {
+    const ua = usageCount[a.id]||0;
+    const ub = usageCount[b.id]||0;
+    if (ub !== ua) return ub - ua; // meest gebruikt eerst
+    return a.label.localeCompare(b.label, 'nl'); // dan alfabetisch
+  });
+
   renderMealGrid(allPickerMeals, existing?.meal_id);
   show('meal-picker');
 }
