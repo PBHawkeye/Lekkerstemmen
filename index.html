@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v10:40</title>
+  <title>Lekkerstemmen v12:13</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -443,7 +443,7 @@
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px" id="tomorrow-label">Morgen</div>
       <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:28px" id="tomorrow-emoji">🍽️</span>
+        <span style="font-size:28px" id="tomorrow-emoji">&#x1F37D;️</span>
         <div>
           <div style="font-weight:800;font-size:16px;color:var(--text)" id="tomorrow-name">—</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px" id="tomorrow-meta"></div>
@@ -527,7 +527,7 @@
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Stem</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label">Maaltijden</span></button>
-    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">🛒</span><span class="nav-label">Inkopen</span></button>
+    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label">Inkopen</span></button>
     <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
     <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label">Sport</span></button>
     <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
@@ -1692,6 +1692,9 @@ function goScreen(name) {
   else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
   else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus(); show('status'); }
   else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
+  else if (name==='shopping') { openShoppingScreen(); }
+  else if (name==='profile') { openProfileScreen(); }
+  else if (name==='invite') { openInviteScreen(); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
 }
@@ -1783,7 +1786,7 @@ function refreshHome() {
       const doneScoreEl = document.getElementById('done-score-display');
       const doneCommentEl = document.getElementById('done-comment-display');
       if (doneNameEl && todayMeal) doneNameEl.textContent = getMealDisplay(todayMeal.meal_type);
-      if (doneScoreEl && myCI) doneScoreEl.textContent = myCI.score===3?'😋 Lekker!':myCI.score===2?'😐 Ging wel':myCI.score===1?'😕 Niet zo lekker':'';
+      if (doneScoreEl && myCI) doneScoreEl.textContent = myCI.score===3?'\uD83D\uDE0B Lekker!':myCI.score===2?'\uD83D\uDE10 Ging wel':myCI.score===1?'\uD83D\uDE15 Niet zo lekker':'';
       if (doneCommentEl && myCI?.comment) doneCommentEl.textContent = '"'+myCI.comment+'"';
       else if (doneCommentEl) doneCommentEl.textContent = '';
     else {
@@ -1814,35 +1817,93 @@ function refreshHome() {
     }
   }
 
-  // Week dots
+  // ── Weekoverzicht ────────────────────────────────────────────
   const row = document.getElementById('week-row');
   row.innerHTML = '';
-  const baseDate = new Date();
-  baseDate.setDate(baseDate.getDate()+testDayOffset);
-  const realToday = new Date();
-  realToday.setDate(realToday.getDate()+testDayOffset);
+  const weekBase = new Date();
+  weekBase.setDate(weekBase.getDate() + testDayOffset + homeDayOffset);
+  const weekDay = weekBase.getDay();
+  const weekMon = new Date(weekBase);
+  weekMon.setDate(weekBase.getDate() - (weekDay===0?6:weekDay-1));
+  const DAYS_SHORT = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+
   for (let i=0;i<7;i++) {
-    const d = new Date(baseDate);
-    const startOfWeek = baseDate.getDate()-baseDate.getDay()+1;
-    d.setDate(startOfWeek+i);
+    const d = new Date(weekMon);
+    d.setDate(weekMon.getDate()+i);
     const ds = d.toISOString().split('T')[0];
+    const isToday = ds === todayStr();
+    const isPast = ds < todayStr();
+    const isFuture = ds > todayStr();
+    const menuEntry = weeklyMenu.find(m=>m.day_date===ds&&m.published);
     const ci = checkins.find(c=>c.eaten_at===ds);
     const score = ci?.score??null;
-    const isToday = ds===todayStr();
-    const isPast = d < realToday && !isToday;
-    // Heeft deze dag een maaltijd maar geen check-in?
-    const hasMeal = weeklyMenu.find(m=>m.day_date===ds&&m.published) ||
-                    checkins.find(c=>c.eaten_at===ds); // proxy: als er check-in data is
-    const isMissed = isPast && !score && currentProfile?.role==='child';
 
-    const dot = document.createElement('div');
-    dot.className = 'day-wrap';
-    const dotClass = score?'s'+score:(isMissed?'missed':'');
-    const emoji = score===1?'\uD83D\uDE15':score===2?'\uD83D\uDE10':score===3?'\uD83D\uDE0B':(isMissed?'!':'');
-    dot.innerHTML = '<div class="day-dot '+dotClass+' '+(isToday?'today-ring':'')+'" '+
-      (isMissed ? 'onclick="openMissedCheckin('+"'"+ds+"'"+')" title="Vergeten in te vullen — tik om alsnog te checken"' : '')+
-      '>'+emoji+'</div><div class="day-label '+(isMissed?'missed-label':'')+'">'+DAYS[(i+1)%7]+'</div>';
-    row.appendChild(dot);
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer';
+
+    // Dag label
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--green)':'var(--muted)');
+    label.textContent = DAYS_SHORT[i];
+
+    // Dag nummer
+    const num = document.createElement('div');
+    num.style.cssText = 'font-size:11px;color:'+(isToday?'var(--green)':'var(--muted)')+';font-weight:'+(isToday?'800':'400');
+    num.textContent = d.getDate();
+
+    // Hoofd cel: maaltijd emoji + score smiley
+    const bubble = document.createElement('div');
+    bubble.style.cssText = 'width:100%;aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;transition:all 0.15s;' +
+      (isToday ? 'background:var(--green-bg);border:2px solid var(--green);' :
+       isPast && menuEntry && !score ? 'background:#FFEEEE;border:1.5px solid var(--coral);' :
+       menuEntry ? 'background:white;border:1.5px solid var(--border);' :
+       'background:var(--bg);border:1.5px dashed var(--border);opacity:0.5');
+
+    if (menuEntry) {
+      const mealEmoji = document.createElement('div');
+      mealEmoji.style.cssText = 'font-size:18px;line-height:1';
+      mealEmoji.textContent = menuEntry.meal_emoji || '\uD83C\uDF7D️';
+      bubble.appendChild(mealEmoji);
+
+      if (score) {
+        const scoreEl = document.createElement('div');
+        scoreEl.style.cssText = 'font-size:10px;line-height:1';
+        scoreEl.textContent = score===3?'\uD83D\uDE0B':score===2?'\uD83D\uDE10':'\uD83D\uDE15';
+        bubble.appendChild(scoreEl);
+      } else if (isPast) {
+        const missEl = document.createElement('div');
+        missEl.style.cssText = 'font-size:10px;color:var(--coral);font-weight:700';
+        missEl.textContent = '!';
+        bubble.appendChild(missEl);
+      }
+    } else if (isToday) {
+      bubble.innerHTML = '<div style="font-size:16px">?</div>';
+    }
+
+    // Tooltip: maaltijdnaam
+    if (menuEntry) {
+      bubble.title = menuEntry.meal_name + (score ? ' · ' + (score===3?'Lekker':score===2?'Ging wel':'Niet lekker') : '');
+    }
+
+    // Click: vandaag/verleden → check-in, toekomst → stem of menu
+    cell.onclick = () => {
+      if (isFuture) {
+        // Toekomst: open stemscherm
+        if (p.role === 'child') goScreen('vote');
+        else goScreen('menu');
+      } else if (isPast && menuEntry && !score && p.role === 'child') {
+        // Gemiste check-in
+        openMissedCheckin(ds);
+      } else if (isToday) {
+        // Vandaag: ga naar check-in of home dag
+        homeStepDay(0);
+      }
+    };
+
+    cell.appendChild(label);
+    cell.appendChild(num);
+    cell.appendChild(bubble);
+    row.appendChild(cell);
   }
 
   // Streak
@@ -2107,7 +2168,7 @@ function renderCustomMealsList() {
               '<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700;white-space:nowrap">❤ '+favoriteOf.join(' & ')+'</span>':'')+
           '</div>'+
           (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
-          (m.side_dish?'<div style="font-size:11px;color:var(--muted);margin-top:2px">🥗 '+m.side_dish+'</div>':'')+
+          (m.side_dish?'<div style="font-size:11px;color:var(--muted);margin-top:2px">\uD83E\uDD57 '+m.side_dish+'</div>':'')+
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">\uD83D\uDCD6</button>':'') +
         '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>'+
@@ -2199,7 +2260,7 @@ function openAddMealSheet() {
   if (nameEl) nameEl.value = '';
   if (noteEl) noteEl.value = '';
   if (urlEl) urlEl.value = '';
-  selectedEmoji = '🍽️';
+  selectedEmoji = '\uD83C\uDF7D️';
 }
 
 function closeAddMealSheet() {
@@ -2984,7 +3045,7 @@ function openEditFromBtn(btn) {
     id: btn.dataset.mealId || '',
     label: btn.dataset.mealLabel || '',
     name: btn.dataset.mealLabel || '',
-    emoji: btn.dataset.mealEmoji || '🍽️',
+    emoji: btn.dataset.mealEmoji || '\uD83C\uDF7D️',
     note: btn.dataset.mealNote || '',
     recipe_url: btn.dataset.mealUrl || '',
     side_dish: btn.dataset.mealSide || '',
@@ -3580,7 +3641,7 @@ async function renderVoteSetupSportGrid(weekStart) {
 // ── PROFIELSCHERM ───────────────────────────────────────────────
 let profileSelectedEmoji = null;
 
-const PROFILE_EMOJIS = ['😊','😄','😎','🤗','😋','😇','🤩','😍','🥳','🙂','👦','👧','👨','👩','🧑','👴','👵','🐱','🐶','🦊','🐸','🦁','🐼','🐨'];
+const PROFILE_EMOJIS = ['\uD83D\uDE0A','\uD83D\uDE04','\uD83D\uDE0E','\uD83E\uDD17','\uD83D\uDE0B','\uD83D\uDE07','\uD83E\uDD29','\uD83D\uDE0D','\uD83E\uDD73','\uD83D\uDE42','\uD83D\uDC66','\uD83D\uDC67','\uD83D\uDC68','\uD83D\uDC69','\uD83E\uDDD1','\uD83D\uDC74','\uD83D\uDC75','\uD83D\uDC31','\uD83D\uDC36','\uD83E\uDD8A','\uD83D\uDC38','\uD83E\uDD81','\uD83D\uDC3C','\uD83D\uDC28'];
 
 
 function toggleMoreMenu() {
@@ -3607,7 +3668,7 @@ function openProfileScreen() {
   document.getElementById('profile-role-display').textContent = p.role === 'parent' ? 'ouder' : 'kind';
 
   // Emoji
-  profileSelectedEmoji = p.emoji || '😊';
+  profileSelectedEmoji = p.emoji || '\uD83D\uDE0A';
   document.getElementById('profile-emoji-display').textContent = profileSelectedEmoji;
   renderProfileEmojiPicker();
 
@@ -3889,7 +3950,7 @@ function getShoppingListText() {
     return date.toLocaleDateString('nl-NL',{weekday:'long'});
   }).join(', ');
 
-  let text = '🛒 Boodschappen Lekkerstemmen\n';
+  let text = '\uD83D\uDED2 Boodschappen Lekkerstemmen\n';
   text += 'Voor: '+days+'\n\n';
   shoppingListData.categorieen.forEach(cat => {
     text += '*'+cat.naam+'*\n';
@@ -4597,20 +4658,20 @@ function renderTomorrowCard(profile) {
   const metaEl = document.getElementById('tomorrow-meta');
 
   if (labelEl) labelEl.textContent = 'Morgen — ' + dayName.charAt(0).toUpperCase() + dayName.slice(1);
-  if (emojiEl) emojiEl.textContent = tomorrowEntry.meal_emoji || '🍽️';
+  if (emojiEl) emojiEl.textContent = tomorrowEntry.meal_emoji || '\uD83C\uDF7D️';
   if (nameEl) nameEl.textContent = tomorrowEntry.meal_name || '—';
 
   // Meta: kok info
   let meta = '';
-  if (tomorrowEntry.cook_name === 'Afhaal') meta = '🛵 Afhaal';
-  else if (tomorrowEntry.cook_name === 'Uit eten') meta = '🍽️ Uit eten';
-  else if (tomorrowEntry.cook_name) meta = '👨‍🍳 ' + tomorrowEntry.cook_name + ' kookt';
+  if (tomorrowEntry.cook_name === 'Afhaal') meta = '\uD83D\uDEF5 Afhaal';
+  else if (tomorrowEntry.cook_name === 'Uit eten') meta = '\uD83C\uDF7D️ Uit eten';
+  else if (tomorrowEntry.cook_name) meta = '\uD83D\uDC68‍\uD83C\uDF73 ' + tomorrowEntry.cook_name + ' kookt';
 
   // Corvee voor dit kind
   if (tomorrowEntry.corvee_ids && profile.role === 'child') {
     const corveeIds = JSON.parse(tomorrowEntry.corvee_ids);
     if (corveeIds.includes(profile.id)) {
-      meta += (meta ? ' · ' : '') + '🧹 Jij corvee!';
+      meta += (meta ? ' · ' : '') + '\uD83E\uDDF9 Jij corvee!';
     }
   }
   if (metaEl) metaEl.textContent = meta;
@@ -4840,7 +4901,7 @@ async function renderMenuScreen() {
         else if (existing.cook_name) detailHtml += '<span class="detail-pill cook">\uD83D\uDC68\uD83C\uDF73 '+existing.cook_name+'</span>';
         if (existing.corvee_names) detailHtml += '<span class="detail-pill corvee">\uD83E\uDDF9 '+existing.corvee_names+'</span>';
         if (existing.note) detailHtml += '<span class="detail-pill">'+existing.note+'</span>';
-        if (existing.message) detailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">💬 '+existing.message+'</span>';
+        if (existing.message) detailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">\uD83D\uDCAC '+existing.message+'</span>';
       }
       row.innerHTML=
         '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
@@ -4912,7 +4973,7 @@ async function renderMenuScreen() {
         if (myCorveeDays) childDetailHtml += '<span class="detail-pill me">\uD83E\uDDF9 Jij corvee!</span>';
         else if (entry.corvee_names) childDetailHtml += '<span class="detail-pill corvee">\uD83E\uDDF9 '+entry.corvee_names+'</span>';
         if (entry.note) childDetailHtml += '<span class="detail-pill">'+entry.note+'</span>';
-        if (entry.message) childDetailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">💬 '+entry.message+'</span>';
+        if (entry.message) childDetailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">\uD83D\uDCAC '+entry.message+'</span>';
       }
 
       row.innerHTML=
@@ -5640,7 +5701,7 @@ boot();
 
     <!-- Avatar groot -->
     <div style="text-align:center;padding:24px 0 20px">
-      <div id="profile-emoji-display" style="font-size:56px;margin-bottom:8px">😊</div>
+      <div id="profile-emoji-display" style="font-size:56px;margin-bottom:8px">&#x1F60A;</div>
       <div style="font-size:20px;font-weight:800;color:var(--text)" id="profile-name-display">Naam</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px" id="profile-role-display">kind</div>
     </div>
@@ -5664,17 +5725,17 @@ boot();
     <!-- Pincode wijzigen (als kind) -->
     <div id="profile-pin-section" style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px;display:none">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Pincode</div>
-      <button onclick="openSetPin({changeOnly:true})" style="padding:10px 16px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text)">🔒 Pincode wijzigen</button>
+      <button onclick="openSetPin({changeOnly:true})" style="padding:10px 16px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text)">&#x1F512; Pincode wijzigen</button>
     </div>
 
     <!-- Uitloggen / gezin -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Account</div>
       <button onclick="goScreen('invite')" style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px">👨‍👩‍👧</span><span>Gezin beheren</span>
+        <span style="font-size:18px">&#x1F468;‍&#x1F469;‍&#x1F467;</span><span>Gezin beheren</span>
       </button>
       <button onclick="doSignOut()" style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid #FFEEEE;background:#FFEEEE;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--coral);text-align:left;display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px">🚪</span><span>Uitloggen</span>
+        <span style="font-size:18px">&#x1F6AA;</span><span>Uitloggen</span>
       </button>
     </div>
 
@@ -5700,7 +5761,7 @@ boot();
 
     <!-- Loading -->
     <div id="shopping-loading" style="display:none;text-align:center;padding:24px;color:var(--muted)">
-      <div style="font-size:32px;margin-bottom:8px">🛒</div>
+      <div style="font-size:32px;margin-bottom:8px">&#x1F6D2;</div>
       <div style="font-weight:700">AI stelt lijst samen...</div>
     </div>
 
@@ -5709,7 +5770,7 @@ boot();
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Boodschappenlijst</div>
         <div style="display:flex;gap:6px">
-          <button onclick="shareShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:12px;cursor:pointer">📱 WhatsApp</button>
+          <button onclick="shareShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:12px;cursor:pointer">&#x1F4F1; WhatsApp</button>
           <button onclick="copyShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">Kopieer</button>
         </div>
       </div>
@@ -5718,7 +5779,7 @@ boot();
       <div id="shopping-categories"></div>
 
       <div style="margin-top:12px;padding:12px;background:var(--green-bg);border-radius:var(--r);font-size:12px;color:var(--muted);line-height:1.5">
-        💡 Tik op een ingredient om het door te strepen als je het al in huis hebt.
+        &#x1F4A1; Tik op een ingredient om het door te strepen als je het al in huis hebt.
       </div>
     </div>
   </div>
