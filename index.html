@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:11</title>
+  <title>Lekkerstemmen v18:29</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -520,29 +520,7 @@
       <button class="btn btn-primary" onclick="goScreen('vote')">Stem nu →</button>
     </div>
   </div>
-  <div style="height:88px"></div>
-  <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label">Home</span></button>
-    <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Check-in</span></button>
-    <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
-    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Stem</span></button>
-    <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label">Maaltijden</span></button>
-    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label">Inkopen</span></button>
-    <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
-    <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label">Sport</span></button>
-    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
-    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label">Menu</span></button>
-    <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
-    <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label">Sport</span></button>
-    <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label">Meer</span></button>
-  <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
-    <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
-      <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label">Maaltijden</span></button>
-      <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
-      <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
-    </div>
-  </div>
-  </nav>
+
 </div>
 
 <div id="s-checkin" class="screen">
@@ -758,61 +736,8 @@
   </div>
 </div>
 
-<div id="s-sport" class="screen">
-  <div class="topbar">
-    <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
-  <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
-  <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
-  <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
-  <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
-  <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
-  <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
-  <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
-  <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
-  <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
-</svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
-    <div style="width:38px"></div>
-  </div>
-  <div style="flex:1;padding:0 16px 100px">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5" id="sport-desc">
-      Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
-    </div>
 
-    <!-- Week navigatie -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <button onclick="sportWeekStep(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #ECEAF8;background:white;font-size:16px;cursor:pointer">←</button>
-      <div style="flex:1;text-align:center">
-        <div style="font-weight:800;font-size:15px" id="sport-week-label">—</div>
-        <div style="font-size:11px;color:var(--muted)" id="sport-week-sub">week van</div>
-      </div>
-      <button onclick="sportWeekStep(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #ECEAF8;background:white;font-size:16px;cursor:pointer">→</button>
-    </div>
 
-    <div id="sport-schedule-grid"></div>
-
-    <button class="btn btn-primary" onclick="saveSportSchedule()" style="margin-top:16px">Sportdagen opslaan ✓</button>
-  </div>
-</div>
-<div id="s-status" class="screen">
-  <div class="topbar">
-    <div class="logo" style="display:flex;align-items:center">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="22" height="29" style="margin-right:6px"><line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/><path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/><path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/><path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/><path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/><line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/><path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/><path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/><path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/></svg>
-      <span style="font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--text)">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:18px;color:var(--green)">stemmen</span>
-    </div>
-    <div style="width:38px"></div>
-  </div>
-  <div style="flex:1;padding:0 16px 100px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <button onclick="statusWeekStep(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">←</button>
-      <div style="flex:1;text-align:center">
-        <div style="font-weight:800;font-size:16px;color:var(--text)" id="status-week-label">—</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="status-week-sub">huidige week</div>
-      </div>
-      <button onclick="statusWeekStep(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">→</button>
-    </div>
-    <div id="status-items"></div>
-  </div>
-</div>
 <div id="s-sport" class="screen">
   <div class="topbar">
     <div class="logo" style="display:flex;align-items:center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="28" height="37" style="display:inline-block;vertical-align:middle;margin-right:8px">
@@ -5935,5 +5860,29 @@ boot();
     </div>
   </div>
 </div>
+
+<div style="height:88px"></div>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label">Home</span></button>
+    <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Check-in</span></button>
+    <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
+    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Stem</span></button>
+    <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label">Maaltijden</span></button>
+    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label">Inkopen</span></button>
+    <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
+    <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label">Sport</span></button>
+    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
+    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label">Menu</span></button>
+    <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
+    <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label">Sport</span></button>
+    <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label">Meer</span></button>
+  <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
+    <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
+      <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label">Maaltijden</span></button>
+      <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
+      <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
+    </div>
+  </div>
+  </nav>
 </body>
 </html>
