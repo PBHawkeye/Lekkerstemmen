@@ -417,13 +417,13 @@
   <div class="greeting">
     <h1>Hey <span id="home-name">daar</span> &#x1F44B;</h1>
     <!-- Dag navigatie -->
-    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-      <button onclick="homeStepDay(-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.4);background:transparent;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">←</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+      <button onclick="homeStepDay(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.2);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">←</button>
       <div style="flex:1;text-align:center">
-        <p id="home-date" style="margin:0;font-size:14px;opacity:0.9"></p>
-        <span id="home-day-label" style="font-size:11px;opacity:0.7"></span>
+        <p id="home-date" style="margin:0;font-size:14px;color:white;font-weight:600"></p>
+        <span id="home-day-label" style="font-size:11px;color:rgba(255,255,255,0.75)"></span>
       </div>
-      <button id="home-next-btn" onclick="homeStepDay(1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.4);background:transparent;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">→</button>
+      <button id="home-next-btn" onclick="homeStepDay(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.2);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">→</button>
     </div>
     <div id="home-streak" class="streak hidden">&#x1F525; <span id="streak-num">0</span> dagen op rij!</div>
   </div>
@@ -1671,7 +1671,7 @@ function goScreen(name) {
   }
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
   else if (name==='stats') { renderStats(); show('stats'); }
-  else if (name==='menu') { menuBaseOffset = getRealWeekOffset(); menuWeekOffset = menuBaseOffset; renderMenuScreen(); show('menu'); }
+  else if (name==='menu') { menuBaseOffset = getRealWeekOffset(); menuWeekOffset = menuBaseOffset; renderMenuScreen().then(()=>show('menu')); }
   else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
   else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus(); show('status'); }
   else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
@@ -1712,11 +1712,14 @@ function refreshHome() {
   if (p.role==='parent') {
     document.getElementById('nav-action-icon').textContent = '\uD83D\uDE0B';
     document.getElementById('nav-action-label').textContent = 'Check-in';
-    document.getElementById('nav-log').style.display = '';
-    document.getElementById('nav-meals').style.display = '';
-    document.getElementById('nav-invite') && (document.getElementById('nav-invite').style.display='');
-    document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
+    document.getElementById('nav-log').style.display = 'none';
+    document.getElementById('nav-vote-btn').style.display = 'none';
+    document.getElementById('nav-sport').style.display = 'none'; // kind sport
+    document.getElementById('nav-menu') && (document.getElementById('nav-menu').style.display='');
+    document.getElementById('nav-status') && (document.getElementById('nav-status').style.display='');
     document.getElementById('nav-shopping') && (document.getElementById('nav-shopping').style.display='');
+    document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='');
+    document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
     document.getElementById('nav-status').style.display = '';
     document.getElementById('nav-menu').style.display = '';
     document.getElementById('nav-stats').style.display = '';
@@ -2944,9 +2947,10 @@ function openEditFromBtn(btn) {
     id: btn.dataset.mealId || '',
     label: btn.dataset.mealLabel || '',
     name: btn.dataset.mealLabel || '',
-    emoji: btn.dataset.mealEmoji || '\uD83C\uDF7D',
+    emoji: btn.dataset.mealEmoji || '🍽️',
     note: btn.dataset.mealNote || '',
     recipe_url: btn.dataset.mealUrl || '',
+    side_dish: btn.dataset.mealSide || '',
   };
   openEditMeal(meal);
 }
@@ -3439,7 +3443,7 @@ async function applyProposalDay(dateStr, mealId, mealName, mealEmoji) {
     published: false,
   },{onConflict:'family_id,day_date'});
   await loadData();
-  renderMenuScreen();
+  await renderMenuScreen();
   show('menu');
 }
 
@@ -3541,6 +3545,21 @@ let profileSelectedEmoji = null;
 
 const PROFILE_EMOJIS = ['😊','😄','😎','🤗','😋','😇','🤩','😍','🥳','🙂','👦','👧','👨','👩','🧑','👴','👵','🐱','🐶','🦊','🐸','🦁','🐼','🐨'];
 
+
+function toggleMoreMenu() {
+  const menu = document.getElementById('nav-more-menu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? '' : 'none';
+}
+// Sluit meer-menu als ergens anders geklikt wordt
+document.addEventListener('click', (e) => {
+  const more = document.getElementById('nav-more-menu');
+  const btn = document.getElementById('nav-more');
+  if (more && btn && !more.contains(e.target) && !btn.contains(e.target)) {
+    more.style.display = 'none';
+  }
+});
+
 function openProfileScreen() {
   const p = currentProfile;
   if (!p) return;
@@ -3631,37 +3650,59 @@ async function openShoppingScreen() {
 async function renderShoppingDayPicker() {
   const picker = document.getElementById('shopping-days-picker');
   if (!picker) return;
-  picker.innerHTML = '';
+  picker.innerHTML = '<div style="font-size:12px;color:var(--muted)">Laden...</div>';
 
-  const weekStart = testMondayOfWeek();
+  const today = todayStr();
+  const familyId = currentProfile.family_id;
+
+  // Haal gepubliceerde menu's op voor de komende 3 weken (en huidige week)
+  const fromDate = today;
+  const toDate = new Date();
+  toDate.setDate(toDate.getDate() + testDayOffset + homeDayOffset + 21);
+  const toDateStr = toDate.toISOString().split('T')[0];
+
   const {data:menuDays} = await sb.from('weekly_menu')
-    .select('*').eq('family_id', currentProfile.family_id)
-    .eq('week_of', weekStart).eq('published', true)
+    .select('*')
+    .eq('family_id', familyId)
+    .eq('published', true)
+    .gte('day_date', fromDate)
+    .lte('day_date', toDateStr)
     .order('day_date', {ascending:true});
 
+  picker.innerHTML = '';
+
   if (!menuDays || menuDays.length === 0) {
-    picker.innerHTML = '<p style="font-size:13px;color:var(--muted)">Geen gepubliceerd menu gevonden. Stel eerst het weekmenu vast.</p>';
+    picker.innerHTML =
+      '<div style="padding:12px;background:#FFF4DC;border-radius:var(--r);border:1.5px solid #FFD97A;font-size:13px;color:#8A5E00">'+
+      '⚠️ Geen gepubliceerde menu gevonden voor de komende weken.<br>'+
+      '<span style="font-size:12px;opacity:0.8">Stel eerst het weekmenu vast via het Menu scherm.</span></div>';
     return;
   }
 
-  const DAYS = ['zo','ma','di','wo','do','vr','za'];
+  const DAYS_FULL = ['zo','ma','di','wo','do','vr','za'];
+
   menuDays.forEach(day => {
     const d = new Date(day.day_date+'T12:00:00');
-    const dayName = DAYS[d.getDay()];
+    const dayName = DAYS_FULL[d.getDay()];
     const dateLabel = d.getDate()+' '+d.toLocaleDateString('nl-NL',{month:'short'});
     const isSelected = selectedShoppingDays.includes(day.day_date);
+    const isToday = day.day_date === today;
 
     const btn = document.createElement('button');
-    btn.style.cssText = 'padding:8px 12px;border-radius:var(--r);border:1.5px solid '+(isSelected?'var(--green)':'var(--border)')+
-      ';background:'+(isSelected?'var(--green-bg)':'white')+
-      ';cursor:pointer;text-align:center;min-width:64px';
-    btn.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted)">'+dayName+'</div>'+
-      '<div style="font-size:13px;font-weight:700;color:'+(isSelected?'var(--green)':'var(--text)')+'">'+day.meal_emoji+'</div>'+
-      '<div style="font-size:11px;color:var(--muted)">'+dateLabel+'</div>';
+    btn.style.cssText = 'padding:8px 10px;border-radius:var(--r);border:1.5px solid '+
+      (isSelected?'var(--green)':isToday?'var(--amber)':'var(--border)')+
+      ';background:'+(isSelected?'var(--green-bg)':isToday?'var(--amber-light)':'white')+
+      ';cursor:pointer;text-align:center;min-width:58px;transition:all 0.15s';
+    btn.innerHTML =
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+(isSelected?'var(--green)':isToday?'var(--amber)':'var(--muted)')+'">'+
+        (isToday?'vandaag':dayName)+
+      '</div>'+
+      '<div style="font-size:20px;margin:2px 0">'+day.meal_emoji+'</div>'+
+      '<div style="font-size:10px;color:var(--muted)">'+dateLabel+'</div>';
 
     btn.onclick = () => {
       if (selectedShoppingDays.includes(day.day_date)) {
-        selectedShoppingDays = selectedShoppingDays.filter(d=>d!==day.day_date);
+        selectedShoppingDays = selectedShoppingDays.filter(d2=>d2!==day.day_date);
       } else {
         selectedShoppingDays.push(day.day_date);
       }
@@ -3669,6 +3710,23 @@ async function renderShoppingDayPicker() {
     };
     picker.appendChild(btn);
   });
+
+  // Selecteer-alles knop
+  if (menuDays.length > 1) {
+    const allBtn = document.createElement('button');
+    allBtn.style.cssText = 'padding:8px 10px;border-radius:var(--r);border:1.5px dashed var(--border);background:transparent;cursor:pointer;text-align:center;min-width:58px;color:var(--muted);font-size:11px;font-weight:700';
+    const allSelected = menuDays.every(d=>selectedShoppingDays.includes(d.day_date));
+    allBtn.textContent = allSelected ? 'Alles weg' : 'Alles';
+    allBtn.onclick = () => {
+      if (allSelected) {
+        selectedShoppingDays = [];
+      } else {
+        selectedShoppingDays = menuDays.map(d=>d.day_date);
+      }
+      renderShoppingDayPicker();
+    };
+    picker.appendChild(allBtn);
+  }
 }
 
 async function generateShoppingList() {
@@ -5341,6 +5399,10 @@ boot();
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
       <textarea id="edit-meal-note" maxlength="200" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Bijgerecht</label>
+      <input type="text" id="edit-meal-side" maxlength="80" placeholder="bijv. gebakken aardappels, rijst..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none" />
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Recept URL</label>
