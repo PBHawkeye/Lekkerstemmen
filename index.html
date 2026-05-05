@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v15:54</title>
+  <title>Lekkerstemmen v10:40</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1769,7 +1769,13 @@ function refreshHome() {
   );
 
   if (p.role==='child') {
-    if (!todayMeal) unhide(document.getElementById('today-child-wait'));
+    const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+    if (!todayMeal && !todayMenuEntry) unhide(document.getElementById('today-child-wait'));
+    else if (!todayMeal && todayMenuEntry) {
+      // Menu beschikbaar maar nog niet gegeten - toon check-in prompt met menu info
+      document.getElementById('today-child-q').textContent = 'Hoe was '+todayMenuEntry.meal_emoji+' '+todayMenuEntry.meal_name+' vanavond?';
+      unhide(document.getElementById('today-child'));
+    }
     else if (hasCheckedIn) unhide(document.getElementById('today-child-done'));
       // Vul done card met check-in info
       const myCI = checkins.find(c => c.eaten_at === todayDateStr || c.meal_id === todayMeal?.id);
@@ -1785,9 +1791,17 @@ function refreshHome() {
       unhide(document.getElementById('today-child'));
     }
   } else {
+    // Ouder: check ook weekmenu voor vandaag
+    const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+
     // Ouder: eerst log-card, dan check-in card, dan done
-    if (!todayMeal) {
+    if (!todayMeal && !todayMenuEntry) {
+      // Geen menu en geen check-in: vraag om te loggen
       unhide(document.getElementById('today-parent'));
+    } else if (!todayMeal && todayMenuEntry) {
+      // Menu gepubliceerd maar nog niet ingecheckt: toon niets extra (tonight-card doet het)
+      // Verberg de "Wat eten jullie vanavond?" kaart
+      hide(document.getElementById('today-parent'));
     } else if (hasCheckedIn) {
       document.getElementById('today-parent-meal').textContent = '✓ '+getMealDisplay(todayMeal.meal_type)+' gelogd & beoordeeld';
       unhide(document.getElementById('today-parent-done'));
