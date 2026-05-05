@@ -3667,7 +3667,9 @@ async function renderShoppingDayPicker() {
   if (!picker) return;
   picker.innerHTML = '<div style="font-size:12px;color:var(--muted)">Laden...</div>';
 
-  const today = todayStr();
+  // Gebruik echte datum voor inkopen (niet gesimuleerd)
+  const realToday = new Date();
+  const today = realToday.toISOString().split('T')[0];
   const familyId = currentProfile.family_id;
 
   // Haal gepubliceerde menu's op voor de komende 3 weken (en huidige week)
@@ -4619,8 +4621,25 @@ function getWeekDates(mondayStr) {
   return dates;
 }
 
+
+// ── MENU WEEK NAVIGATIE ─────────────────────────────────────────
+function getMenuWeekStart() {
+  const base = new Date();
+  base.setDate(base.getDate() + testDayOffset + (menuWeekOffset * 7));
+  const day = base.getDay();
+  const mon = new Date(base);
+  mon.setDate(base.getDate() - day + (day===0?-6:1));
+  return mon.toISOString().split('T')[0];
+}
+
+function menuWeekStep(delta) {
+  menuWeekOffset += delta;
+  renderMenuScreen();
+}
+
 async function renderMenuScreen() {
   const p = currentProfile;
+  if (!p) return;
   const weekStart = getMenuWeekStart();
   const dates = getWeekDates(weekStart);
 
