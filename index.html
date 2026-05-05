@@ -418,12 +418,12 @@
     <h1>Hey <span id="home-name">daar</span> &#x1F44B;</h1>
     <!-- Dag navigatie -->
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
-      <button onclick="homeStepDay(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.2);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">←</button>
+      <button onclick="homeStepDay(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;color:var(--green);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,0.08)">←</button>
       <div style="flex:1;text-align:center">
-        <p id="home-date" style="margin:0;font-size:14px;color:white;font-weight:600"></p>
-        <span id="home-day-label" style="font-size:11px;color:rgba(255,255,255,0.75)"></span>
+        <p id="home-date" style="margin:0;font-size:14px;color:var(--text);font-weight:600"></p>
+        <span id="home-day-label" style="font-size:11px;color:var(--muted)"></span>
       </div>
-      <button id="home-next-btn" onclick="homeStepDay(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.2);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">→</button>
+      <button id="home-next-btn" onclick="homeStepDay(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;color:var(--green);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,0.08)">→</button>
     </div>
     <div id="home-streak" class="streak hidden">&#x1F525; <span id="streak-num">0</span> dagen op rij!</div>
   </div>
@@ -533,6 +533,15 @@
     <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label">Status</span></button>
     <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label">Menu</span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
+    <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label">Sport</span></button>
+    <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label">Meer</span></button>
+  <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
+    <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
+      <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label">Maaltijden</span></button>
+      <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
+      <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
+    </div>
+  </div>
   </nav>
 </div>
 
@@ -1714,25 +1723,31 @@ function refreshHome() {
     document.getElementById('nav-action-label').textContent = 'Check-in';
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-vote-btn').style.display = 'none';
-    document.getElementById('nav-sport').style.display = 'none'; // kind sport
+    document.getElementById('nav-sport').style.display = 'none';
+    document.getElementById('nav-meals').style.display = 'none';
+    document.getElementById('nav-stats').style.display = 'none';
+    document.getElementById('nav-invite').style.display = 'none';
     document.getElementById('nav-menu') && (document.getElementById('nav-menu').style.display='');
+    document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='');
+    document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
     document.getElementById('nav-status') && (document.getElementById('nav-status').style.display='');
     document.getElementById('nav-shopping') && (document.getElementById('nav-shopping').style.display='');
     document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='');
     document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
-    document.getElementById('nav-status').style.display = '';
-    document.getElementById('nav-menu').style.display = '';
-    document.getElementById('nav-stats').style.display = '';
   } else {
+    // Kind nav: alleen check-in, stem, sport
     document.getElementById('nav-action-icon').textContent = '\uD83D\uDE0B';
     document.getElementById('nav-action-label').textContent = 'Check-in';
-    document.getElementById('nav-log').style.display = 'none';
-    document.getElementById('nav-meals').style.display = 'none';
-    document.getElementById('nav-status') && (document.getElementById('nav-status').style.display='none');
-    document.getElementById('nav-menu').style.display = '';
-    document.getElementById('nav-stats').style.display = 'none';
-    // Stem-knop altijd zichtbaar voor kinderen
-    document.getElementById('nav-vote-child')&&(document.getElementById('nav-vote-child').style.display='');
+    // Verberg alle ouder items
+    ['nav-menu','nav-status','nav-shopping','nav-sport-parent','nav-more',
+     'nav-stats','nav-meals','nav-invite','nav-log'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    // Toon kind items
+    document.getElementById('nav-vote-btn') && (document.getElementById('nav-vote-btn').style.display='');
+    document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
+    document.getElementById('nav-vote-child') && (document.getElementById('nav-vote-child').style.display='');
   }
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
