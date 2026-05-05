@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v13:03</title>
+  <title>Lekkerstemmen v14:44</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1912,7 +1912,8 @@ function refreshHome() {
         homeDayOffset = -testDayOffset + diffDays;
         loadData().then(() => {
           refreshHome();
-          goScreen('log');
+          // Kleine vertraging zodat refreshHome de week-row kan renderen
+          setTimeout(() => goScreen('log'), 50);
         });
       }
     };
@@ -3927,18 +3928,37 @@ async function generateShoppingList() {
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514',
-        max_tokens:600,
+        max_tokens:800,
         messages:[{role:'user',content:prompt}]
       })
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('API error:', res.status, errText);
+      throw new Error('API ' + res.status);
+    }
     const data = await res.json();
-    const text = data.content?.[0]?.text?.trim().replace(/```json|```/g,'').trim();
-    shoppingListData = JSON.parse(text);
+    const rawText = data.content?.[0]?.text || '';
+    console.log('[Shopping] AI response:', rawText);
+    // Zoek JSON in de response (ook als er tekst omheen staat)
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Geen JSON in response');
+    shoppingListData = JSON.parse(jsonMatch[0]);
+    if (!shoppingListData.categorieen) throw new Error('Onverwacht formaat');
     renderShoppingResult();
   } catch(e) {
     console.error('Shopping list error:', e);
-    document.getElementById('shopping-loading').style.display = 'none';
-    alert('Fout bij genereren. Probeer opnieuw.');
+    const loadEl = document.getElementById('shopping-loading');
+    if (loadEl) loadEl.style.display = 'none';
+    const resultEl = document.getElementById('shopping-result');
+    // Toon foutmelding in het scherm ipv alert
+    if (resultEl) {
+      resultEl.style.display = '';
+      resultEl.innerHTML = '<div style="padding:16px;background:#FFEEEE;border-radius:var(--r);border:1.5px solid var(--coral);color:var(--coral);font-size:14px">'+
+        '&#9888;&#65039; Kon geen lijst genereren: '+e.message+'<br><br>'+
+        '<button onclick="generateShoppingList()" style="padding:8px 16px;background:var(--green);color:white;border:none;border-radius:var(--r);cursor:pointer;font-weight:700">Opnieuw proberen</button>'+
+        '</div>';
+    }
   }
 }
 
@@ -4455,9 +4475,23 @@ function renderDragList(containerId, meals, isAvailable) {
     item.dataset.source = isAvailable ? 'available' : 'unavailable';
     const actionIcon = isAvailable ? '✕' : '+';
     const actionColor = isAvailable ? 'var(--coral)' : 'var(--green)';
+    // Haal usage info op uit histMenu (al geladen) of weeklyMenu
+    const mealUsage = (typeof histMenu !== 'undefined' ? histMenu : weeklyMenu||[])
+      .filter(m=>m.meal_id===meal.id);
+    const timesEaten = mealUsage.length;
+    const lastDate = mealUsage.length
+      ? new Date(mealUsage[0].day_date+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'short'})
+      : null;
+
     item.innerHTML =
       '<span class="drag-emoji">'+meal.emoji+'</span>'+
-      '<span class="drag-name">'+meal.label+'</span>'+
+      '<div style="flex:1;min-width:0">'+
+        '<span class="drag-name">'+meal.label+'</span>'+
+        (timesEaten>0||lastDate?
+          '<div style="font-size:10px;color:var(--muted);margin-top:1px">'+
+            (timesEaten>0?timesEaten+'x gegeten':'')+(timesEaten>0&&lastDate?' · ':'')+
+            (lastDate?'laatst '+lastDate:'')+
+          '</div>':'')+'</div>'+
       '<span style="font-size:16px;font-weight:700;color:'+actionColor+';flex-shrink:0;width:24px;text-align:center">'+actionIcon+'</span>';
 
     // Drag events
@@ -5040,6 +5074,7 @@ async function renderMenuScreen() {
 
 // ── MAALTIJD ZOEKEN ─────────────────────────────────────────────
 let allPickerMeals = [];
+let histMenu = [];
 
 function renderMealGrid(meals, selectedId) {
   const grid = document.getElementById('meal-picker-grid');
@@ -5175,7 +5210,7 @@ async function searchMealsAI() {
   if (btn) btn.textContent = '✨';
 }
 
-function openMealPicker(dateStr, dayIndex, existing) {
+async function openMealPicker(dateStr, dayIndex, existing) {
   console.log('[Picker] openMealPicker:', dateStr, dayIndex);
   currentPickDay = {dateStr, dayIndex, existing};
   const d = new Date(dateStr+'T12:00:00');
@@ -5214,24 +5249,28 @@ function openMealPicker(dateStr, dayIndex, existing) {
   const labelEl = document.getElementById('meal-grid-label');
   if (labelEl) labelEl.textContent = 'Wat eten we?';
 
-  // Sla alle maaltijden op voor zoeken, gesorteerd op gebruik dan alfabet
-  const unsorted = getAllMeals();
+  // Haal historische menu data op voor sortering
+  const {data:histMenuData} = await sb.from('weekly_menu')
+    .select('meal_id,day_date')
+    .eq('family_id', currentProfile.family_id)
+    .order('day_date', {ascending:false})
+    .limit(100);
 
-  // Tel hoe vaak elke maaltijd op het menu heeft gestaan
   const usageCount = {};
-  (weeklyMenu||[]).forEach(m => {
-    if (m.meal_id) usageCount[m.meal_id] = (usageCount[m.meal_id]||0) + 1;
-  });
-  // Voeg ook checkins mee (als backup als weeklyMenu leeg is)
-  (checkins||[]).forEach(c => {
-    if (c.meal_type) usageCount[c.meal_type] = (usageCount[c.meal_type]||0) + 1;
+  const lastUsed = {};
+  histMenu = histMenuData||[];
+  histMenu.forEach(m => {
+    if (!m.meal_id) return;
+    usageCount[m.meal_id] = (usageCount[m.meal_id]||0) + 1;
+    if (!lastUsed[m.meal_id]) lastUsed[m.meal_id] = m.day_date;
   });
 
+  const unsorted = getAllMeals();
   allPickerMeals = unsorted.sort((a, b) => {
     const ua = usageCount[a.id]||0;
     const ub = usageCount[b.id]||0;
-    if (ub !== ua) return ub - ua; // meest gebruikt eerst
-    return a.label.localeCompare(b.label, 'nl'); // dan alfabetisch
+    if (ub !== ua) return ub - ua;
+    return a.label.localeCompare(b.label, 'nl');
   });
 
   renderMealGrid(allPickerMeals, existing?.meal_id);
