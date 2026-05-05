@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v15:41</title>
+  <title>Lekkerstemmen v15:56</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -2952,8 +2952,8 @@ async function renderStatus() {
 
   // ── 2. STEMMEN ─────────────────────────────────────────────
   if (kieslijstKlaar && !menuPublished && !isPast) {
-    const notVoted = kids.filter(k=>!votes.find(v=>v.profile_id===testUuid(k.id)));
-    const voted = kids.filter(k=>votes.find(v=>v.profile_id===testUuid(k.id)));
+    const notVoted = kids.filter(k=>!votes.find(v=>v.profile_id===k.id));
+    const voted = kids.filter(k=>votes.find(v=>v.profile_id===k.id));
     if (notVoted.length > 0) {
       hasUrgent = true;
       let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Nog niet gestemd</div>';
@@ -2975,7 +2975,7 @@ async function renderStatus() {
   if (isCurrentWeek && menuPublished) {
     const todayMenu = menu.find(m=>m.day_date===today&&m.published);
     if (todayMenu) {
-      const missing = kids.filter(k=>!cis.find(c=>c.eaten_at===today&&c.profile_id===testUuid(k.id)));
+      const missing = kids.filter(k=>!cis.find(c=>c.eaten_at===today&&c.profile_id===k.id));
       if (missing.length > 0) {
         let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Check-in vandaag — '+todayMenu.meal_emoji+' '+todayMenu.meal_name+'</div>';
         missing.forEach(k => { html += row('⏳',k.emoji+' '+k.name+' nog niet ingecheckt',null,null,null,false); });
@@ -2992,7 +2992,7 @@ async function renderStatus() {
     pastDays.forEach(d=>{
       if (!menu.find(m=>m.day_date===d&&m.published)) return;
       kids.forEach(k=>{
-        if (!cis.find(c=>c.eaten_at===d&&c.profile_id===testUuid(k.id))) {
+        if (!cis.find(c=>c.eaten_at===d&&c.profile_id===k.id)) {
           missed.push({kid:k, date:d, dayName:new Date(d+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long'})});
         }
       });
@@ -3021,7 +3021,7 @@ async function renderStatus() {
     const DAYS_S = ['zo','ma','di','wo','do','vr','za'];
     let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Check-ins deze week</div>';
     kids.forEach(kid=>{
-      const kidCis = cis.filter(c=>c.profile_id===testUuid(kid.id));
+      const kidCis = cis.filter(c=>c.profile_id===kid.id);
       const dots = weekDates.map(d=>{
         const ci = kidCis.find(c=>c.eaten_at===d);
         const past = d<=today;
@@ -5709,7 +5709,7 @@ async function boot() {
   initTestBar();
 
   if (testModeActive) {
-    testDayOffset = -8;
+    testDayOffset = 0; // start op vandaag, gebruik scenario knoppen om te simuleren
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
     currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
     homeDayOffset = 0; // start altijd op vandaag
