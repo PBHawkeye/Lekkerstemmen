@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:44</title>
+  <title>Lekkerstemmen v18:54</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -799,6 +799,9 @@
       <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">Weekvoortgang</div>
       <div id="status-progress-steps"></div>
     </div>
+
+    <!-- Status items container -->
+    <div id="status-items"></div>
 
     <!-- Op wie wacht het -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px" id="status-waiting-card">
@@ -4994,6 +4997,18 @@ async function renderMenuScreen() {
         if (existing.note) detailHtml += '<span class="detail-pill">'+existing.note+'</span>';
         if (existing.message) detailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">\uD83D\uDCAC '+existing.message+'</span>';
       }
+
+      // Sport/afwezigheid pills — altijd tonen, ook als dag nog leeg is
+      const daySchedule = sportScheduleData[dateStr] || {};
+      const members = getFamilyMembers();
+      members.forEach(member => {
+        const eventType = daySchedule[member.id] || null;
+        if (!eventType) return;
+        const ev = EVENT_TYPES[eventType];
+        if (!ev) return;
+        detailHtml += '<span class="detail-pill" style="background:'+ev.bg+';border-color:'+ev.border+';color:var(--text);">'+
+          ev.emoji+' '+member.name+(ev.eetsNiet?' eet niet':'')+'</span>';
+      });
       row.innerHTML=
         '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
         '<span style="font-size:28px">'+(existing?existing.meal_emoji:'+')+'</span>'+
