@@ -716,7 +716,15 @@
   <div style="padding:0 16px 100px">
     <p style="font-size:13px;color:var(--muted);padding:0 8px 12px" id="meal-picker-sub"></p>
 
-    <div class="label" style="margin-bottom:8px">Wat eten we?</div>
+    <div style="position:relative;margin-bottom:10px">
+      <input type="text" id="meal-search" placeholder="Zoek of vraag AI: 'iets met kip wat Faas lekker vindt'..."
+        style="width:100%;padding:12px 40px 12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;outline:none;font-family:'DM Sans',sans-serif"
+        oninput="filterMeals(this.value)" />
+      <button onclick="searchMealsAI()" id="meal-search-ai-btn"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;padding:4px" title="AI zoeken">✨</button>
+    </div>
+    <div id="meal-search-ai-result" style="display:none;padding:8px 10px;background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--border);font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+    <div class="label" style="margin-bottom:8px" id="meal-grid-label">Wat eten we?</div>
     <div class="meal-grid" id="meal-picker-grid"></div>
     <div style="margin-top:8px;margin-bottom:16px">
       <input type="text" id="meal-picker-custom" placeholder="Of typ een eigen gerecht..." maxlength="40" />
@@ -3669,34 +3677,28 @@ async function renderShoppingDayPicker() {
 
   const familyId = currentProfile.family_id;
 
-  // Gebruik gesimuleerde vandaag als startdatum (zodat testdata ook werkt)
-  const simToday = new Date();
-  simToday.setDate(simToday.getDate() + testDayOffset + homeDayOffset);
-  const today = simToday.toISOString().split('T')[0];
-
-  // Zoek gepubliceerde menu's vanaf vandaag (gesimuleerd) tot 3 weken vooruit
-  const fromDate = today;
-  const toDate = new Date(simToday);
-  toDate.setDate(simToday.getDate() + 21);
-  const toDateStr = toDate.toISOString().split('T')[0];
-
-  const {data:menuDays} = await sb.from('weekly_menu')
+  // Haal alle gepubliceerde menu's op, filter daarna in JS
+  const {data:allMenuDays} = await sb.from('weekly_menu')
     .select('*')
     .eq('family_id', familyId)
     .eq('published', true)
-    .gte('day_date', fromDate)
-    .lte('day_date', toDateStr)
     .order('day_date', {ascending:true});
+
+  console.log('[Shopping] alle gepubliceerde dagen:', allMenuDays?.length, allMenuDays?.map(m=>m.day_date));
+
+  // Toon alle gepubliceerde dagen (geen datum filter - werkt ook in testmodus)
+  const menuDays = allMenuDays || [];
 
   picker.innerHTML = '';
 
   if (!menuDays || menuDays.length === 0) {
     picker.innerHTML =
       '<div style="padding:12px;background:#FFF4DC;border-radius:var(--r);border:1.5px solid #FFD97A;font-size:13px;color:#8A5E00">'+
-      '⚠️ Geen gepubliceerde menu gevonden voor de komende weken.<br>'+
-      '<span style="font-size:12px;opacity:0.8">Stel eerst het weekmenu vast via het Menu scherm.</span></div>';
+      '⚠️ Geen gepubliceerde menu gevonden.<br>'+
+      '<span style="font-size:12px;opacity:0.8">Stel eerst het weekmenu vast en publiceer het via het Menu scherm.</span></div>';
     return;
   }
+  console.log('[Shopping] toon', menuDays.length, 'dagen');
 
   const DAYS_FULL = ['zo','ma','di','wo','do','vr','za'];
 
@@ -4912,6 +4914,144 @@ async function renderMenuScreen() {
   }
 }
 
+
+// ── MAALTIJD ZOEKEN ─────────────────────────────────────────────
+let allPickerMeals = [];
+
+function renderMealGrid(meals, selectedId) {
+  const grid = document.getElementById('meal-picker-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (meals.length === 0) {
+    grid.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1">Geen gerechten gevonden</div>';
+    return;
+  }
+  meals.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'meal-btn' + (selectedId && selectedId === m.id ? ' selected' : '');
+    btn.dataset.meal = m.id;
+    btn.dataset.emoji = m.emoji;
+    btn.dataset.name = m.label;
+    btn.innerHTML = '<span class="meal-emoji-big">' + m.emoji + '</span>' + m.label;
+    btn.onclick = () => {
+      document.querySelectorAll('#meal-picker-grid .meal-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('meal-picker-custom').value = '';
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function filterMeals(query) {
+  const aiResult = document.getElementById('meal-search-ai-result');
+  if (aiResult) aiResult.style.display = 'none';
+  const label = document.getElementById('meal-grid-label');
+
+  if (!query.trim()) {
+    if (label) label.textContent = 'Wat eten we?';
+    renderMealGrid(allPickerMeals);
+    return;
+  }
+
+  const q = query.toLowerCase();
+  const filtered = allPickerMeals.filter(m =>
+    m.label.toLowerCase().includes(q) ||
+    (m.note && m.note.toLowerCase().includes(q))
+  );
+
+  if (label) label.textContent = filtered.length + ' resultaten';
+  renderMealGrid(filtered);
+}
+
+async function searchMealsAI() {
+  const query = document.getElementById('meal-search')?.value?.trim();
+  if (!query) {
+    document.getElementById('meal-search').focus();
+    return;
+  }
+
+  const btn = document.getElementById('meal-search-ai-btn');
+  const aiResult = document.getElementById('meal-search-ai-result');
+  const label = document.getElementById('meal-grid-label');
+
+  if (btn) btn.textContent = '⏳';
+  if (aiResult) { aiResult.style.display = ''; aiResult.textContent = 'AI zoekt...'; }
+
+  // Haal scores op voor context
+  const {data:cis} = await sb.from('checkins_with_context')
+    .select('meal_type,score,child_name,comment')
+    .eq('family_id', currentProfile.family_id)
+    .order('eaten_at', {ascending:false})
+    .limit(100);
+
+  // Bouw meal context
+  const mealContext = allPickerMeals.map(m => {
+    const mealCis = (cis||[]).filter(c => c.meal_type === m.id);
+    const avgScore = mealCis.length
+      ? (mealCis.reduce((s,c) => s+c.score, 0) / mealCis.length).toFixed(1)
+      : null;
+    const perPerson = {};
+    mealCis.forEach(c => {
+      if (!perPerson[c.child_name]) perPerson[c.child_name] = [];
+      perPerson[c.child_name].push(c.score);
+    });
+    const personScores = Object.entries(perPerson).map(([name, scores]) =>
+      name + ': ' + (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1)
+    ).join(', ');
+    return m.emoji + ' ' + m.label + (avgScore ? ' (gem:' + avgScore + (personScores?', '+personScores:'') + ')' : '');
+  }).join('\n');
+
+  const prompt = [
+    'Je helpt bij het kiezen van een gerecht voor vanavond.',
+    'Beschikbare gerechten met scores (1=slecht, 3=lekker):',
+    mealContext,
+    '',
+    'Vraag: ' + query,
+    '',
+    'Geef een lijst van de beste matches als JSON array van meal IDs.',
+    'Geef ook een korte uitleg in 1 zin.',
+    'Antwoord: {"ids": ["id1", "id2"], "uitleg": "..."}',
+    'Geef ALLEEN de JSON terug.',
+  ].join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        messages: [{role:'user', content:prompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text?.trim().replace(/```json|```/g,'').trim();
+    const result = JSON.parse(text);
+
+    const matched = result.ids
+      .map(id => allPickerMeals.find(m => m.id === id))
+      .filter(Boolean);
+
+    if (matched.length > 0) {
+      renderMealGrid(matched);
+      if (label) label.textContent = matched.length + ' AI suggestie' + (matched.length !== 1 ? 's' : '');
+      if (aiResult) {
+        aiResult.style.display = '';
+        aiResult.innerHTML = '✨ ' + result.uitleg;
+      }
+    } else {
+      if (aiResult) { aiResult.textContent = 'Geen matches gevonden voor deze zoekopdracht.'; }
+      filterMeals(query); // fallback op tekst
+    }
+  } catch(e) {
+    console.error('AI search error:', e);
+    if (aiResult) { aiResult.textContent = 'AI niet beschikbaar, zoek op tekst.'; }
+    filterMeals(query);
+  }
+
+  if (btn) btn.textContent = '✨';
+}
+
 function openMealPicker(dateStr, dayIndex, existing) {
   console.log('[Picker] openMealPicker:', dateStr, dayIndex);
   currentPickDay = {dateStr, dayIndex, existing};
@@ -4943,22 +5083,17 @@ function openMealPicker(dateStr, dayIndex, existing) {
   if(corveeSection) corveeSection.style.display =
     (selectedCook==='afhaal'||selectedCook==='uiteten') ? 'none' : '';
 
-  const grid = document.getElementById('meal-picker-grid');
-  grid.innerHTML='';
-  getAllMeals().forEach(m=>{
-    const btn = document.createElement('button');
-    btn.className='meal-btn'+(existing&&existing.meal_id===m.id?' selected':'');
-    btn.dataset.meal=m.id;
-    btn.dataset.emoji=m.emoji;
-    btn.dataset.name=m.label;
-    btn.innerHTML='<span class="meal-emoji-big">'+m.emoji+'</span>'+m.label;
-    btn.onclick=()=>{
-      document.querySelectorAll('.meal-picker-grid .meal-btn, #meal-picker-grid .meal-btn').forEach(b=>b.classList.remove('selected'));
-      btn.classList.add('selected');
-      document.getElementById('meal-picker-custom').value='';
-    };
-    grid.appendChild(btn);
-  });
+  // Reset zoekbalk
+  const searchEl = document.getElementById('meal-search');
+  if (searchEl) searchEl.value = '';
+  const aiResultEl = document.getElementById('meal-search-ai-result');
+  if (aiResultEl) aiResultEl.style.display = 'none';
+  const labelEl = document.getElementById('meal-grid-label');
+  if (labelEl) labelEl.textContent = 'Wat eten we?';
+
+  // Sla alle maaltijden op voor zoeken
+  allPickerMeals = getAllMeals();
+  renderMealGrid(allPickerMeals, existing?.meal_id);
   show('meal-picker');
 }
 
