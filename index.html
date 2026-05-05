@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v16:34</title>
+  <title>Lekkerstemmen v16:42</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -195,7 +195,7 @@
     .vote-opt.selected .vote-check { background: var(--amber); border-color: var(--amber); color: white; }
 
     /* BOTTOM NAV */
-    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 420px; background: white; border-top: 1.5px solid var(--border); display: flex; padding: 8px 0 20px; z-index: 100; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; background: white; border-top: 1.5px solid var(--border); display: flex; padding: 8px 0; z-index: 100 20px; z-index: 100; }
     .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border: none; background: transparent; cursor: pointer; color: var(--muted); font-family: 'DM Sans', sans-serif; }
     .nav-btn.active { color: var(--green); }
     .nav-icon { font-size: 22px; line-height: 1; }
@@ -1196,6 +1196,7 @@ const sb = supabase.createClient(
 // ── STATE ──────────────────────────────────────────────────────
 let currentUser = null, currentProfile = null;
 let todayMeal = null, checkins = [], customMeals = [];
+let familyProfiles = [];
 let selectedScore = null, selectedDrink = null, selectedMeal = null, selectedComment = '';
 let togTogether = true, togSport = false, selectedRole = null;
 let voteChoices = [], inlineVoteChoices = [], currentAuthTab = 'login';
@@ -1664,6 +1665,14 @@ async function loadData() {
   todayMeal = mealRes.data;
   customMeals = cmRes.data||[];
   weeklyMenu = wmRes.data||[];
+
+  // Laad alle gezinsleden
+  if (!testModeActive && currentProfile?.family_id) {
+    const {data:members} = await sb.from('profiles')
+      .select('id,name,role,emoji')
+      .eq('family_id', currentProfile.family_id);
+    familyProfiles = members||[];
+  }
   const newSettings = settingsRes.data || {vote_day:6, family_id:familyId};
   // Bewaar disabled_meals als die al lokaal bekend zijn en de DB ze niet heeft
   if (!newSettings.disabled_meals && familySettings?.disabled_meals) {
@@ -2776,7 +2785,17 @@ function getFamilyMembers() {
       role: p.role
     }));
   }
-  return [{id: currentProfile.id, shortId: currentProfile.id, name: currentProfile.name, emoji: '\uD83D\uDC64', role: currentProfile.role}];
+  // Productie: gebruik geladen familyProfiles
+  if (familyProfiles.length > 0) {
+    return familyProfiles.map(p => ({
+      id: p.id,
+      shortId: p.id,
+      name: p.name,
+      emoji: p.emoji || '\uD83D\uDC64',
+      role: p.role
+    }));
+  }
+  return [{id: currentProfile.id, shortId: currentProfile.id, name: currentProfile.name, emoji: currentProfile.emoji || '\uD83D\uDC64', role: currentProfile.role}];
 }
 
 function renderPersonGrid(containerId, selectedId, onClickFn, highlightClass='selected') {
@@ -3281,6 +3300,9 @@ async function renderSportSchedule() {
     ? 'Geef aan op welke dagen jij sport hebt. Je ouder houdt hier rekening mee bij het kiezen van het avondeten.'
     : 'Plan hier de sportdagen en afwezigheid van het gezin. Dit helpt bij het kiezen van een passend gerecht.';
 
+  // Zorg dat nav zichtbaar blijft
+  const nav = document.querySelector('.bottom-nav');
+  if (nav) nav.style.display = '';
   document.getElementById('sport-week-label').textContent =
     mon.toLocaleDateString('nl-NL',fmt) + ' – ' + sun.toLocaleDateString('nl-NL',fmt);
   const sportRealOffset = sportWeekOffset - sportBaseOffset;
