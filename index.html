@@ -3474,7 +3474,7 @@ async function applyAllProposal() {
     },{onConflict:'family_id,day_date'});
   }
   await loadData();
-  renderMenuScreen();
+  await renderMenuScreen();
   show('menu');
 }
 
@@ -3667,15 +3667,17 @@ async function renderShoppingDayPicker() {
   if (!picker) return;
   picker.innerHTML = '<div style="font-size:12px;color:var(--muted)">Laden...</div>';
 
-  // Gebruik echte datum voor inkopen (niet gesimuleerd)
-  const realToday = new Date();
-  const today = realToday.toISOString().split('T')[0];
   const familyId = currentProfile.family_id;
 
-  // Haal gepubliceerde menu's op voor de komende 3 weken (en huidige week)
+  // Gebruik gesimuleerde vandaag als startdatum (zodat testdata ook werkt)
+  const simToday = new Date();
+  simToday.setDate(simToday.getDate() + testDayOffset + homeDayOffset);
+  const today = simToday.toISOString().split('T')[0];
+
+  // Zoek gepubliceerde menu's vanaf vandaag (gesimuleerd) tot 3 weken vooruit
   const fromDate = today;
-  const toDate = new Date();
-  toDate.setDate(toDate.getDate() + testDayOffset + homeDayOffset + 21);
+  const toDate = new Date(simToday);
+  toDate.setDate(simToday.getDate() + 21);
   const toDateStr = toDate.toISOString().split('T')[0];
 
   const {data:menuDays} = await sb.from('weekly_menu')
@@ -4911,6 +4913,7 @@ async function renderMenuScreen() {
 }
 
 function openMealPicker(dateStr, dayIndex, existing) {
+  console.log('[Picker] openMealPicker:', dateStr, dayIndex);
   currentPickDay = {dateStr, dayIndex, existing};
   const d = new Date(dateStr+'T12:00:00');
   document.getElementById('meal-picker-title').textContent = WEEK_DAYS[dayIndex]+' '+d.getDate();
@@ -4960,7 +4963,8 @@ function openMealPicker(dateStr, dayIndex, existing) {
 }
 
 async function confirmMealPick() {
-  if (!currentPickDay) return;
+  console.log('[Picker] confirmMealPick, currentPickDay:', currentPickDay);
+  if (!currentPickDay) { console.warn('[Picker] currentPickDay is null!'); return; }
   const {dateStr, dayIndex} = currentPickDay;
   const customVal = document.getElementById('meal-picker-custom').value.trim();
   const note = document.getElementById('meal-picker-note').value.trim();
@@ -4978,7 +4982,7 @@ async function confirmMealPick() {
     mealName = selectedBtn.dataset.name;
   } else return;
 
-  const weekStart = testMondayOfWeek();
+  const weekStart = getMenuWeekStart();
   // Bepaal cook naam
   let cookName = null;
   if (selectedCook==='afhaal') cookName='Afhaal';
