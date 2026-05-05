@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:29</title>
+  <title>Lekkerstemmen v18:44</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1643,7 +1643,7 @@ function goScreen(name) {
   else if (name==='stats') { renderStats(); show('stats'); }
   else if (name==='menu') { menuBaseOffset = getRealWeekOffset(); menuWeekOffset = menuBaseOffset; renderMenuScreen().then(()=>show('menu')); }
   else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
-  else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus(); show('status'); }
+  else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus().then(()=>show('status')); }
   else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
   else if (name==='shopping') { openShoppingScreen(); }
   else if (name==='profile') { openProfileScreen(); }
@@ -1812,38 +1812,75 @@ function refreshHome() {
     num.style.cssText = 'font-size:12px;color:'+(isToday?'var(--green)':'var(--muted)')+';font-weight:'+(isToday?'800':'500');
     num.textContent = d.getDate();
 
-    // Hoofd cel: maaltijd emoji + score smiley
+    // Bubble: logica per dag
+    // Verleden: toon smiley (als gestemd) of ! (gemist)
+    // Vandaag: toon menu emoji, maar smiley als al ingecheckt
+    // Toekomst: toon menu emoji (als gepland)
     const bubble = document.createElement('div');
-    bubble.style.cssText = 'width:100%;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;transition:all 0.15s;cursor:pointer;' +
-      (isToday ? 'background:var(--green-bg);border:2px solid var(--green);' :
-       isPast && menuEntry && !score ? 'background:#FFEEEE;border:1.5px solid var(--coral);' :
-       menuEntry ? 'background:white;border:1.5px solid var(--border);' :
-       'background:var(--bg);border:1.5px dashed var(--border);opacity:0.4');
 
-    if (menuEntry) {
-      const mealEmoji = document.createElement('div');
-      mealEmoji.style.cssText = 'font-size:18px;line-height:1';
-      mealEmoji.textContent = menuEntry.meal_emoji || '\uD83C\uDF7D️';
-      bubble.appendChild(mealEmoji);
+    let bgColor, borderColor, borderWidth, content_html;
 
-      if (score) {
-        const scoreEl = document.createElement('div');
-        scoreEl.style.cssText = 'font-size:10px;line-height:1';
-        scoreEl.textContent = score===3?'\uD83D\uDE0B':score===2?'\uD83D\uDE10':'\uD83D\uDE15';
-        bubble.appendChild(scoreEl);
-      } else if (isPast) {
-        const missEl = document.createElement('div');
-        missEl.style.cssText = 'font-size:10px;color:var(--coral);font-weight:700';
-        missEl.textContent = '!';
-        bubble.appendChild(missEl);
+    if (isPast) {
+      if (menuEntry && score) {
+        // Verleden + ingecheckt → grote smiley
+        const smiley = score===3?'\uD83D\uDE0B':score===2?'\uD83D\uDE10':'\uD83D\uDE15';
+        bgColor = score===3?'var(--green-bg)':score===2?'#FFF4DC':'#FFEEEE';
+        borderColor = score===3?'var(--green)':score===2?'var(--amber)':'var(--coral)';
+        borderWidth = '1.5px';
+        content_html = '<div style="font-size:26px;line-height:1">'+smiley+'</div>';
+      } else if (menuEntry && !score) {
+        // Verleden + niet ingecheckt → uitroepteken
+        bgColor = '#FFEEEE';
+        borderColor = 'var(--coral)';
+        borderWidth = '1.5px';
+        content_html = '<div style="font-size:20px;font-weight:900;color:var(--coral)">!</div>';
+      } else {
+        // Verleden + geen menu
+        bgColor = 'var(--bg)';
+        borderColor = 'var(--border)';
+        borderWidth = '1px';
+        content_html = '';
       }
     } else if (isToday) {
-      bubble.innerHTML = '<div style="font-size:16px">?</div>';
+      if (score) {
+        // Vandaag + al ingecheckt → smiley
+        const smiley = score===3?'\uD83D\uDE0B':score===2?'\uD83D\uDE10':'\uD83D\uDE15';
+        bgColor = 'var(--green-bg)';
+        borderColor = 'var(--green)';
+        borderWidth = '2px';
+        content_html = '<div style="font-size:26px;line-height:1">'+smiley+'</div>';
+      } else if (menuEntry) {
+        // Vandaag + menu maar nog niet ingecheckt → menu emoji
+        bgColor = 'var(--green-bg)';
+        borderColor = 'var(--green)';
+        borderWidth = '2px';
+        content_html = '<div style="font-size:26px;line-height:1">'+(menuEntry.meal_emoji||'\uD83C\uDF7D')+'</div>';
+      } else {
+        bgColor = 'var(--green-bg)';
+        borderColor = 'var(--green)';
+        borderWidth = '2px';
+        content_html = '<div style="font-size:18px;opacity:0.4">?</div>';
+      }
+    } else {
+      // Toekomst
+      if (menuEntry) {
+        bgColor = 'white';
+        borderColor = 'var(--border)';
+        borderWidth = '1.5px';
+        content_html = '<div style="font-size:26px;line-height:1">'+(menuEntry.meal_emoji||'\uD83C\uDF7D')+'</div>';
+      } else {
+        bgColor = 'var(--bg)';
+        borderColor = 'var(--border)';
+        borderWidth = '1px';
+        content_html = '';
+      }
     }
 
-    // Tooltip: maaltijdnaam
+    bubble.style.cssText = 'width:100%;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;cursor:pointer;background:'+bgColor+';border:'+borderWidth+' solid '+borderColor+';';
+    bubble.innerHTML = content_html;
+
     if (menuEntry) {
-      bubble.title = menuEntry.meal_name + (score ? ' · ' + (score===3?'Lekker':score===2?'Ging wel':'Niet lekker') : '');
+      bubble.title = menuEntry.meal_name + (score ? ' · '+(score===3?'Lekker':score===2?'Ging wel':'Niet lekker') : '');
     }
 
     // Click handler: altijd naar check-in voor die dag
