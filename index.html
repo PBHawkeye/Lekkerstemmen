@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v16:01</title>
+  <title>Lekkerstemmen v16:30</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1867,7 +1867,7 @@ function refreshHome() {
         bgColor = 'var(--green-bg)';
         borderColor = 'var(--green)';
         borderWidth = '2px';
-        content_html = '<div style="font-size:22px;line-height:1">'+(menuEntry.meal_emoji||'\uD83C\uDF7D')+'</div><div style="font-size:8px;font-weight:900;color:var(--green);letter-spacing:.05em">STEM</div>';
+        content_html = '<div style="font-size:22px;line-height:1">'+(menuEntry.meal_emoji||'\uD83C\uDF7D')+'</div>';
       } else {
         bgColor = 'var(--green-bg)';
         borderColor = 'var(--green)';
@@ -1899,23 +1899,18 @@ function refreshHome() {
     // Click handler: altijd naar check-in voor die dag
     const clickHandler = () => {
       if (isFuture) {
-        // Toekomst: stem of menu
-        if (p.role === 'child') goScreen('vote');
-        else goScreen('menu');
-      } else if (menuEntry) {
-        // Dag met menu: ga naar check-in voor die dag
-        // Zet homeDayOffset zodat todayStr() die dag teruggeeft
+        // Toekomst: naar voorkeur opgeven
+        goScreen('vote');
+      } else {
+        // Vandaag of verleden: naar stemmen (check-in)
         const targetDate = new Date(ds + 'T12:00:00');
-        const realToday = new Date();
-        realToday.setDate(realToday.getDate() + testDayOffset);
         const simToday = new Date();
         simToday.setDate(simToday.getDate() + testDayOffset);
         const diffDays = Math.round((targetDate - simToday) / (1000*60*60*24));
         homeDayOffset = diffDays;
         loadData().then(() => {
           refreshHome();
-          // Kleine vertraging zodat refreshHome de week-row kan renderen
-          setTimeout(() => goScreen('log'), 50);
+          setTimeout(() => goScreen('checkin'), 50);
         });
       }
     };
@@ -1926,6 +1921,15 @@ function refreshHome() {
     cell.appendChild(label);
     cell.appendChild(num);
     cell.appendChild(bubble);
+
+    // STEM label onder het bolletje
+    const stemLabel = document.createElement('div');
+    stemLabel.style.cssText = 'font-size:8px;font-weight:900;letter-spacing:.06em;height:10px;margin-top:1px;text-align:center';
+    if (!isFuture && !score && menuEntry) {
+      stemLabel.textContent = 'STEM';
+      stemLabel.style.color = isPast ? 'var(--coral)' : 'var(--green)';
+    }
+    cell.appendChild(stemLabel);
     row.appendChild(cell);
   }
 
