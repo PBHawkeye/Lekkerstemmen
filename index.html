@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v15:51</title>
+  <title>Lekkerstemmen v16:01</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -429,7 +429,7 @@
   </div>
   <div id="today-child" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
-    <div id="today-child-q" class="today-q">Hoe was het eten?</div>
+    <div id="today-child-q" class="today-q">Hoe lekker was het?</div>
     <button class="btn-white" onclick="goScreen('checkin')">Check in → <small>8 sec</small></button>
   </div>
   <div id="today-child-done" class="today-card hidden">
@@ -505,7 +505,7 @@
   <div id="today-parent-checkin" class="today-card hidden" style="background:linear-gradient(135deg,#22C9A0 0%,#1D9E75 100%)">
     <div class="today-badge">Jouw smaak</div>
     <div id="today-parent-checkin-q" class="today-q">En hoe vond jij het?</div>
-    <button class="btn-white" onclick="goScreen('checkin')">Check in →</button>
+    <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
@@ -525,7 +525,7 @@
 
 <div id="s-checkin" class="screen">
   <div class="checkin-wrap">
-    <div class="checkin-head"><h2>Hoe was het eten?</h2><p id="checkin-meal-name">Vanavond</p></div>
+    <div class="checkin-head"><h2>Hoe lekker was het?</h2><p id="checkin-meal-name">Vanavond</p></div>
     <div class="smiley-row">
       <div class="smiley" id="sm-1" onclick="selectSmiley(1)">&#x1F615;</div>
       <div class="smiley" id="sm-2" onclick="selectSmiley(2)">&#x1F610;</div>
@@ -1068,7 +1068,7 @@
       <textarea class="suggestion-textarea" id="vote-suggestion" placeholder="Ik wil graag ook... (bijv. lasagne, surinaams, sushi)"></textarea>
     </div>
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px" id="vote-status">Kies nog <span id="vote-remaining" style="color:var(--amber);font-weight:800">2</span> maaltijden</div>
-    <button class="btn btn-primary" onclick="doVote()" id="vote-btn" disabled>Stem versturen →</button>
+    <button class="btn btn-primary" onclick="doVote()" id="vote-btn" disabled>Voorkeur versturen →</button>
     <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
   </div>
 </div>
@@ -1212,15 +1212,6 @@ function testMondayOfWeek() {
   d.setDate(d.getDate() + testDayOffset);
   const day = d.getDay();
   const diff = d.getDate() - day + (day===0?-6:1);
-  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
-}
-
-function nextMondayOfWeek() {
-  // Maandag van de VOLGENDE week (waarvoor gestemd wordt)
-  const d = new Date();
-  d.setDate(d.getDate() + testDayOffset);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day===0?-6:1) + 7;
   return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
 }
 
@@ -1705,7 +1696,7 @@ function refreshHome() {
 
   if (p.role==='parent') {
     document.getElementById('nav-action-icon').textContent = '\uD83D\uDE0B';
-    document.getElementById('nav-action-label').textContent = 'Check-in';
+    document.getElementById('nav-action-label').textContent = 'Stem';
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-vote-btn').style.display = 'none';
     document.getElementById('nav-sport').style.display = 'none';
@@ -1722,7 +1713,7 @@ function refreshHome() {
   } else {
     // Kind nav: alleen check-in, stem, sport
     document.getElementById('nav-action-icon').textContent = '\uD83D\uDE0B';
-    document.getElementById('nav-action-label').textContent = 'Check-in';
+    document.getElementById('nav-action-label').textContent = 'Stem';
     // Verberg alle ouder items
     ['nav-menu','nav-status','nav-shopping','nav-sport-parent','nav-more',
      'nav-stats','nav-meals','nav-invite','nav-log'].forEach(id => {
@@ -1872,11 +1863,11 @@ function refreshHome() {
         borderWidth = '2px';
         content_html = '<div style="font-size:26px;line-height:1">'+smiley+'</div>';
       } else if (menuEntry) {
-        // Vandaag + menu maar nog niet ingecheckt → menu emoji
+        // Vandaag + menu maar nog niet ingecheckt → menu emoji + STEM
         bgColor = 'var(--green-bg)';
         borderColor = 'var(--green)';
         borderWidth = '2px';
-        content_html = '<div style="font-size:26px;line-height:1">'+(menuEntry.meal_emoji||'\uD83C\uDF7D')+'</div>';
+        content_html = '<div style="font-size:22px;line-height:1">'+(menuEntry.meal_emoji||'\uD83C\uDF7D')+'</div><div style="font-size:8px;font-weight:900;color:var(--green);letter-spacing:.05em">STEM</div>';
       } else {
         bgColor = 'var(--green-bg)';
         borderColor = 'var(--green)';
@@ -1908,8 +1899,9 @@ function refreshHome() {
     // Click handler: altijd naar check-in voor die dag
     const clickHandler = () => {
       if (isFuture) {
-        // Toekomst: iedereen kan stemmen via de bolletjes
-        goScreen('vote');
+        // Toekomst: stem of menu
+        if (p.role === 'child') goScreen('vote');
+        else goScreen('menu');
       } else if (menuEntry) {
         // Dag met menu: ga naar check-in voor die dag
         // Zet homeDayOffset zodat todayStr() die dag teruggeeft
@@ -1940,14 +1932,8 @@ function refreshHome() {
   // Streak
   let streak = 0;
   for (let i=0;i<14;i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + testDayOffset - i);
-    const ds2 = d.toISOString().split('T')[0];
-    // Check of persoon die dag niet at (vakantie etc) - dan overslaan
-    const dayEv = (sportScheduleData[ds2] || {})[p.id];
-    const didNotEat2 = dayEv && EVENT_TYPES[dayEv]?.eetsNiet;
-    if (didNotEat2) continue; // niet eten telt niet mee maar breekt streak ook niet
-    if (checkins.find(c=>c.eaten_at===ds2)) streak++;
+    const d = new Date(); d.setDate(d.getDate()-i);
+    if (checkins.find(c=>c.eaten_at===d.toISOString().split('T')[0])) streak++;
     else break;
   }
   const streakEl = document.getElementById('home-streak');
@@ -2346,19 +2332,7 @@ function resetCheckin() {
   hide(document.getElementById('drink-section'));
   hide(document.getElementById('checkin-autosave'));
   unhide(document.getElementById('checkin-skip'));
-  const checkinDateStr = todayStr();
-  const checkinMenuEntry = weeklyMenu.find(m=>m.day_date===checkinDateStr&&m.published);
-  const mealNameEl = document.getElementById('checkin-meal-name');
-  if (mealNameEl) {
-    if (todayMeal) {
-      mealNameEl.textContent = getMealDisplay(todayMeal.meal_type);
-    } else if (checkinMenuEntry) {
-      mealNameEl.textContent = checkinMenuEntry.meal_emoji+' '+checkinMenuEntry.meal_name;
-    } else {
-      const d = new Date(checkinDateStr+'T12:00:00');
-      mealNameEl.textContent = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
-    }
-  }
+  if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
   selectedComment=''; inlineVoteChoices=[];
   preSportFood=null; postSportFood=null;
   const commentEl=document.getElementById('checkin-comment');
@@ -2511,8 +2485,8 @@ async function doCheckin() {
 
 async function openVoteScreen() {
   const familyId = currentProfile.family_id;
-  const weekStart = nextMondayOfWeek();
-  const menuPublished = weeklyMenu.some(m=>m.week_of===weekStart&&m.published);
+  const weekStart = testMondayOfWeek();
+  const menuPublished = weeklyMenu.some(m=>m.published);
 
   // Haal bestaande stem op
   const {data:existingVote} = await sb.from('votes')
@@ -2530,29 +2504,23 @@ async function openVoteScreen() {
   }
 
   const hasVoted = !!existingVote;
-  const isReadOnly = menuPublished; // readonly als menu al vastgesteld is
+  const isReadOnly = hasVoted && menuPublished;
 
   // Titel
   const titleEl = document.querySelector('#s-vote .topbar h2');
-  if (titleEl) titleEl.textContent = isReadOnly ? 'Jouw stem' : hasVoted ? 'Stem aanpassen' : 'Stem voor volgende week';
+  if (titleEl) titleEl.textContent = isReadOnly ? 'Jouw stem' : hasVoted ? 'Stem wijzigen' : 'Stem voor volgende week';
 
-  // Status banner
+  // Status tekst
   const statusEl = document.getElementById('vote-status');
-  if (statusEl) {
-    if (isReadOnly) {
-      statusEl.innerHTML = '<div style="background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--green);font-weight:700;margin-bottom:12px">&#x2713; Het menu is al vastgesteld voor deze week. Je kunt je stem niet meer wijzigen.</div>';
-    } else if (hasVoted) {
-      statusEl.innerHTML = '<div style="background:#FFF4DC;border:1.5px solid var(--amber);border-radius:var(--r);padding:10px 14px;font-size:13px;color:#8A5E00;margin-bottom:12px">&#x270F;&#xFE0F; Je hebt al gestemd. Je kunt je stem hieronder aanpassen zolang het menu nog niet vastgesteld is.</div>';
-    } else {
-      statusEl.innerHTML = '';
-    }
+  if (isReadOnly && statusEl) {
+    statusEl.innerHTML = '<span style="color:var(--green);font-weight:700">✓ Menu is al vastgesteld</span>';
   }
 
   // Knop
   const btn = document.getElementById('vote-btn');
   if (btn) {
     btn.style.display = isReadOnly ? 'none' : '';
-    btn.textContent = hasVoted ? 'Stem aanpassen →' : 'Stem versturen →';
+    btn.textContent = hasVoted ? 'Stem bijwerken →' : 'Stem versturen →';
   }
 
   // Suggestie readonly
@@ -2648,7 +2616,7 @@ async function doVote() {
   document.getElementById('vote-btn').textContent='Opslaan...';
   await sb.from('votes').upsert({
     profile_id:currentProfile.id, family_id:currentProfile.family_id,
-    week_of:nextMondayOfWeek(), meal_choice_1:voteChoices[0], meal_choice_2:voteChoices[1],
+    week_of:testMondayOfWeek(), meal_choice_1:voteChoices[0], meal_choice_2:voteChoices[1],
   },{onConflict:'profile_id,week_of'});
   document.getElementById('success-emoji').textContent='\uD83D\uDDF3';
   document.getElementById('success-title').textContent='Stem uitgebracht!';
@@ -5815,12 +5783,12 @@ boot();
       <input type="text" id="edit-meal-name" maxlength="40" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-size:15px;outline:none" />
     </div>
     <div style="margin-bottom:10px">
-      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Bijgerecht</label>
-      <input type="text" id="edit-meal-side" maxlength="80" placeholder="bijv. gebakken aardappels, rijst..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none" />
-    </div>
-    <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
       <textarea id="edit-meal-note" maxlength="200" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Bijgerecht</label>
+      <input type="text" id="edit-meal-side" maxlength="80" placeholder="bijv. gebakken aardappels, rijst..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none" />
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Recept URL</label>
@@ -5834,7 +5802,7 @@ boot();
 </div>
 
 <div id="add-meal-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
-  <div style="background:white;border-radius:20px 20px 0 0;padding:24px 24px calc(24px + env(safe-area-inset-bottom, 0px));width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding-bottom:100px">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">Maaltijd toevoegen</div>
       <button onclick="closeAddMealSheet()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">✕</button>
@@ -5960,7 +5928,7 @@ boot();
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label">Home</span></button>
     <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Check-in</span></button>
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
-    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Stem</span></button>
+    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Voorkeur</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label">Maaltijden</span></button>
     <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label">Inkopen</span></button>
     <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
