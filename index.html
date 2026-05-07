@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v16:30</title>
+  <title>Lekkerstemmen v16:53</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -430,7 +430,7 @@
   <div id="today-child" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div id="today-child-q" class="today-q">Hoe lekker was het?</div>
-    <button class="btn-white" onclick="goScreen('checkin')">Check in → <small>8 sec</small></button>
+    <button class="btn-white" onclick="goScreen('checkin')">Stem → <small>8 sec</small></button>
   </div>
   <div id="today-child-done" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
@@ -547,18 +547,15 @@
     </div>
     <!-- Sport voeding sectie -->
     <div id="sport-nutrition-section" class="hidden" style="padding:0 24px 16px">
-      <div class="drink-title" style="margin-bottom:10px">⚽ Jij had sport vandaag! <span class="optional">optioneel</span></div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Wat at of dronk je v&#243;&#243;r het sporten?</div>
+      <div class="drink-title" style="margin-bottom:12px">&#9917; Jij had sport vandaag!</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Heb je mee gegeten?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="sport-ate-together-options"></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">V&#243;&#243;r het sporten gegeten/gedronken?</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="pre-sport-options"></div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">En erna?</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Na het sporten?</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="post-sport-options"></div>
     </div>
-    <!-- Inline stem sectie -->
-    <div id="vote-inline-section" class="vote-inline hidden">
-      <div class="vote-inline-title">Stem voor volgende week <span class="optional">optioneel</span></div>
-      <div class="vote-inline-grid" id="vote-inline-grid"></div>
-      <p id="vote-inline-info" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></p>
-    </div>
+
     <div id="checkin-autosave" class="actions hidden" style="text-align:center;padding-bottom:8px">
       <div style="font-size:13px;color:var(--muted);margin-bottom:8px" id="checkin-autosave-msg">Wordt opgeslagen...</div>
       <div style="display:flex;gap:8px">
@@ -1833,8 +1830,19 @@ function refreshHome() {
 
     let bgColor, borderColor, borderWidth, content_html;
 
+    // Check of persoon niet at die dag (vakantie, uit eten etc)
+    const myDayEvent = (sportScheduleData[ds] || {})[p.id] || null;
+    const didNotEat = myDayEvent && EVENT_TYPES[myDayEvent] && EVENT_TYPES[myDayEvent].eetsNiet;
+
     if (isPast) {
-      if (menuEntry && score) {
+      if (didNotEat) {
+        // Niet aanwezig/at niet → toon event emoji neutraal
+        const ev = EVENT_TYPES[myDayEvent];
+        bgColor = ev.bg || 'var(--bg)';
+        borderColor = ev.border || 'var(--border)';
+        borderWidth = '1.5px';
+        content_html = '<div style="font-size:22px;line-height:1">'+ev.emoji+'</div>';
+      } else if (menuEntry && score) {
         // Verleden + ingecheckt → grote smiley
         const smiley = score===3?'\uD83D\uDE0B':score===2?'\uD83D\uDE10':'\uD83D\uDE15';
         bgColor = score===3?'var(--green-bg)':score===2?'#FFF4DC':'#FFEEEE';
@@ -1876,7 +1884,14 @@ function refreshHome() {
       }
     } else {
       // Toekomst
-      if (menuEntry) {
+      if (didNotEat) {
+        // Toekomst + niet aanwezig → event emoji
+        const ev = EVENT_TYPES[myDayEvent];
+        bgColor = ev.bg || 'var(--bg)';
+        borderColor = ev.border || 'var(--border)';
+        borderWidth = '1.5px';
+        content_html = '<div style="font-size:22px;line-height:1">'+ev.emoji+'</div>';
+      } else if (menuEntry) {
         bgColor = 'white';
         borderColor = 'var(--border)';
         borderWidth = '1.5px';
@@ -1925,7 +1940,7 @@ function refreshHome() {
     // STEM label onder het bolletje
     const stemLabel = document.createElement('div');
     stemLabel.style.cssText = 'font-size:8px;font-weight:900;letter-spacing:.06em;height:10px;margin-top:1px;text-align:center';
-    if (!isFuture && !score && menuEntry) {
+    if (!isFuture && !score && menuEntry && !didNotEat) {
       stemLabel.textContent = 'STEM';
       stemLabel.style.color = isPast ? 'var(--coral)' : 'var(--green)';
     }
@@ -2054,11 +2069,23 @@ function refreshHome() {
   const menuPreview = document.getElementById('today-menu-preview');
   const previewList = document.getElementById('today-menu-preview-list');
   if (p.role==='child' && weeklyMenu.length>0 && weeklyMenu.some(m=>m.published)) {
-    const published = weeklyMenu.filter(m=>m.published).sort((a,b)=>a.day_date>b.day_date?1:-1);
-    previewList.innerHTML = published.slice(0,3).map(m=>{
+    const today2 = todayStr();
+    const published = weeklyMenu
+      .filter(m=>m.published && m.day_date >= today2)
+      .sort((a,b)=>a.day_date>b.day_date?1:-1);
+    // Als minder dan 3 toekomstige, ook verleden tonen om lijst te vullen
+    const allPublished = weeklyMenu.filter(m=>m.published).sort((a,b)=>a.day_date>b.day_date?1:-1);
+    const previewItems = published.length > 0 ? published.slice(0,3) : allPublished.slice(0,3);
+    previewList.innerHTML = previewItems.map(m=>{
       const d = new Date(m.day_date+'T12:00:00');
       const dayName = d.toLocaleDateString('nl-NL',{weekday:'short'});
-      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px"><span>'+m.meal_emoji+'</span><span style="font-weight:700;width:28px">'+dayName+'</span><span style="color:var(--muted)">'+m.meal_name+'</span></div>';
+      const isToday2 = m.day_date === today2;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">'+
+        '<span>'+m.meal_emoji+'</span>'+
+        '<span style="font-weight:700;width:28px;color:'+(isToday2?'var(--green)':'inherit')+'">'+dayName+'</span>'+
+        '<span style="color:var(--muted)">'+m.meal_name+'</span>'+
+        (isToday2?'<span style="font-size:10px;background:var(--green);color:white;border-radius:99px;padding:1px 6px;font-weight:700">vandaag</span>':'')+
+        '</div>';
     }).join('');
     unhide(menuPreview);
   } else {
@@ -2338,7 +2365,7 @@ function resetCheckin() {
   unhide(document.getElementById('checkin-skip'));
   if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
   selectedComment=''; inlineVoteChoices=[];
-  preSportFood=null; postSportFood=null;
+  preSportFood=null; postSportFood=null; sportAteTogether=null;
   const commentEl=document.getElementById('checkin-comment');
   if(commentEl) commentEl.value='';
   hide(document.getElementById('comment-section'));
@@ -2360,9 +2387,7 @@ function selectSmiley(score) {
     document.getElementById('checkin-comment').placeholder = 'bijv. lekker! of: de saus was te zuur...';
   }
   unhide(document.getElementById('comment-section'));
-  // Inline stemmen
-  renderInlineVote();
-  unhide(document.getElementById('vote-inline-section'));
+  // Inline voorkeur verwijderd - apart scherm
   unhide(document.getElementById('checkin-autosave'));
   hide(document.getElementById('checkin-skip'));
 
@@ -2372,6 +2397,35 @@ function selectSmiley(score) {
   checkSportToday().then(hasSport => {
     const sportSection = document.getElementById('sport-nutrition-section');
     if (hasSport) {
+      // Mee gegeten opties
+      const ateContainer = document.getElementById('sport-ate-together-options');
+      if (ateContainer) {
+        ateContainer.innerHTML = '';
+        const ateOptions = [
+          {id:'ja',          emoji:'\uD83C\uDF7D\uFE0F', label:'Ja, gewoon mee'},
+          {id:'opgewarmd',   emoji:'\uD83C\uDF7D\uFE0F', label:'Ja, opgewarmd'},
+          {id:'apart',       emoji:'\uD83E\uDD6A', label:'Nee, apart gegeten'},
+          {id:'erna',        emoji:'\uD83D\uDD50', label:'Erna thuis gegeten'},
+        ];
+        ateOptions.forEach(opt => {
+          const btn = document.createElement('button');
+          const isSel = sportAteTogether === opt.id;
+          btn.style.cssText = 'padding:8px 12px;border-radius:99px;border:1.5px solid '+(isSel?'var(--green)':'var(--border)')+';background:'+(isSel?'var(--green-bg)':'white')+';cursor:pointer;font-size:13px;font-weight:600;color:'+(isSel?'var(--green)':'var(--text)')+';display:flex;align-items:center;gap:5px;transition:all 0.15s';
+          btn.innerHTML = '<span>'+opt.emoji+'</span><span>'+opt.label+'</span>';
+          btn.onclick = () => {
+            sportAteTogether = opt.id;
+            // Herrender zodat selectie zichtbaar is
+            const ev = document.createEvent('Event');
+            document.getElementById('sport-ate-together-options').querySelectorAll('button').forEach(b => {
+              const isNowSel = b.querySelector('span:last-child').textContent === opt.label;
+              b.style.borderColor = isNowSel ? 'var(--green)' : 'var(--border)';
+              b.style.background = isNowSel ? 'var(--green-bg)' : 'white';
+              b.style.color = isNowSel ? 'var(--green)' : 'var(--text)';
+            });
+          };
+          ateContainer.appendChild(btn);
+        });
+      }
       renderSportNutritionOptions('pre-sport-options', null, (id) => { preSportFood = id; });
       renderSportNutritionOptions('post-sport-options', null, (id) => { postSportFood = id; });
       unhide(sportSection);
@@ -2456,6 +2510,7 @@ async function doCheckin() {
     comment: commentVal||null,
     pre_sport_food: preSportFood||null,
     post_sport_food: postSportFood||null,
+    ate_with_family: sportAteTogether||null,
   },{onConflict:'profile_id,meal_id'});
   if (ciError) {
     console.error('Checkin error:', ciError);
@@ -5930,7 +5985,7 @@ boot();
 <div style="height:88px"></div>
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label">Home</span></button>
-    <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Check-in</span></button>
+    <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Stem</span></button>
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Voorkeur</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label">Maaltijden</span></button>
