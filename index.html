@@ -12,7 +12,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:23</title>
+  <title>Lekkerstemmen v18:27</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1758,21 +1758,22 @@ function refreshHome() {
     // Ouder: check ook weekmenu voor vandaag
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
 
-    // Ouder: eerst log-card, dan check-in card, dan done
-    if (!todayMeal && !todayMenuEntry) {
-      // Geen menu en geen check-in: vraag om te loggen
-      unhide(document.getElementById('today-parent'));
-    } else if (!todayMeal && todayMenuEntry) {
-      // Menu gepubliceerd maar nog niet ingecheckt: toon niets extra (tonight-card doet het)
-      // Verberg de "Wat eten jullie vanavond?" kaart
+    // Ouder: als er een gepubliceerd menu is, toon alleen "Log maaltijd" als er nog niets gelogd is
+    // Anders alles verbergen - menu-preview blok bevat alle info
+    if (todayMenuEntry) {
+      // Menu gepubliceerd: verberg alle groene kaarten, menu-preview doet het werk
       hide(document.getElementById('today-parent'));
+      hide(document.getElementById('today-parent-done'));
+      hide(document.getElementById('today-parent-checkin'));
+    } else if (!todayMeal) {
+      // Geen menu en niets gelogd: vraag om te loggen
+      unhide(document.getElementById('today-parent'));
     } else if (hasCheckedIn) {
-      // Al gestemd - geen groene kaart, menu preview doet het werk
       hide(document.getElementById('today-parent-done'));
       hide(document.getElementById('today-parent-checkin'));
     } else {
-      // Maaltijd gelogd maar nog niet beoordeeld
-      document.getElementById('today-parent-meal').textContent = '✓ '+getMealDisplay(todayMeal.meal_type)+' gelogd';
+      // Gelogd maar nog niet beoordeeld
+      document.getElementById('today-parent-meal').textContent = '\u2713 '+getMealDisplay(todayMeal.meal_type)+' gelogd';
       unhide(document.getElementById('today-parent-done'));
       document.getElementById('today-parent-checkin-q').textContent = 'En hoe vond jij '+getMealDisplay(todayMeal.meal_type)+'?';
       unhide(document.getElementById('today-parent-checkin'));
