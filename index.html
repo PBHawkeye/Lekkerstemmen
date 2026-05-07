@@ -12,7 +12,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:07</title>
+  <title>Lekkerstemmen v18:12</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -799,7 +799,7 @@
       <div id="status-waiting-list"></div>
     </div>
 
-    <!-- Stem overzicht per kind -->
+    <!-- Check-in overzicht per kind -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">Stemmen deze week</div>
       <div id="status-checkins"></div>
@@ -1326,7 +1326,7 @@ async function simulateWeek() {
   const kids = getFamilyMembers().filter(p=>p.role==='child');
   const drinks = ['water','soda','milk','juice'];
 
-  // ── Vorige week: maaltijden + stemmen ──────────────────
+  // ── Vorige week: maaltijden + check-ins ──────────────────
   const weekMeals = [
     {offset:-6, meal:'pasta',       together:true,  sport:false, note:'met tomatensaus'},
     {offset:-5, meal:'soep',        together:false, sport:true,  note:'erwtensoep'},
@@ -1366,7 +1366,7 @@ async function simulateWeek() {
 
     if (!meal) { console.error('Meal error:', mealErr); continue; }
 
-    // Stemmen + ouder stem
+    // Check-ins + ouder check-in
     const allPersons = TEST_PERSONS;
     for (const person of allPersons) {
       let score, drink, comment;
@@ -1467,7 +1467,7 @@ async function simulateWeek() {
   refreshHome();
   if (btn) { btn.textContent = '✓ Klaar!'; setTimeout(()=>{ btn.textContent='⚡ Simuleer'; btn.disabled=false; }, 2000); }
   alert('✅ Complete testweek aangemaakt!\n\n' +
-    '\uD83D\uDCCA Vorige week: 6 maaltijden + stemmen voor heel gezin\n' +
+    '\uD83D\uDCCA Vorige week: 6 maaltijden + check-ins voor heel gezin\n' +
     '\uD83D\uDCC5 Deze week: volledig menu met kok + corvee\n' +
     '\uD83D\uDDF3 Stemmen: Tjeerd (pasta+pizza), Faas (nasi+pasta), Biek (pizza+rijst)\n' +
     '\uD83D\uDCAC Suggesties: Tjeerd wil sushi, Biek wil hamburgers\n\n' +
@@ -1608,7 +1608,7 @@ async function loadData() {
   }
   familySettings = newSettings;
 
-  // Stemmen: als view leeg, direct ophalen
+  // Check-ins: als view leeg, direct ophalen
   let cis = cisRes.data||[];
   if (cis.length === 0) {
     const {data:direct} = await sb.from('checkins')
@@ -1716,7 +1716,7 @@ function refreshHome() {
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
     .forEach(id => hide(document.getElementById(id)));
 
-  // Check of er vandaag een stem is (op datum of meal_id)
+  // Check of er vandaag een check-in is (op datum of meal_id)
   const todayDateStr = todayStr();
   const hasCheckedIn = checkins.some(c=>
     c.meal_id===todayMeal?.id ||
@@ -1739,7 +1739,7 @@ function refreshHome() {
       unhide(document.getElementById('today-child'));
     }
     else if (hasCheckedIn) unhide(document.getElementById('today-child-done'));
-      // Vul done card met stem info
+      // Vul done card met check-in info
       const myCI = checkins.find(c => c.eaten_at === todayDateStr || c.meal_id === todayMeal?.id);
       const doneNameEl = document.getElementById('done-meal-name');
       const doneScoreEl = document.getElementById('done-score-display');
@@ -1758,9 +1758,9 @@ function refreshHome() {
     // Ouder: check ook weekmenu voor vandaag
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
 
-    // Ouder: eerst log-card, dan stem card, dan done
+    // Ouder: eerst log-card, dan check-in card, dan done
     if (!todayMeal && !todayMenuEntry) {
-      // Geen menu en geen stem: vraag om te loggen
+      // Geen menu en geen check-in: vraag om te loggen
       unhide(document.getElementById('today-parent'));
     } else if (!todayMeal && todayMenuEntry) {
       // Menu gepubliceerd maar nog niet ingecheckt: toon niets extra (tonight-card doet het)
@@ -1901,13 +1901,13 @@ function refreshHome() {
       bubble.title = menuEntry.meal_name + (score ? ' · '+(score===3?'Lekker':score===2?'Ging wel':'Niet lekker') : '');
     }
 
-    // Click handler: altijd naar stem voor die dag
+    // Click handler: altijd naar check-in voor die dag
     const clickHandler = () => {
       if (isFuture) {
         // Toekomst: naar voorkeur opgeven
         goScreen('vote');
       } else {
-        // Vandaag of verleden: naar stemmen (stem)
+        // Vandaag of verleden: naar stemmen (check-in)
         const targetDate = new Date(ds + 'T12:00:00');
         const simToday = new Date();
         simToday.setDate(simToday.getDate() + testDayOffset);
@@ -2173,7 +2173,7 @@ async function doLog() {
     document.getElementById('log-btn').textContent='Maaltijd opslaan ✓'; return;
   }
   await loadData();
-  // Ouder gaat direct naar stem — jij eet ook mee!
+  // Ouder gaat direct naar check-in — jij eet ook mee!
   const alreadyCheckedIn = todayMeal && checkins.some(c=>c.meal_id===todayMeal?.id);
   if (!alreadyCheckedIn) {
     selectedScore=null; selectedDrink=null; resetCheckin();
@@ -2908,7 +2908,7 @@ function selectCookPerson(id, name) {
 }
 
 function openMissedCheckin(dateStr) {
-  // Sla de datum op en open stem scherm voor die dag
+  // Sla de datum op en open check-in scherm voor die dag
   const saved = testDayOffset;
   const today = new Date();
   const target = new Date(dateStr+'T12:00:00');
@@ -3061,7 +3061,7 @@ async function renderStatus() {
     if (todayMenu) {
       const missing = kids.filter(k=>!cis.find(c=>c.eaten_at===today&&c.profile_id===k.id));
       if (missing.length > 0) {
-        let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Stem vandaag — '+todayMenu.meal_emoji+' '+todayMenu.meal_name+'</div>';
+        let html = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Check-in vandaag — '+todayMenu.meal_emoji+' '+todayMenu.meal_name+'</div>';
         missing.forEach(k => { html += row('⏳',k.emoji+' '+k.name+' nog niet ingecheckt',null,null,null,false); });
         addCard(html);
         hasUrgent = true;
@@ -3117,7 +3117,7 @@ async function renderStatus() {
       }).join('');
       html += '<div style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
         '<span style="font-size:15px">'+kid.emoji+'</span><span style="font-weight:700;font-size:13px">'+kid.name+'</span>'+
-        '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+kidCis.length+' stem'+(kidCis.length!==1?'s':'')+'</span></div>'+
+        '<span style="font-size:11px;color:var(--muted);margin-left:auto">'+kidCis.length+' stem'+(kidCis.length!==1?'men':'')+'</span></div>'+
         '<div style="display:flex;gap:3px">'+dots+'</div></div>';
     });
     addCard(html);
@@ -3272,7 +3272,7 @@ function getDisabledMeals() {
 
 // ── LIEVELINGSGERECHTEN ─────────────────────────────────────────
 function getFavorites(cisData) {
-  // Bereken per persoon het hoogst scorende gerecht (min 2 stemmen)
+  // Bereken per persoon het hoogst scorende gerecht (min 2 check-ins)
   const perPerson = {};
   cisData.forEach(c => {
     if (!c.meal_type || !c.child_name) return;
@@ -4798,7 +4798,7 @@ function renderTonightCard(profile) {
     c.meal_id === todayMeal?.id ||
     c.eaten_at === todayDateStr2
   );
-  // Voor kinderen: verberg na stem (stem kaart neemt het over)
+  // Voor kinderen: verberg na check-in (check-in kaart neemt het over)
   // Voor ouders: altijd tonen als info (kok/corvee)
   if (hasCheckedInToday && profile.role === 'child') {
     hide(tonight);
