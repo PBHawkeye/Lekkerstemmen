@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v15:43</title>
+  <title>Lekkerstemmen v15:51</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1908,9 +1908,8 @@ function refreshHome() {
     // Click handler: altijd naar check-in voor die dag
     const clickHandler = () => {
       if (isFuture) {
-        // Toekomst: stem of menu
-        if (p.role === 'child') goScreen('vote');
-        else goScreen('menu');
+        // Toekomst: iedereen kan stemmen via de bolletjes
+        goScreen('vote');
       } else if (menuEntry) {
         // Dag met menu: ga naar check-in voor die dag
         // Zet homeDayOffset zodat todayStr() die dag teruggeeft
@@ -2347,7 +2346,19 @@ function resetCheckin() {
   hide(document.getElementById('drink-section'));
   hide(document.getElementById('checkin-autosave'));
   unhide(document.getElementById('checkin-skip'));
-  if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
+  const checkinDateStr = todayStr();
+  const checkinMenuEntry = weeklyMenu.find(m=>m.day_date===checkinDateStr&&m.published);
+  const mealNameEl = document.getElementById('checkin-meal-name');
+  if (mealNameEl) {
+    if (todayMeal) {
+      mealNameEl.textContent = getMealDisplay(todayMeal.meal_type);
+    } else if (checkinMenuEntry) {
+      mealNameEl.textContent = checkinMenuEntry.meal_emoji+' '+checkinMenuEntry.meal_name;
+    } else {
+      const d = new Date(checkinDateStr+'T12:00:00');
+      mealNameEl.textContent = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'});
+    }
+  }
   selectedComment=''; inlineVoteChoices=[];
   preSportFood=null; postSportFood=null;
   const commentEl=document.getElementById('checkin-comment');
@@ -5804,12 +5815,12 @@ boot();
       <input type="text" id="edit-meal-name" maxlength="40" style="width:100%;padding:12px 14px;border:1.5px solid #ECEAF8;border-radius:14px;font-size:15px;outline:none" />
     </div>
     <div style="margin-bottom:10px">
-      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
-      <textarea id="edit-meal-note" maxlength="200" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
-    </div>
-    <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Bijgerecht</label>
       <input type="text" id="edit-meal-side" maxlength="80" placeholder="bijv. gebakken aardappels, rijst..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none" />
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
+      <textarea id="edit-meal-note" maxlength="200" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Recept URL</label>
