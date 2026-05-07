@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:54</title>
+  <title>Lekkerstemmen v15:43</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1215,6 +1215,15 @@ function testMondayOfWeek() {
   return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
 }
 
+function nextMondayOfWeek() {
+  // Maandag van de VOLGENDE week (waarvoor gestemd wordt)
+  const d = new Date();
+  d.setDate(d.getDate() + testDayOffset);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day===0?-6:1) + 7;
+  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
+}
+
 function initials(name) { return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
 function getAllMeals(includeDisabled=false) {
   const disabled = getDisabledMeals();
@@ -1594,6 +1603,16 @@ async function loadData() {
   customMeals = cmRes.data||[];
   weeklyMenu = wmRes.data||[];
 
+  // Laad sport schedule data voor gebruik in menu scherm
+  const {data:sportData} = await sb.from('sport_schedule')
+    .select('*')
+    .eq('family_id', familyId);
+  sportScheduleData = {};
+  (sportData||[]).forEach(s => {
+    if (!sportScheduleData[s.sport_date]) sportScheduleData[s.sport_date] = {};
+    sportScheduleData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
+  });
+
   // Laad alle gezinsleden
   if (!testModeActive && currentProfile?.family_id) {
     const {data:members} = await sb.from('profiles')
@@ -1922,8 +1941,14 @@ function refreshHome() {
   // Streak
   let streak = 0;
   for (let i=0;i<14;i++) {
-    const d = new Date(); d.setDate(d.getDate()-i);
-    if (checkins.find(c=>c.eaten_at===d.toISOString().split('T')[0])) streak++;
+    const d = new Date();
+    d.setDate(d.getDate() + testDayOffset - i);
+    const ds2 = d.toISOString().split('T')[0];
+    // Check of persoon die dag niet at (vakantie etc) - dan overslaan
+    const dayEv = (sportScheduleData[ds2] || {})[p.id];
+    const didNotEat2 = dayEv && EVENT_TYPES[dayEv]?.eetsNiet;
+    if (didNotEat2) continue; // niet eten telt niet mee maar breekt streak ook niet
+    if (checkins.find(c=>c.eaten_at===ds2)) streak++;
     else break;
   }
   const streakEl = document.getElementById('home-streak');
@@ -2475,8 +2500,8 @@ async function doCheckin() {
 
 async function openVoteScreen() {
   const familyId = currentProfile.family_id;
-  const weekStart = testMondayOfWeek();
-  const menuPublished = weeklyMenu.some(m=>m.published);
+  const weekStart = nextMondayOfWeek();
+  const menuPublished = weeklyMenu.some(m=>m.week_of===weekStart&&m.published);
 
   // Haal bestaande stem op
   const {data:existingVote} = await sb.from('votes')
@@ -2494,23 +2519,29 @@ async function openVoteScreen() {
   }
 
   const hasVoted = !!existingVote;
-  const isReadOnly = hasVoted && menuPublished;
+  const isReadOnly = menuPublished; // readonly als menu al vastgesteld is
 
   // Titel
   const titleEl = document.querySelector('#s-vote .topbar h2');
-  if (titleEl) titleEl.textContent = isReadOnly ? 'Jouw stem' : hasVoted ? 'Stem wijzigen' : 'Stem voor volgende week';
+  if (titleEl) titleEl.textContent = isReadOnly ? 'Jouw stem' : hasVoted ? 'Stem aanpassen' : 'Stem voor volgende week';
 
-  // Status tekst
+  // Status banner
   const statusEl = document.getElementById('vote-status');
-  if (isReadOnly && statusEl) {
-    statusEl.innerHTML = '<span style="color:var(--green);font-weight:700">✓ Menu is al vastgesteld</span>';
+  if (statusEl) {
+    if (isReadOnly) {
+      statusEl.innerHTML = '<div style="background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--green);font-weight:700;margin-bottom:12px">&#x2713; Het menu is al vastgesteld voor deze week. Je kunt je stem niet meer wijzigen.</div>';
+    } else if (hasVoted) {
+      statusEl.innerHTML = '<div style="background:#FFF4DC;border:1.5px solid var(--amber);border-radius:var(--r);padding:10px 14px;font-size:13px;color:#8A5E00;margin-bottom:12px">&#x270F;&#xFE0F; Je hebt al gestemd. Je kunt je stem hieronder aanpassen zolang het menu nog niet vastgesteld is.</div>';
+    } else {
+      statusEl.innerHTML = '';
+    }
   }
 
   // Knop
   const btn = document.getElementById('vote-btn');
   if (btn) {
     btn.style.display = isReadOnly ? 'none' : '';
-    btn.textContent = hasVoted ? 'Stem bijwerken →' : 'Stem versturen →';
+    btn.textContent = hasVoted ? 'Stem aanpassen →' : 'Stem versturen →';
   }
 
   // Suggestie readonly
@@ -2606,7 +2637,7 @@ async function doVote() {
   document.getElementById('vote-btn').textContent='Opslaan...';
   await sb.from('votes').upsert({
     profile_id:currentProfile.id, family_id:currentProfile.family_id,
-    week_of:testMondayOfWeek(), meal_choice_1:voteChoices[0], meal_choice_2:voteChoices[1],
+    week_of:nextMondayOfWeek(), meal_choice_1:voteChoices[0], meal_choice_2:voteChoices[1],
   },{onConflict:'profile_id,week_of'});
   document.getElementById('success-emoji').textContent='\uD83D\uDDF3';
   document.getElementById('success-title').textContent='Stem uitgebracht!';
@@ -5792,7 +5823,7 @@ boot();
 </div>
 
 <div id="add-meal-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
-  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px 24px calc(24px + env(safe-area-inset-bottom, 0px));width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding-bottom:100px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">Maaltijd toevoegen</div>
       <button onclick="closeAddMealSheet()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">✕</button>
