@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v16:53</title>
+  <title>Lekkerstemmen v17:44</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1692,8 +1692,7 @@ function refreshHome() {
   }
 
   if (p.role==='parent') {
-    document.getElementById('nav-action-icon').textContent = '\uD83D\uDE0B';
-    document.getElementById('nav-action-label').textContent = 'Stem';
+    document.getElementById('nav-action').style.display = 'none';
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-vote-btn').style.display = 'none';
     document.getElementById('nav-sport').style.display = 'none';
@@ -1708,19 +1707,16 @@ function refreshHome() {
     document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='');
     document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
   } else {
-    // Kind nav: alleen check-in, stem, sport
-    document.getElementById('nav-action-icon').textContent = '\uD83D\uDE0B';
-    document.getElementById('nav-action-label').textContent = 'Stem';
-    // Verberg alle ouder items
-    ['nav-menu','nav-status','nav-shopping','nav-sport-parent','nav-more',
+    // Kind nav: Home · Voorkeur · Sport
+    // Verberg nav-action (Stem knop) en alle ouder items
+    ['nav-action','nav-menu','nav-status','nav-shopping','nav-sport-parent','nav-more',
      'nav-stats','nav-meals','nav-invite','nav-log'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Toon kind items
+    // Toon: Voorkeur + Sport
     document.getElementById('nav-vote-btn') && (document.getElementById('nav-vote-btn').style.display='');
     document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
-    document.getElementById('nav-vote-child') && (document.getElementById('nav-vote-child').style.display='');
   }
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
