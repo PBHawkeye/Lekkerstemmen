@@ -12,7 +12,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v06:45</title>
+  <title>Lekkerstemmen v07:01</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -449,6 +449,13 @@
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op maaltijd van ouder...</div>
   </div>
+  <!-- Koken knop -->
+  <div id="tonight-cook-section" style="display:none;margin:0 16px 12px">
+    <button id="tonight-cook-btn" class="btn btn-primary" style="width:100%;font-size:16px;padding:14px">
+      &#x1F373; Vanavond koken
+    </button>
+  </div>
+
   <div id="today-menu-preview" class="hidden" style="margin:0 16px 16px">
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Menu deze week</div>
@@ -2110,14 +2117,14 @@ function refreshHome() {
     }).join('');
     // Koken knop als jij vandaag kookt
     const todayEntry = previewItems.find(m => m.day_date === today2);
+    const kookSection = document.getElementById('tonight-cook-section');
     const kookBtn = document.getElementById('tonight-cook-btn');
-    if (kookBtn) {
-      if (todayEntry && todayEntry.cook_name && todayEntry.cook_name.includes(p.name)) {
-        kookBtn.style.display = '';
-        kookBtn.onclick = () => openCookScreen(todayEntry);
-      } else {
-        kookBtn.style.display = 'none';
-      }
+    if (kookSection && todayEntry && todayEntry.cook_name &&
+        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase())) {
+      kookSection.style.display = '';
+      if (kookBtn) kookBtn.onclick = () => openCookScreen(todayEntry);
+    } else if (kookSection) {
+      kookSection.style.display = 'none';
     }
     unhide(menuPreview);
   } else {
