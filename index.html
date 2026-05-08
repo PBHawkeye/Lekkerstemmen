@@ -12,7 +12,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v13:08</title>
+  <title>Lekkerstemmen v13:19</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -3931,46 +3931,85 @@ function renderCookHistory(history) {
   scoresEl.innerHTML = scoresHtml;
 }
 
-async function generateCookRecipe() {
-  const btn = document.getElementById('cook-ai-recipe-btn');
-  const recipeEl = document.getElementById('cook-ai-recipe');
-  const textEl = document.getElementById('cook-ai-recipe-text');
-
-  btn.textContent = '\u23F3 Bezig...';
-  btn.disabled = true;
-  recipeEl.style.display = '';
-  textEl.textContent = 'AI genereert recept...';
+function generateCookRecipe() {
+  if (!getApiKey()) {
+    const recipeEl = document.getElementById('cook-ai-recipe');
+    const textEl = document.getElementById('cook-ai-recipe-text');
+    if (recipeEl) recipeEl.style.display = '';
+    if (textEl) textEl.textContent = 'Geen API key ingesteld. Ga naar \u22EF \u2192 Profiel.';
+    return;
+  }
 
   const members = getFamilyMembers();
   const prompt = 'Genereer een eenvoudig recept voor ' + currentCookEntry.meal_name +
-    ' voor een gezin van ' + members.length + ' personen. ' +
-    (currentCookEntry.note ? 'Extra info: ' + currentCookEntry.note + '. ' : '') +
-    'Geef ingredi\u00ebntenlijst en bereidingswijze in stappen. Houd het praktisch en bondig.';
+    ' voor een gezin van ' + members.length + ' personen.' +
+    (currentCookEntry.note ? '\nExtra info: ' + currentCookEntry.note : '') +
+    '\n\nGeef:\n- Ingredi\u00ebntenlijst met hoeveelheden\n- Bereidingswijze in genummerde stappen\n\nHoud het praktisch en bondig.';
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: getAnthropicHeaders(),
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
-        messages: [{role:'user', content: prompt}]
-      })
-    });
-    const data = await res.json();
-    textEl.textContent = data.content?.[0]?.text || 'Geen recept gegenereerd.';
-    btn.style.display = 'none';
-  } catch(e) {
-    textEl.textContent = 'Fout bij genereren. Probeer opnieuw.';
-    btn.textContent = '\u2728 AI recept genereren';
-    btn.disabled = false;
-  }
+  openPromptModal(prompt, async (finalPrompt) => {
+    const btn = document.getElementById('cook-ai-recipe-btn');
+    const recipeEl = document.getElementById('cook-ai-recipe');
+    const textEl = document.getElementById('cook-ai-recipe-text');
+
+    if (btn) { btn.textContent = '\u23F3 Bezig...'; btn.disabled = true; }
+    if (recipeEl) recipeEl.style.display = '';
+    if (textEl) textEl.textContent = 'AI genereert recept...';
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: getAnthropicHeaders(),
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 800,
+          messages: [{role:'user', content: finalPrompt}]
+        })
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error('API ' + res.status + ': ' + errText.slice(0, 150));
+      }
+      const data = await res.json();
+      if (textEl) textEl.textContent = data.content?.[0]?.text || 'Geen recept gegenereerd.';
+      if (btn) btn.style.display = 'none';
+    } catch(e) {
+      console.error('Recipe error:', e);
+      if (textEl) textEl.textContent = 'Fout: ' + e.message;
+      if (btn) { btn.textContent = '\u2728 AI recept genereren'; btn.disabled = false; }
+    }
+  });
 }
 
 
 function saveApiKey() {
   const key = document.getElementById('api-key-input')?.value?.trim();
   if (key) { localStorage.setItem('lk_api_key', key); alert('API key opgeslagen!'); }
+}
+
+
+// ── AI PROMPT MODAL ──────────────────────────────────────────────
+let promptModalCallback = null;
+
+function openPromptModal(prompt, onSend) {
+  const textarea = document.getElementById('ai-prompt-textarea');
+  if (textarea) textarea.value = prompt;
+  promptModalCallback = onSend;
+  const modal = document.getElementById('ai-prompt-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closePromptModal() {
+  const modal = document.getElementById('ai-prompt-modal');
+  if (modal) modal.style.display = 'none';
+  promptModalCallback = null;
+}
+
+function sendPromptModal() {
+  const textarea = document.getElementById('ai-prompt-textarea');
+  const prompt = textarea?.value?.trim();
+  if (!prompt) return;
+  closePromptModal();
+  if (promptModalCallback) promptModalCallback(prompt);
 }
 
 function openProfileScreen() {
@@ -4209,6 +4248,7 @@ async function generateShoppingList() {
   ].join('\n');
 
   try {
+    if (!getApiKey()) throw new Error('Geen API key. Ga naar \u22EF \u2192 Profiel.');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers: getAnthropicHeaders(),
@@ -6261,6 +6301,18 @@ boot();
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px">SCORES</div>
       <div id="cook-scores"></div>
+    </div>
+  </div>
+</div>
+
+<div id="ai-prompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;padding-bottom:40px">
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:6px">AI Prompt</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Pas de vraag aan voor je verstuurt:</div>
+    <textarea id="ai-prompt-textarea" style="width:100%;min-height:140px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'DM Sans',sans-serif;line-height:1.5;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="closePromptModal()" class="btn" style="flex:1;background:var(--bg);border:1.5px solid var(--border);color:var(--text)">Annuleren</button>
+      <button onclick="sendPromptModal()" class="btn btn-primary" style="flex:2">&#x2728; Versturen</button>
     </div>
   </div>
 </div>
