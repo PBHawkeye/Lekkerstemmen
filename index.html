@@ -12,7 +12,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Lekkerstemmen v18:27</title>
+  <title>Lekkerstemmen v06:45</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
@@ -1650,6 +1650,7 @@ function goScreen(name) {
   else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
   else if (name==='shopping') { openShoppingScreen(); }
   else if (name==='profile') { openProfileScreen(); }
+  else if (name==='cook') { show('cook'); }
   else if (name==='invite') { openInviteScreen(); }
   else if (name==='meal-picker') { show('meal-picker'); }
   else show(name);
@@ -2107,6 +2108,17 @@ function refreshHome() {
         (isToday2?'<span style="font-size:10px;background:var(--green);color:white;border-radius:99px;padding:1px 6px;font-weight:700;margin-left:4px">vandaag</span>':'')+
         '</div>';
     }).join('');
+    // Koken knop als jij vandaag kookt
+    const todayEntry = previewItems.find(m => m.day_date === today2);
+    const kookBtn = document.getElementById('tonight-cook-btn');
+    if (kookBtn) {
+      if (todayEntry && todayEntry.cook_name && todayEntry.cook_name.includes(p.name)) {
+        kookBtn.style.display = '';
+        kookBtn.onclick = () => openCookScreen(todayEntry);
+      } else {
+        kookBtn.style.display = 'none';
+      }
+    }
     unhide(menuPreview);
   } else {
     hide(menuPreview);
@@ -3807,6 +3819,148 @@ function enableTestMode() {
   // Schakel testmodus in zonder opnieuw te deployen
   window._testModeOverride = true;
   location.reload();
+}
+
+
+// ── KOKEN SCHERM ────────────────────────────────────────────────
+let currentCookEntry = null;
+
+async function openCookScreen(menuEntry) {
+  currentCookEntry = menuEntry;
+  const familyId = currentProfile.family_id;
+
+  // Gerecht basis info
+  document.getElementById('cook-meal-emoji').textContent = menuEntry.meal_emoji || '\uD83C\uDF7D';
+  document.getElementById('cook-meal-name').textContent = menuEntry.meal_name;
+
+  // Haal custom meal op voor bijgerecht/recept/notitie
+  const {data:meal} = await sb.from('custom_meals')
+    .select('*').eq('family_id', familyId).eq('name', menuEntry.meal_name).maybeSingle();
+
+  const sideEl = document.getElementById('cook-side-dish');
+  const noteEl = document.getElementById('cook-note');
+  const recipeLink = document.getElementById('cook-recipe-link');
+  const aiBtn = document.getElementById('cook-ai-recipe-btn');
+
+  sideEl.textContent = meal?.side_dish ? '\uD83E\uDD57 Bijgerecht: ' + meal.side_dish : '';
+  noteEl.textContent = meal?.note || '';
+
+  if (meal?.recipe_url) {
+    recipeLink.href = meal.recipe_url;
+    recipeLink.style.display = '';
+    aiBtn.style.display = 'none';
+  } else {
+    recipeLink.style.display = 'none';
+    aiBtn.style.display = '';
+  }
+
+  // Reset AI recept
+  document.getElementById('cook-ai-recipe').style.display = 'none';
+  document.getElementById('cook-ai-recipe-text').textContent = '';
+
+  // Haal geschiedenis op
+  const {data:history} = await sb.from('checkins_with_context')
+    .select('*').eq('family_id', familyId)
+    .eq('meal_type', menuEntry.meal_id)
+    .order('eaten_at', {ascending: false})
+    .limit(20);
+
+  renderCookHistory(history || []);
+
+  show('cook');
+}
+
+function renderCookHistory(history) {
+  const el = document.getElementById('cook-history');
+  const scoresEl = document.getElementById('cook-scores');
+
+  if (!history.length) {
+    el.textContent = 'Nog niet eerder gegeten.';
+    scoresEl.innerHTML = '';
+    return;
+  }
+
+  // Groepeer opmerkingen per datum
+  const byDate = {};
+  history.forEach(c => {
+    if (!byDate[c.eaten_at]) byDate[c.eaten_at] = [];
+    byDate[c.eaten_at].push(c);
+  });
+
+  const SCORE_EMOJI = {1:'\uD83D\uDE15', 2:'\uD83D\uDE10', 3:'\uD83D\uDE0B'};
+  let histHtml = '';
+  Object.entries(byDate).slice(0, 5).forEach(([date, cis]) => {
+    const d = new Date(date+'T12:00:00');
+    const dateStr = d.toLocaleDateString('nl-NL', {day:'numeric', month:'long'});
+    const comments = cis.filter(c=>c.comment).map(c=>
+      '<span style="font-weight:600">' + (c.child_name||'?') + '</span>: ' + c.comment
+    ).join('<br>');
+    const scores = cis.map(c=>
+      (c.child_name||'?') + ' ' + (SCORE_EMOJI[c.score]||'')
+    ).join(' · ');
+    histHtml += '<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">' + dateStr + ' · ' + scores + '</div>' +
+      (comments ? '<div style="font-size:13px;line-height:1.5">' + comments + '</div>' : '') +
+      '</div>';
+  });
+  el.innerHTML = histHtml || '<span style="color:var(--muted);font-style:italic">Geen opmerkingen.</span>';
+
+  // Scores per persoon
+  const personScores = {};
+  history.forEach(c => {
+    if (!personScores[c.child_name]) personScores[c.child_name] = [];
+    personScores[c.child_name].push(c.score);
+  });
+  let scoresHtml = '';
+  Object.entries(personScores).forEach(([name, scores]) => {
+    const avg = scores.reduce((a,b)=>a+b,0) / scores.length;
+    const emoji = avg >= 2.5 ? '\uD83D\uDE0B' : avg >= 1.5 ? '\uD83D\uDE10' : '\uD83D\uDE15';
+    scoresHtml += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">' +
+      '<span style="font-weight:700;flex:1">' + name + '</span>' +
+      '<span style="font-size:20px">' + emoji + '</span>' +
+      '<span style="font-size:13px;color:var(--muted)">' + avg.toFixed(1) + ' gem. (' + scores.length + 'x)</span>' +
+      '</div>';
+  });
+  scoresEl.innerHTML = scoresHtml;
+}
+
+async function generateCookRecipe() {
+  const btn = document.getElementById('cook-ai-recipe-btn');
+  const recipeEl = document.getElementById('cook-ai-recipe');
+  const textEl = document.getElementById('cook-ai-recipe-text');
+
+  btn.textContent = '\u23F3 Bezig...';
+  btn.disabled = true;
+  recipeEl.style.display = '';
+  textEl.textContent = 'AI genereert recept...';
+
+  const members = getFamilyMembers();
+  const prompt = 'Genereer een eenvoudig recept voor ' + currentCookEntry.meal_name +
+    ' voor een gezin van ' + members.length + ' personen. ' +
+    (currentCookEntry.note ? 'Extra info: ' + currentCookEntry.note + '. ' : '') +
+    'Geef ingredi\u00ebntenlijst en bereidingswijze in stappen. Houd het praktisch en bondig.';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+    const data = await res.json();
+    textEl.textContent = data.content?.[0]?.text || 'Geen recept gegenereerd.';
+    btn.style.display = 'none';
+  } catch(e) {
+    textEl.textContent = 'Fout bij genereren. Probeer opnieuw.';
+    btn.textContent = '\u2728 AI recept genereren';
+    btn.disabled = false;
+  }
 }
 
 function openProfileScreen() {
@@ -6026,8 +6180,54 @@ boot();
       <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label">Maaltijden</span></button>
       <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
       <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
+      <button class="nav-btn" onclick="goScreen('profile');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128100;</span><span class="nav-label">Profiel</span></button>
     </div>
   </div>
   </nav>
+
+<div id="s-cook" class="screen">
+  <div class="topbar">
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Vanavond koken</div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+
+    <!-- Gerecht info -->
+    <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--green);padding:20px;margin-bottom:16px">
+      <div id="cook-meal-emoji" style="font-size:48px;margin-bottom:8px">&#x1F37D;</div>
+      <div id="cook-meal-name" style="font-family:'Fraunces',serif;font-weight:800;font-size:24px;color:var(--green)"></div>
+      <div id="cook-side-dish" style="font-size:14px;color:var(--muted);margin-top:4px"></div>
+      <div id="cook-note" style="font-size:13px;color:var(--muted);margin-top:4px;font-style:italic"></div>
+    </div>
+
+    <!-- Recept knop -->
+    <div id="cook-recipe-section" style="margin-bottom:16px">
+      <a id="cook-recipe-link" href="#" target="_blank" class="btn btn-primary" style="display:none;text-align:center;text-decoration:none">
+        &#x1F4D6; Recept bekijken
+      </a>
+      <button id="cook-ai-recipe-btn" onclick="generateCookRecipe()" class="btn" style="display:none;width:100%;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green)">
+        &#x2728; AI recept genereren
+      </button>
+    </div>
+
+    <!-- AI gegenereerd recept -->
+    <div id="cook-ai-recipe" style="display:none;background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">AI RECEPT</div>
+      <div id="cook-ai-recipe-text" style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>
+    </div>
+
+    <!-- Eerdere opmerkingen -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px">EERDER GEGETEN</div>
+      <div id="cook-history" style="font-size:13px;color:var(--muted);font-style:italic">Laden...</div>
+    </div>
+
+    <!-- Scores per persoon -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px">SCORES</div>
+      <div id="cook-scores"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
