@@ -1639,9 +1639,9 @@ async function loadData() {
   });
 
   // Laad alle gezinsleden
-  if (!testModeActive && currentProfile?.family_id) {
+  if (currentProfile?.family_id) {
     const {data:members} = await sb.from('profiles')
-      .select('id,name,role,emoji')
+      .select('id,name,role,emoji,sports')
       .eq('family_id', currentProfile.family_id);
     familyProfiles = members||[];
   }
@@ -6451,7 +6451,7 @@ function homeGetDate() {
 }
 
 // ── TEST TOGGLE ────────────────────────────────────────────────
-let testModeActive = false;
+let testModeActive = true;
 
 function toggleTestMode() {
   testModeActive = !testModeActive;
@@ -6789,25 +6789,27 @@ async function boot() {
   show('loading');
   initTestBar();
 
-  if (testModeActive) {
-    testDayOffset = 0; // start op vandaag, gebruik scenario knoppen om te simuleren
-    const p = TEST_PERSONS.find(x=>x.id===testPersonId);
-    currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
-    homeDayOffset = 0; // start altijd op vandaag
-    console.log('[Boot] profile:', currentProfile.name, currentProfile.id);
-    updateScenarioHighlight();
-    try {
-      await loadData();
-    } catch(e) {
-      console.error('[Boot] loadData error:', e);
+  // Testmodus + productie: altijd via echte Supabase sessie
+  const {data:{session}} = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadProfile(); // laadt echte currentProfile en familyProfiles
+    if (testModeActive) {
+      // Wissel naar gewenste testpersoon als die verschilt van ingelogde
+      const target = familyProfiles.find(p => p.name.toLowerCase() === testPersonId.toLowerCase())
+        || familyProfiles.find(p => p.name.toLowerCase().startsWith(testPersonId));
+      if (target && target.id !== currentProfile.id) {
+        currentProfile = { ...target, sports: target.sports ? (typeof target.sports === 'string' ? JSON.parse(target.sports) : target.sports) : [] };
+        await loadData();
+      }
+      updateScenarioHighlight();
+      syncTestCreditsInput();
+      renderTestPersons();
     }
     refreshHome();
-    syncTestCreditsInput();
     show('home');
   } else {
-    const {data:{session}} = await sb.auth.getSession();
-    if (session) { currentUser=session.user; await loadProfile(); show('home'); }
-    else show('auth');
+    show('auth');
     sb.auth.onAuthStateChange(async(event,session)=>{
       if (!testModeActive) {
         if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); show('home'); }
