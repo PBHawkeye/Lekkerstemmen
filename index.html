@@ -770,7 +770,10 @@
 
     <div id="sport-schedule-grid"></div>
 
-    <button class="btn btn-primary" onclick="saveSportSchedule()" style="margin-top:16px;margin-bottom:32px">Sportdagen opslaan ✓</button>
+    <div style="display:flex;gap:8px;margin-top:16px;margin-bottom:32px">
+      <button class="btn" onclick="copyPreviousWeekSport()" style="flex:1;background:white;border:1.5px solid var(--border);color:var(--text);font-size:13px">🔄 Overnemen vorige week</button>
+      <button class="btn btn-primary" onclick="saveSportSchedule()" style="flex:1">Sportdagen opslaan ✓</button>
+    </div>
   </div>
 </div>
 <div id="s-status" class="screen">
@@ -3634,6 +3637,34 @@ function toggleSport(dateStr, profileId) {
 
 function sportWeekStep(delta) {
   sportWeekOffset += delta;
+  renderSportSchedule();
+}
+
+async function copyPreviousWeekSport() {
+  const dates = getSportWeekDates(sportWeekOffset);
+  const prevDates = getSportWeekDates(sportWeekOffset - 1);
+  const familyId = currentProfile.family_id;
+
+  const { data: prevData } = await sb.from('sport_schedule')
+    .select('*')
+    .eq('family_id', familyId)
+    .gte('sport_date', prevDates[0])
+    .lte('sport_date', prevDates[6]);
+
+  if (!prevData || prevData.length === 0) {
+    alert('Geen sportdata gevonden voor vorige week.');
+    return;
+  }
+
+  prevData.forEach(row => {
+    if (!row.has_sport) return;
+    const dayOfWeek = new Date(row.sport_date + 'T12:00:00').getDay();
+    const thisDate = dates.find(d => new Date(d + 'T12:00:00').getDay() === dayOfWeek);
+    if (!thisDate) return;
+    if (!sportScheduleData[thisDate]) sportScheduleData[thisDate] = {};
+    sportScheduleData[thisDate][row.profile_id] = row.note;
+  });
+
   renderSportSchedule();
 }
 
