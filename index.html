@@ -408,7 +408,13 @@
 <div id="s-home" class="screen">
 
   <div class="greeting">
-    <h1>Hey <span id="home-name">daar</span> &#x1F44B;</h1>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <h1 style="margin:0">Hey <span id="home-name">daar</span> &#x1F44B;</h1>
+      <div id="credits-badge" style="display:none;align-items:center;gap:5px;background:var(--green-bg);border:1.5px solid var(--border);border-radius:99px;padding:4px 12px;cursor:pointer" onclick="goScreen('profile')" title="AI credits - klik voor meer info">
+        <span style="font-size:14px">&#x1F916;</span>
+        <span class="ai-credits-display" style="font-size:12px;font-weight:700;color:var(--green)">200 credits</span>
+      </div>
+    </div>
     <!-- Dag navigatie -->
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
       <button onclick="homeStepDay(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;color:var(--green);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,0.08)">←</button>
@@ -547,7 +553,7 @@
     </div>
     <!-- Sport voeding sectie -->
     <div id="sport-nutrition-section" class="hidden" style="padding:0 24px 16px">
-      <div class="drink-title" style="margin-bottom:12px">&#9917; Jij had sport vandaag!</div>
+      <div class="drink-title" style="margin-bottom:12px" id="sport-nutrition-title">&#9917; Jij had sport vandaag!</div>
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Heb je mee gegeten?</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="sport-ate-together-options"></div>
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">V&#243;&#243;r het sporten gegeten/gedronken?</div>
@@ -1469,6 +1475,14 @@ async function simulateWeek() {
     family_id: familyId,
     vote_day: 6,
   },{onConflict:'family_id'});
+  // Reset credits: verwijder bestaande transacties en schrijf verse starttoewijzing
+  await sb.from('credits').delete().eq('family_id', familyId);
+  await sb.from('credits').insert({
+    family_id: familyId,
+    amount: AI_CREDITS_START,
+    reason: 'Simulatie reset',
+  });
+  cachedCredits = AI_CREDITS_START;
 
   await loadData();
   refreshHome();
@@ -1614,6 +1628,9 @@ async function loadData() {
     newSettings.disabled_meals = familySettings.disabled_meals;
   }
   familySettings = newSettings;
+  // Laad credits uit aparte tabel + initialiseer als nieuw gezin
+  await initCreditsIfNew();
+  await loadCredits();
 
   // Check-ins: als view leeg, direct ophalen
   let cis = cisRes.data||[];
@@ -1673,6 +1690,10 @@ function refreshHome() {
   const p = currentProfile;
   document.getElementById('home-name').textContent = p.name;
   const avatarEl = document.getElementById('home-avatar'); if (avatarEl) avatarEl.textContent = initials(p.name);
+  // Credits badge: toon voor ouder
+  const creditsBadge = document.getElementById('credits-badge');
+  if (creditsBadge) creditsBadge.style.display = p.role === 'parent' ? 'flex' : 'none';
+  renderCreditsDisplay();
 
   // Datum met homeDayOffset
   const simDate = new Date();
@@ -2404,7 +2425,7 @@ function resetCheckin() {
   unhide(document.getElementById('checkin-skip'));
   if (todayMeal) document.getElementById('checkin-meal-name').textContent='Vanavond: '+getMealDisplay(todayMeal.meal_type);
   selectedComment=''; inlineVoteChoices=[];
-  preSportFood=null; postSportFood=null; sportAteTogether=null;
+  preSportFood=null; postSportFood=null; sportAteTogether=null; todaySportKey=null;
   const commentEl=document.getElementById('checkin-comment');
   if(commentEl) commentEl.value='';
   hide(document.getElementById('comment-section'));
@@ -2433,9 +2454,17 @@ function selectSmiley(score) {
   // Sport voeding sectie - toon als iemand vandaag sport heeft
   preSportFood = null;
   postSportFood = null;
-  checkSportToday().then(hasSport => {
+  checkSportToday().then(({hasSport, sportKey, sportInfo}) => {
+    todaySportKey = sportKey; // bewaar voor doCheckin
     const sportSection = document.getElementById('sport-nutrition-section');
     if (hasSport) {
+      // Toon specifieke sportnaam in de titel
+      const sportTitleEl = document.getElementById('sport-nutrition-title');
+      if (sportTitleEl) {
+        const sportLabel = sportInfo?.label || 'sport';
+        const sportEmoji = sportInfo?.emoji || '\u26bd';
+        sportTitleEl.textContent = sportEmoji + ' Jij had ' + sportLabel + ' vandaag!';
+      }
       // Mee gegeten opties
       const ateContainer = document.getElementById('sport-ate-together-options');
       if (ateContainer) {
@@ -2550,6 +2579,7 @@ async function doCheckin() {
     pre_sport_food: preSportFood||null,
     post_sport_food: postSportFood||null,
     ate_with_family: sportAteTogether||null,
+    sport_type: todaySportKey||null,  // bijv. 'sport:voetbal' of null
   },{onConflict:'profile_id,meal_id'});
   if (ciError) {
     console.error('Checkin error:', ciError);
@@ -3442,14 +3472,15 @@ async function renderSportSchedule() {
     // Dag cellen
     dates.forEach(d => {
       const currentType = sportScheduleData[d]?.[member.id] || null;
-      const info = currentType ? EVENT_TYPES[currentType] : null;
+      // Resolve info: kan EVENT_TYPES key zijn OF 'sport:id' formaat
+      const info = resolveSportInfo(currentType, member.id);
       const cell = document.createElement('div');
       cell.style.cssText = 'height:36px;border-radius:8px;background:'+(info?info.bg:'#F4FAF7')+
         ';border:1.5px solid '+(info?info.border:'var(--border)')+
         ';display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all 0.15s'+
         (info?.eetsNiet?';opacity:0.7':'');
       cell.textContent = info ? info.emoji : '';
-      cell.title = info ? info.label+' — '+info.tip : 'Klik om status in te stellen';
+      cell.title = info ? info.label+' \u2014 '+(info.tip||'') : 'Klik om status in te stellen';
       const capD = d;
       const capId = member.id;
       cell.onclick = () => cycleSportEvent(capD, capId, cell);
@@ -3469,19 +3500,101 @@ const EVENT_TYPES = {
 
 const SPORT_CYCLE = [null, 'sport', 'late', 'out', 'travel'];
 
+function resolveSportInfo(storedKey, profileId) {
+  if (!storedKey) return null;
+  // 'sport:voetbal' of 'sport:voetbal:laat' formaat: persoonlijke sport
+  if (storedKey.startsWith('sport:')) {
+    const parts = storedKey.split(':'); // ['sport', 'voetbal'] of ['sport', 'voetbal', 'laat']
+    const sportId = parts[1];
+    const isLate = parts[2] === 'laat';
+    const sports = getSportsForProfile(profileId);
+    const found = sports.find(s => s.id === sportId);
+    if (found) {
+      const lateLabel = isLate ? ' (laat)' : '';
+      return {
+        emoji: isLate ? found.emoji + '\uD83D\uDD50' : found.emoji,
+        label: found.label + lateLabel,
+        bg: isLate ? 'var(--amber-light)' : found.bg,
+        border: isLate ? 'var(--amber)' : found.border,
+        eetsNiet: false,
+        tip: found.label + (isLate ? ' \u2014 laat thuis' : ''),
+      };
+    }
+    // Fallback: generieke sport
+    return EVENT_TYPES['sport'];
+  }
+  // Legacy 'sport' sleutel of andere event types
+  return EVENT_TYPES[storedKey] || null;
+}
+
 function cycleSportEvent(dateStr, profileId, cell) {
   if (!sportScheduleData[dateStr]) sportScheduleData[dateStr] = {};
   const current = sportScheduleData[dateStr][profileId] || null;
-  const currentIdx = SPORT_CYCLE.indexOf(current);
-  const nextType = SPORT_CYCLE[(currentIdx + 1) % SPORT_CYCLE.length];
-  sportScheduleData[dateStr][profileId] = nextType;
 
-  const info = nextType ? EVENT_TYPES[nextType] : null;
-  cell.style.background = info ? info.bg : '#F4FAF7';
-  cell.style.borderColor = info ? info.border : 'var(--border)';
+  // Haal persoonlijke sporten op
+  const personalSports = getSportsForProfile(profileId);
+
+  // Bouw de cyclus: null -> sport1 -> sport2 (optioneel) -> late -> out -> travel -> null
+  const cycle = buildSportCycle(personalSports);
+  const currentIdx = cycle.findIndex(c => {
+    if (c === null && current === null) return true;
+    if (c !== null && current !== null && c.key === current) return true;
+    return false;
+  });
+  const nextEntry = cycle[(currentIdx + 1) % cycle.length];
+
+  // Bepaal de opgeslagen waarde en weergave
+  let storedKey, info;
+  if (nextEntry === null) {
+    storedKey = null;
+    info = null;
+  } else if (nextEntry.isSport) {
+    storedKey = nextEntry.key; // bijv. 'sport:voetbal' of 'sport:voetbal:laat'
+    const lateLabel = nextEntry.late ? ' (laat)' : '';
+    const lateTip = nextEntry.late ? ' \u2014 komt laat thuis' : '';
+    info = {
+      emoji: nextEntry.late ? nextEntry.sport.emoji + '\uD83D\uDD50' : nextEntry.sport.emoji,
+      label: nextEntry.sport.label + lateLabel,
+      bg: nextEntry.late ? 'var(--amber-light)' : nextEntry.sport.bg,
+      border: nextEntry.late ? 'var(--amber)' : nextEntry.sport.border,
+      eetsNiet: false,
+      tip: nextEntry.sport.label + lateTip,
+    };
+  } else {
+    storedKey = nextEntry.key;
+    info = EVENT_TYPES[nextEntry.key];
+  }
+
+  sportScheduleData[dateStr][profileId] = storedKey;
+  updateSportCell(cell, info);
+}
+
+function buildSportCycle(personalSports) {
+  // Cyclus: null → per sport {sport alleen} → {sport + laat thuis} → out → travel
+  // "sport + laat" = sport die dag maar laat thuis (eet mee maar later)
+  const cycle = [null];
+  if (!personalSports || personalSports.length === 0) {
+    // Geen persoonlijke sporten: generieke sport, dan laat, dan weg
+    cycle.push({ key: 'sport', isSport: false });
+    cycle.push({ key: 'late', isSport: false });
+  } else {
+    personalSports.forEach(sport => {
+      // Optie 1: sport op normale tijd
+      cycle.push({ key: 'sport:' + sport.id, isSport: true, sport, late: false });
+      // Optie 2: sport + laat thuis (eet mee maar later)
+      cycle.push({ key: 'sport:' + sport.id + ':laat', isSport: true, sport, late: true });
+    });
+  }
+  cycle.push({ key: 'out', isSport: false });
+  cycle.push({ key: 'travel', isSport: false });
+  return cycle;
+}
+
+function updateSportCell(cell, info) {
+  cell.style.background = info ? (info.bg || '#F4FAF7') : '#F4FAF7';
+  cell.style.borderColor = info ? (info.border || 'var(--border)') : 'var(--border)';
   cell.textContent = info ? info.emoji : '';
-  cell.title = info ? info.label+' — '+info.tip : 'Klik om in te stellen';
-  // Streep de cel door als persoon niet mee eet
+  cell.title = info ? info.label + ' \u2014 ' + (info.tip || '') : 'Klik om status in te stellen';
   cell.style.opacity = (info && info.eetsNiet) ? '0.6' : '1';
 }
 
@@ -3648,15 +3761,12 @@ async function requestAIMenuProposal(weekStart, targetContainer) {
   try {
     const {prompt, dates, DAYS, allMeals} = await generateMenuProposal(weekStart);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers: getAnthropicHeaders(),
-      body: JSON.stringify({
+    const response = await anthropicFetch({
         model:'claude-sonnet-4-5',
         max_tokens:1000,
         messages:[{role:'user',content:prompt}]
-      })
     });
+    if (!response) return;  // geen credits
 
     const data = await response.json();
     if (!data.content?.[0]?.text) throw new Error('Geen respons van AI');
@@ -3805,6 +3915,188 @@ async function renderVoteSetupSportGrid(weekStart) {
 let profileSelectedEmoji = null;
 
 const PROFILE_EMOJIS = ['\uD83D\uDE0A','\uD83D\uDE04','\uD83D\uDE0E','\uD83E\uDD17','\uD83D\uDE0B','\uD83D\uDE07','\uD83E\uDD29','\uD83D\uDE0D','\uD83E\uDD73','\uD83D\uDE42','\uD83D\uDC66','\uD83D\uDC67','\uD83D\uDC68','\uD83D\uDC69','\uD83E\uDDD1','\uD83D\uDC74','\uD83D\uDC75','\uD83D\uDC31','\uD83D\uDC36','\uD83E\uDD8A','\uD83D\uDC38','\uD83E\uDD81','\uD83D\uDC3C','\uD83D\uDC28'];
+
+// ── SPORT PRESETS ────────────────────────────────────────────
+const SPORT_PRESETS = [
+  { id:'voetbal',    label:'Voetbal',     emoji:'\u26bd',         color:'#2ECC71', bg:'#E8F8F0', border:'#2ECC71' },
+  { id:'hockey',     label:'Hockey',      emoji:'\uD83C\uDFF1',   color:'#8B4513', bg:'#F5ECE6', border:'#C49A6C' },
+  { id:'zwemmen',    label:'Zwemmen',     emoji:'\uD83C\uDFCA',   color:'#3498DB', bg:'#EBF5FB', border:'#3498DB' },
+  { id:'tennis',     label:'Tennis',      emoji:'\uD83C\uDFBE',   color:'#F39C12', bg:'#FEF9E7', border:'#F39C12' },
+  { id:'basketbal',  label:'Basketbal',   emoji:'\uD83C\uDFC0',   color:'#E67E22', bg:'#FEF0E3', border:'#E67E22' },
+  { id:'turnen',     label:'Turnen',      emoji:'\uD83E\uDD38',   color:'#9B59B6', bg:'#F5EEF8', border:'#9B59B6' },
+  { id:'atletiek',   label:'Atletiek',    emoji:'\uD83C\uDFC3',   color:'#E74C3C', bg:'#FDECEA', border:'#E74C3C' },
+  { id:'wielrennen', label:'Wielrennen',  emoji:'\uD83D\uDEB4',   color:'#1D9E75', bg:'#E8F7F2', border:'#1D9E75' },
+  { id:'dans',       label:'Dans',        emoji:'\uD83D\uDC83',   color:'#E91E8C', bg:'#FDE8F3', border:'#E91E8C' },
+  { id:'judo',       label:'Judo/Karate', emoji:'\uD83E\uDD4B',   color:'#2C3E50', bg:'#EAECEE', border:'#2C3E50' },
+  { id:'paardrijden',label:'Paardrijden', emoji:'\uD83D\uDC34',   color:'#6D4C41', bg:'#F3ECE9', border:'#6D4C41' },
+  { id:'roeien',     label:'Roeien',      emoji:'\uD83D\uDEA3',   color:'#1A5276', bg:'#EBF5FB', border:'#1A5276' },
+  { id:'gym',        label:'Gym/Fitness', emoji:'\uD83C\uDFCB',   color:'#7D3C98', bg:'#F4ECF7', border:'#7D3C98' },
+  { id:'ijshockey',  label:'IJshockey',   emoji:'\uD83C\uDFD2',   color:'#2E86C1', bg:'#EBF5FB', border:'#2E86C1' },
+  { id:'badminton',  label:'Badminton',   emoji:'\uD83C\uDFF8',   color:'#17A589', bg:'#E8F8F5', border:'#17A589' },
+  { id:'korfbal',    label:'Korfbal',     emoji:'\uD83E\uDD45',   color:'#D35400', bg:'#FBEEE6', border:'#D35400' },
+  { id:'volleybal',  label:'Volleybal',   emoji:'\uD83C\uDFD0',   color:'#F1C40F', bg:'#FEFDF0', border:'#D4AC0D' },
+];
+
+const SPORT_COLORS = [
+  { color:'#2ECC71', bg:'#E8F8F0', border:'#2ECC71' },
+  { color:'#3498DB', bg:'#EBF5FB', border:'#3498DB' },
+  { color:'#E74C3C', bg:'#FDECEA', border:'#E74C3C' },
+  { color:'#F39C12', bg:'#FEF9E7', border:'#F39C12' },
+  { color:'#9B59B6', bg:'#F5EEF8', border:'#9B59B6' },
+  { color:'#1D9E75', bg:'#E8F7F2', border:'#1D9E75' },
+  { color:'#E67E22', bg:'#FEF0E3', border:'#E67E22' },
+  { color:'#2C3E50', bg:'#EAECEE', border:'#2C3E50' },
+];
+
+let editingSportIndex = -1;
+let selectedSportPreset = null;
+let selectedSportColor = null;
+
+// Test sport profielen (testmodus)
+const testSportProfiles = {
+  'a0000000-0000-0000-0000-000000000003': [
+    { id:'voetbal', label:'Voetbal', emoji:'\u26bd', color:'#2ECC71', bg:'#E8F8F0', border:'#2ECC71' }
+  ],
+  'a0000000-0000-0000-0000-000000000004': [
+    { id:'zwemmen', label:'Zwemmen', emoji:'\uD83C\uDFCA', color:'#3498DB', bg:'#EBF5FB', border:'#3498DB' },
+    { id:'tennis',  label:'Tennis',  emoji:'\uD83C\uDFBE', color:'#F39C12', bg:'#FEF9E7', border:'#F39C12' }
+  ],
+  'a0000000-0000-0000-0000-000000000005': [
+    { id:'turnen', label:'Turnen', emoji:'\uD83E\uDD38', color:'#9B59B6', bg:'#F5EEF8', border:'#9B59B6' }
+  ],
+};
+
+function getProfileSports(profile) {
+  if (!profile) return [];
+  try {
+    if (profile.sports) {
+      return Array.isArray(profile.sports) ? profile.sports : JSON.parse(profile.sports);
+    }
+  } catch(e) {}
+  return [];
+}
+
+function getSportsForProfile(profileId) {
+  if (testModeActive) return testSportProfiles[profileId] || [];
+  if (profileId === currentProfile?.id) return getProfileSports(currentProfile);
+  const fp = familyProfiles.find(p => p.id === profileId);
+  return getProfileSports(fp);
+}
+
+function renderProfileSportsList() {
+  const list = document.getElementById('profile-sports-list');
+  const addBtn = document.getElementById('profile-add-sport-btn');
+  if (!list) return;
+  const sports = getProfileSports(currentProfile);
+  list.innerHTML = '';
+  if (sports.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:8px">Geen sporten ingesteld</p>';
+  } else {
+    sports.forEach((sport, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);border:1.5px solid ' + sport.border + ';background:' + sport.bg + ';margin-bottom:8px';
+      row.innerHTML =
+        '<span style="font-size:22px">' + sport.emoji + '</span>' +
+        '<span style="font-weight:700;font-size:14px;flex:1;color:' + sport.color + '">' + sport.label + '</span>' +
+        '<button onclick="openAddSportModal(' + i + ')" style="font-size:13px;background:white;border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer">\u270F\uFE0F</button>' +
+        '<button onclick="deleteProfileSport(' + i + ')" style="font-size:13px;background:#FFEEEE;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;color:var(--coral)">\uD83D\uDDD1</button>';
+      list.appendChild(row);
+    });
+  }
+  if (addBtn) addBtn.style.display = sports.length >= 2 ? 'none' : '';
+}
+
+function openAddSportModal(editIndex) {
+  editIndex = (editIndex === undefined) ? -1 : parseInt(editIndex);
+  editingSportIndex = editIndex;
+  selectedSportPreset = null;
+  selectedSportColor = null;
+  const modal = document.getElementById('add-sport-modal');
+  const title = document.getElementById('sport-modal-title');
+  const errEl = document.getElementById('sport-modal-error');
+  title.textContent = editIndex >= 0 ? 'Sport bewerken' : 'Sport toevoegen';
+  document.getElementById('sport-edit-index').value = editIndex;
+  if (errEl) errEl.style.display = 'none';
+  if (editIndex >= 0) {
+    const sports = getProfileSports(currentProfile);
+    const sport = sports[editIndex];
+    if (sport) {
+      selectedSportPreset = SPORT_PRESETS.find(p => p.id === sport.id) || null;
+      selectedSportColor = { color: sport.color, bg: sport.bg, border: sport.border };
+    }
+  }
+  renderSportPresetList();
+  renderSportColorPicker();
+  modal.style.display = 'flex';
+}
+
+function closeAddSportModal() {
+  document.getElementById('add-sport-modal').style.display = 'none';
+}
+
+function renderSportPresetList() {
+  const container = document.getElementById('sport-preset-list');
+  if (!container) return;
+  container.innerHTML = '';
+  SPORT_PRESETS.forEach(preset => {
+    const isSelected = selectedSportPreset?.id === preset.id;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:10px 6px;border-radius:var(--r);border:2px solid ' +
+      (isSelected ? preset.border : 'var(--border)') +
+      ';background:' + (isSelected ? preset.bg : 'white') +
+      ';cursor:pointer;text-align:center;transition:all 0.15s;font-family:\'DM Sans\',sans-serif';
+    btn.innerHTML = '<div style="font-size:22px">' + preset.emoji + '</div>' +
+      '<div style="font-size:11px;font-weight:700;color:' + (isSelected ? preset.color : 'var(--muted)') + ';margin-top:3px">' + preset.label + '</div>';
+    btn.onclick = () => {
+      selectedSportPreset = preset;
+      selectedSportColor = { color: preset.color, bg: preset.bg, border: preset.border };
+      renderSportPresetList();
+      renderSportColorPicker();
+    };
+    container.appendChild(btn);
+  });
+}
+
+function renderSportColorPicker() {
+  const container = document.getElementById('sport-color-picker');
+  if (!container) return;
+  container.innerHTML = '';
+  SPORT_COLORS.forEach(c => {
+    const isSelected = selectedSportColor?.color === c.color;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'width:32px;height:32px;border-radius:50%;background:' + c.color +
+      ';border:3px solid ' + (isSelected ? '#333' : 'transparent') + ';cursor:pointer;transition:all 0.15s';
+    btn.onclick = () => { selectedSportColor = c; renderSportColorPicker(); };
+    container.appendChild(btn);
+  });
+}
+
+async function saveProfileSport() {
+  const errEl = document.getElementById('sport-modal-error');
+  if (!selectedSportPreset) {
+    if (errEl) { errEl.textContent = 'Kies een sport.'; errEl.style.display = ''; }
+    return;
+  }
+  const color = selectedSportColor || { color: selectedSportPreset.color, bg: selectedSportPreset.bg, border: selectedSportPreset.border };
+  const newSport = { id: selectedSportPreset.id, label: selectedSportPreset.label, emoji: selectedSportPreset.emoji, color: color.color, bg: color.bg, border: color.border };
+  const sports = getProfileSports(currentProfile);
+  const editIndex = parseInt(document.getElementById('sport-edit-index').value);
+  if (editIndex >= 0) sports[editIndex] = newSport;
+  else { if (sports.length >= 2) return; sports.push(newSport); }
+  await sb.from('profiles').update({ sports: JSON.stringify(sports) }).eq('id', currentProfile.id);
+  currentProfile.sports = sports;
+  closeAddSportModal();
+  renderProfileSportsList();
+}
+
+async function deleteProfileSport(index) {
+  const sports = getProfileSports(currentProfile);
+  sports.splice(index, 1);
+  await sb.from('profiles').update({ sports: JSON.stringify(sports) }).eq('id', currentProfile.id);
+  currentProfile.sports = sports;
+  renderProfileSportsList();
+}
+
 
 
 function toggleMoreMenu() {
@@ -3956,15 +4248,12 @@ function generateCookRecipe() {
     if (textEl) textEl.textContent = 'AI genereert recept...';
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: getAnthropicHeaders(),
-        body: JSON.stringify({
+      const res = await anthropicFetch({
           model: 'claude-sonnet-4-5',
           max_tokens: 800,
           messages: [{role:'user', content: finalPrompt}]
-        })
       });
+      if (!res) { if (btn) { btn.textContent = '\u2728 AI recept genereren'; btn.disabled = false; } return; }
       if (!res.ok) {
         const errText = await res.text();
         throw new Error('API ' + res.status + ': ' + errText.slice(0, 150));
@@ -4017,6 +4306,25 @@ async function sendPromptModal() {
   const textarea = document.getElementById('ai-prompt-textarea');
   const prompt = textarea?.value?.trim();
   if (!prompt) return;
+
+  const sendBtn = document.getElementById('prompt-send-btn');
+  const guardMsg = document.getElementById('prompt-guard-msg');
+
+  // Reset foutmelding
+  if (guardMsg) guardMsg.style.display = 'none';
+  if (sendBtn) { sendBtn.textContent = 'Controleren...'; sendBtn.disabled = true; }
+
+  // Guardrail: check of de prompt over een gerecht/koken gaat
+  const isValid = await checkPromptIsAboutFood(prompt);
+  if (!isValid) {
+    if (guardMsg) {
+      guardMsg.textContent = '\uD83D\uDEAB Deze vraag gaat niet over een gerecht of recept. Pas de prompt aan.';
+      guardMsg.style.display = '';
+    }
+    if (sendBtn) { sendBtn.textContent = '\u2728 Versturen'; sendBtn.disabled = false; }
+    return;
+  }
+
   const cb = promptModalCallback;
   closePromptModal();
   if (cb) {
@@ -4025,6 +4333,32 @@ async function sendPromptModal() {
     } catch(e) {
       console.error('Prompt callback error:', e);
     }
+  }
+}
+
+async function checkPromptIsAboutFood(prompt) {
+  // Snelle Claude-check: gaat de prompt over een gerecht/recept/koken?
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: getAnthropicHeaders(),
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 10,
+        system: 'Je bent een filter. Antwoord ALLEEN met "ja" of "nee". Geen andere tekst.',
+        messages: [{
+          role: 'user',
+          content: 'Gaat de volgende tekst over een gerecht, recept, ingredienten of koken?\n\n' + prompt.slice(0, 500),
+        }]
+      })
+    });
+    if (!res.ok) return true; // bij API-fout: niet blokkeren
+    const data = await res.json();
+    const answer = (data.content?.[0]?.text || '').toLowerCase().trim();
+    return answer.startsWith('ja');
+  } catch(e) {
+    console.warn('Guard check mislukt, doorgaan:', e);
+    return true; // bij netwerkfout: niet blokkeren
   }
 }
 
@@ -4047,7 +4381,48 @@ function openProfileScreen() {
   const pinSection = document.getElementById('profile-pin-section');
   if (pinSection) pinSection.style.display = p.role === 'child' ? '' : 'none';
 
+  // Sport sectie renderen
+  renderProfileSportsList();
+
+  // Credits sectie: alleen voor ouder
+  const creditsSection = document.getElementById('profile-credits-section');
+  if (creditsSection) {
+    if (p.role === 'parent') {
+      creditsSection.style.display = '';
+      renderCreditsDisplay();
+      loadCreditsHistory();
+    } else {
+      creditsSection.style.display = 'none';
+    }
+  }
+
   show('profile');
+}
+
+async function loadCreditsHistory() {
+  // Laad laatste 8 transacties voor de ouder
+  const el = document.getElementById('profile-credits-history');
+  if (!el) return;
+  const { data, error } = await sb.from('credits')
+    .select('amount, reason, created_at')
+    .eq('family_id', currentProfile.family_id)
+    .order('created_at', { ascending: false })
+    .limit(8);
+  if (error || !data || data.length === 0) {
+    el.textContent = 'Geen transacties gevonden.';
+    return;
+  }
+  el.innerHTML = data.map(t => {
+    const date = new Date(t.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const isPos = t.amount > 0;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">' +
+      '<span style="font-weight:700;font-size:13px;color:' + (isPos ? 'var(--green)' : 'var(--muted)') + ';width:36px;flex-shrink:0">' +
+        (isPos ? '+' : '') + t.amount +
+      '</span>' +
+      '<span style="flex:1;font-size:12px;color:var(--text)">' + (t.reason || 'AI aanroep') + '</span>' +
+      '<span style="font-size:11px;color:var(--muted);flex-shrink:0">' + date + '</span>' +
+      '</div>';
+  }).join('');
 }
 
 function renderProfileEmojiPicker() {
@@ -4098,8 +4473,256 @@ function showProfileSaveMsg() {
 
 
 // ── ANTHROPIC API KEY ────────────────────────────────────────────
+
+// ── RECEPT FOTO ANALYSE ────────────────────────────────────────
+function openRecipePhotoCapture() {
+  const input = document.getElementById('recipe-photo-input');
+  if (input) input.click();
+}
+
+function clearRecipePhoto() {
+  const status = document.getElementById('meal-ai-photo-status');
+  const input = document.getElementById('recipe-photo-input');
+  if (status) status.style.display = 'none';
+  if (input) input.value = '';
+}
+
+async function analyzeRecipePhoto(inputEl) {
+  const file = inputEl.files?.[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('meal-ai-photo-status');
+  const msgEl = document.getElementById('meal-ai-photo-msg');
+  const subEl = document.getElementById('meal-ai-photo-sub');
+
+  if (statusEl) statusEl.style.display = '';
+  if (msgEl) msgEl.textContent = 'Foto verwerken...';
+  if (subEl) subEl.textContent = 'Even geduld, AI analyseert het recept';
+
+  try {
+    // Converteer foto naar base64
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || 'image/jpeg';
+
+    if (!getApiKey()) throw new Error('Geen API key. Stel die in via \u22EF \u2192 Profiel.');
+
+    if (msgEl) msgEl.textContent = 'AI herkent recept...';
+
+    const prompt = `Analyseer dit receptfoto en geef de volgende informatie terug als JSON:
+{
+  "naam": "naam van het gerecht (kort, max 30 tekens)",
+  "emoji": "meest passende voedsel-emoji (1 teken)",
+  "notitie": "korte bereidingstip of kenmerk voor de kok (max 80 tekens)",
+  "bijgerecht": "klassiek bijgerecht als logisch (bijv. 'rijst' bij nasi), anders leeg string",
+  "recept_url": "als er een website-URL zichtbaar is in de foto, geef die dan hier, anders leeg string"
+}
+
+Regels:
+- naam: alleen het gerecht, geen bijgerechten erin
+- emoji: kies passende voedselemoji
+- notitie: bereidingstip zoals 'oven 180\u00b0C 25 min' of 'met tomatensaus'
+- bijgerecht: alleen invullen als het logisch en klassiek is, anders lege string
+- recept_url: vul ALLEEN in als er een URL/website letterlijk zichtbaar is in de foto
+
+Geef ALLEEN de JSON terug, geen andere tekst.`;
+
+    const response = await anthropicFetch({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 400,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+    });
+    if (!response) { if (msgEl) { msgEl.textContent = 'Geen credits meer.'; msgEl.style.color = 'var(--coral)'; } return; }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('API ' + response.status + ': ' + errText.slice(0, 100));
+    }
+
+    const data = await response.json();
+    const rawText = data.content?.[0]?.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Geen JSON in AI respons');
+
+    const result = JSON.parse(jsonMatch[0]);
+
+    // Vul de velden in
+    const nameEl = document.getElementById('new-meal-name');
+    const noteEl = document.getElementById('new-meal-note');
+    const sideEl = document.getElementById('new-meal-side');
+    const urlEl = document.getElementById('new-meal-url');
+
+    if (nameEl && result.naam) nameEl.value = result.naam;
+    if (noteEl && result.notitie) noteEl.value = result.notitie;
+    if (sideEl && result.bijgerecht) sideEl.value = result.bijgerecht;
+    if (urlEl && result.recept_url) urlEl.value = result.recept_url;
+
+    // Selecteer passende emoji
+    if (result.emoji) {
+      // Probeer de AI emoji te vinden in de opties, anders zet hem als geselecteerde emoji
+      const found = EMOJI_OPTIONS.find(e => e === result.emoji);
+      if (found) {
+        selectedEmoji = found;
+        renderEmojiPicker();
+      }
+      // Als niet in lijst: toch tonen als selectie
+      selectedEmoji = result.emoji;
+      renderEmojiPicker();
+    }
+
+    // Samenvatting tonen
+    const filled = [result.naam, result.notitie, result.bijgerecht, result.recept_url].filter(Boolean).length;
+    if (msgEl) msgEl.textContent = '\u2728 Recept herkend!';
+    const parts = [];
+    if (result.naam) parts.push('naam');
+    if (result.notitie) parts.push('notitie');
+    if (result.bijgerecht) parts.push('bijgerecht');
+    if (result.recept_url) parts.push('URL');
+    if (subEl) subEl.textContent = parts.length ? parts.join(', ') + ' ingevuld \u2014 controleer en pas aan' : 'Controleer en pas aan waar nodig';
+
+  } catch(e) {
+    console.error('Recipe photo error:', e);
+    if (msgEl) { msgEl.textContent = 'Fout bij analyseren'; msgEl.style.color = 'var(--coral)'; }
+    if (subEl) subEl.textContent = e.message;
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function getApiKey() {
   return localStorage.getItem('lk_api_key') || '';
+}
+
+// ── AI CREDITS ────────────────────────────────────────────────
+// Credits worden opgeslagen in aparte 'credits' tabel met transactiehistorie
+// Schema: { id, family_id, amount (+ of -), reason, created_at }
+// Huidig saldo = SUM(amount) voor family_id
+
+const AI_CREDIT_COST = 1;       // credits per aanroep (aanpasbaar)
+const AI_CREDITS_START = 200;   // startwaarde voor nieuwe gezinnen
+
+let cachedCredits = null;        // lokale cache om DB-calls te minimaliseren
+
+async function loadCredits() {
+  // Haal huidig saldo op: som van alle transacties voor dit gezin
+  const { data, error } = await sb.from('credits')
+    .select('amount')
+    .eq('family_id', currentProfile.family_id);
+  if (error) { console.error('Credits load error:', error); return AI_CREDITS_START; }
+  cachedCredits = (data || []).reduce((sum, r) => sum + r.amount, 0);
+  return cachedCredits;
+}
+
+function getAICredits() {
+  return cachedCredits !== null ? cachedCredits : AI_CREDITS_START;
+}
+
+function renderCreditsDisplay() {
+  const credits = getAICredits();
+  document.querySelectorAll('.ai-credits-display').forEach(el => {
+    el.textContent = credits + ' credits';
+    el.style.color = credits <= 10 ? 'var(--coral)' : credits <= 50 ? '#C47F00' : 'var(--green)';
+    el.title = credits + ' AI credits resterend';
+  });
+}
+
+async function deductCredit(cost, reason) {
+  // Schrijf negatieve transactie naar credits tabel
+  // Geeft true terug als gelukt, false bij onvoldoende saldo
+  const current = getAICredits();
+  const needed = cost || AI_CREDIT_COST;
+  if (current < needed) return false;
+
+  const deduction = -(needed);
+  const { error } = await sb.from('credits').insert({
+    family_id: currentProfile.family_id,
+    amount: deduction,
+    reason: reason || 'AI aanroep',
+  });
+  if (error) { console.error('Credit deduct error:', error); return true; } // bij fout: niet blokkeren
+
+  cachedCredits = current + deduction;
+  renderCreditsDisplay();
+  return true;
+}
+
+async function initCreditsIfNew() {
+  // Geeft nieuwe gezinnen 200 startcredits als ze nog geen transacties hebben
+  const { data } = await sb.from('credits')
+    .select('id').eq('family_id', currentProfile.family_id).limit(1);
+  if (!data || data.length === 0) {
+    await sb.from('credits').insert({
+      family_id: currentProfile.family_id,
+      amount: AI_CREDITS_START,
+      reason: 'Startcredits',
+    });
+    cachedCredits = AI_CREDITS_START;
+  }
+}
+
+async function anthropicFetch(body, cost, reason) {
+  // Centrale wrapper voor alle AI aanroepen
+  // Kinderen worden nooit geblokkeerd — alleen ouder ziet de melding
+  const isParent = currentProfile?.role === 'parent';
+
+  if (isParent) {
+    const ok = await deductCredit(cost || AI_CREDIT_COST, reason);
+    if (!ok) {
+      showCreditWarning();
+      return null; // blokkeer alleen ouder
+    }
+  } else {
+    // Kind: trek credits af op de achtergrond maar blokkeer nooit
+    deductCredit(cost || AI_CREDIT_COST, reason).catch(() => {});
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: getAnthropicHeaders(),
+    body: JSON.stringify(body),
+  });
+  return res;
+}
+
+function showCreditWarning() {
+  // Alleen voor ouder — toon melding in actieve scherm of als toast
+  const msg = 'Je AI credits zijn op. Koop meer credits om AI-functies te blijven gebruiken.';
+  let shown = false;
+  const activeScreen = document.querySelector('.screen.active');
+  if (activeScreen) {
+    const errEl = activeScreen.querySelector('.msg-error');
+    if (errEl) {
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+      errEl.style.display = '';
+      setTimeout(() => errEl.classList.add('hidden'), 6000);
+      shown = true;
+    }
+  }
+  if (!shown) {
+    let toast = document.getElementById('credit-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'credit-toast';
+      toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--coral);color:white;padding:12px 20px;border-radius:var(--r);font-weight:700;font-size:14px;z-index:3000;max-width:320px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.2)';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.display = '';
+    setTimeout(() => { toast.style.display = 'none'; }, 5000);
+  }
 }
 
 function getAnthropicHeaders() {
@@ -4266,15 +4889,12 @@ async function generateShoppingList() {
 
   try {
     if (!getApiKey()) throw new Error('Geen API key. Ga naar \u22EF \u2192 Profiel.');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers: getAnthropicHeaders(),
-      body: JSON.stringify({
+    const res = await anthropicFetch({
         model:'claude-sonnet-4-5',
         max_tokens:800,
         messages:[{role:'user',content:prompt}]
-      })
     });
+    if (!res) { document.getElementById('shopping-loading').style.display='none'; return; }
     if (!res.ok) {
       const errText = await res.text();
       console.error('API error:', res.status, errText);
@@ -4630,15 +5250,12 @@ async function generateMealAI(meal, cis, votes, menuHistory) {
   const prompt = promptParts.filter(Boolean).join('\n');
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers: getAnthropicHeaders(),
-      body: JSON.stringify({
+    const res = await anthropicFetch({
         model:'claude-sonnet-4-5',
         max_tokens:200,
         messages:[{role:'user',content:prompt}]
-      })
     });
+    if (!res) { aiEl.textContent = 'Geen AI credits meer.'; return; }
     const data = await res.json();
     aiEl.textContent = data.content?.[0]?.text || 'Geen aanbeveling beschikbaar.';
   } catch(e) {
@@ -4660,6 +5277,7 @@ const SPORT_FOODS = [
 
 let preSportFood = null;
 let postSportFood = null;
+let todaySportKey = null;   // bijv. 'sport:voetbal' of 'sport:voetbal:laat'
 
 function renderSportNutritionOptions(containerId, selectedId, onSelect) {
   const container = document.getElementById(containerId);
@@ -4684,7 +5302,7 @@ function renderSportNutritionOptions(containerId, selectedId, onSelect) {
 }
 
 async function checkSportToday() {
-  // Controleer of de huidige gebruiker vandaag sport heeft
+  // Geeft {hasSport, sportKey, sportInfo} terug voor vandaag
   const today = todayStr();
   const {data} = await sb.from('sport_schedule')
     .select('*')
@@ -4692,7 +5310,11 @@ async function checkSportToday() {
     .eq('profile_id', currentProfile.id)
     .eq('sport_date', today)
     .maybeSingle();
-  return data && data.has_sport;
+  if (!data || !data.has_sport) return { hasSport: false, sportKey: null, sportInfo: null };
+
+  const sportKey = data.note || 'sport'; // bijv. 'sport:voetbal' of 'sport:voetbal:laat'
+  const sportInfo = resolveSportInfo(sportKey, currentProfile.id);
+  return { hasSport: true, sportKey, sportInfo };
 }
 
 // ── VOTE SETUP ─────────────────────────────────────────────────
@@ -5528,15 +6150,12 @@ async function searchMealsAI() {
   ].join('\n');
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: getAnthropicHeaders(),
-      body: JSON.stringify({
+    const res = await anthropicFetch({
         model: 'claude-sonnet-4-5',
         max_tokens: 200,
         messages: [{role:'user', content:prompt}]
-      })
     });
+    if (!res) { if (aiResult) aiResult.textContent = 'Geen AI credits meer.'; if (btn) btn.textContent = '\u2728'; return; }
     const data = await res.json();
     const text = data.content?.[0]?.text?.trim().replace(/```json|```/g,'').trim();
     const result = JSON.parse(text);
@@ -6126,8 +6745,25 @@ boot();
   <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">Maaltijd toevoegen</div>
-      <button onclick="closeAddMealSheet()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">✕</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="openRecipePhotoCapture()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer" title="Foto van recept analyseren">&#x1F4F7; Foto</button>
+        <button onclick="closeAddMealSheet()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
     </div>
+    <!-- AI foto analyse status -->
+    <div id="meal-ai-photo-status" style="display:none;background:var(--green-bg);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;border:1.5px solid var(--green)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">&#x2728;</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--green)" id="meal-ai-photo-msg">AI analyseert foto...</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px" id="meal-ai-photo-sub"></div>
+        </div>
+        <button onclick="clearRecipePhoto()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)" title="Verwijder foto">✕</button>
+      </div>
+    </div>
+    <!-- Verborgen camera input -->
+    <input type="file" id="recipe-photo-input" accept="image/*" capture="environment" style="display:none" onchange="analyzeRecipePhoto(this)" />
+
     <div class="label" style="margin-bottom:8px">Emoji</div>
     <div class="emoji-picker" id="emoji-picker" style="margin-bottom:16px"></div>
     <div class="label" style="margin-bottom:6px">Naam</div>
@@ -6187,12 +6823,33 @@ boot();
       <button onclick="openSetPin({changeOnly:true})" style="padding:10px 16px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text)">&#x1F512; Pincode wijzigen</button>
     </div>
 
+    <!-- Mijn sporten -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px" id="profile-sports-section">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Mijn sporten</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Voeg maximaal 2 sporten toe. Dit wordt gebruikt in het sportrooster.</p>
+      <div id="profile-sports-list" style="margin-bottom:12px"></div>
+      <button onclick="openAddSportModal()" id="profile-add-sport-btn" style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:var(--r);background:transparent;color:var(--green);font-size:13px;font-weight:700;cursor:pointer">+ Sport toevoegen</button>
+    </div>
+
     <!-- API Key -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Anthropic API Key</div>
       <input type="password" id="api-key-input" placeholder="sk-ant-..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:8px;box-sizing:border-box" />
       <button onclick="saveApiKey()" class="btn btn-primary" style="width:100%;margin-bottom:6px">Opslaan</button>
       <div style="font-size:11px;color:var(--muted)">Nodig voor AI functies (boodschappen, recepten, statistieken). Wordt lokaal opgeslagen op dit apparaat.</div>
+    </div>
+
+    <!-- AI Credits overzicht (alleen ouder) -->
+    <div id="profile-credits-section" style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">AI Credits</div>
+        <span class="ai-credits-display" style="font-size:18px;font-weight:900;color:var(--green)">— credits</span>
+      </div>
+      <div id="profile-credits-history" style="font-size:12px;color:var(--muted)">Laden...</div>
+      <div style="margin-top:10px;padding:10px 14px;background:var(--green-bg);border-radius:var(--r);border:1.5px dashed var(--border);text-align:center">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Meer credits nodig?</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">Binnenkort beschikbaar &#x1F6CD;</div>
+      </div>
     </div>
 
     <!-- Uitloggen / gezin -->
@@ -6327,11 +6984,33 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:6px">AI Prompt</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Pas de vraag aan voor je verstuurt:</div>
     <textarea id="ai-prompt-textarea" style="width:100%;min-height:140px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:'DM Sans',sans-serif;line-height:1.5;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+    <div id="prompt-guard-msg" style="display:none;background:var(--coral-light);border-radius:var(--r);padding:10px 14px;margin-top:10px;font-size:13px;font-weight:700;color:var(--coral)"></div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button onclick="closePromptModal()" class="btn" style="flex:1;background:var(--bg);border:1.5px solid var(--border);color:var(--text)">Annuleren</button>
-      <button onclick="sendPromptModal()" class="btn btn-primary" style="flex:2">&#x2728; Versturen</button>
+      <button onclick="sendPromptModal()" id="prompt-send-btn" class="btn btn-primary" style="flex:2">&#x2728; Versturen</button>
     </div>
   </div>
 </div>
+
+<!-- Sport toevoegen/bewerken modal -->
+<div id="add-sport-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:600;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Fraunces',serif;font-weight:900;font-size:18px" id="sport-modal-title">Sport toevoegen</div>
+      <button onclick="closeAddSportModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">&#x2715;</button>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Kies een sport</div>
+    <div id="sport-preset-list" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
+
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Kleur / stijl</div>
+    <div id="sport-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"></div>
+
+    <div id="sport-modal-error" style="color:var(--coral);font-size:13px;margin-bottom:8px;display:none"></div>
+    <button onclick="saveProfileSport()" class="btn btn-primary" style="width:100%">Opslaan &#x2713;</button>
+    <input type="hidden" id="sport-edit-index" value="-1" />
+  </div>
+</div>
+
 </body>
 </html>
