@@ -2010,7 +2010,11 @@ function refreshHome() {
         const targetDate = new Date(ds + 'T12:00:00');
         const simToday = new Date();
         simToday.setDate(simToday.getDate() + testDayOffset);
-        const diffDays = Math.round((targetDate - simToday) / (1000*60*60*24));
+        // Bereken verschil via datum-strings (timezone-proof)
+        const todayClean = new Date(); todayClean.setDate(todayClean.getDate() + testDayOffset);
+        const todayStr2 = todayClean.toISOString().split('T')[0];
+        const d1 = new Date(ds + 'T12:00:00'); const d2 = new Date(todayStr2 + 'T12:00:00');
+        const diffDays = Math.round((d1 - d2) / (1000*60*60*24));
         homeDayOffset = diffDays;
         loadData().then(() => {
           refreshHome();
