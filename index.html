@@ -4118,7 +4118,20 @@ async function saveProfileSport() {
   const editIndex = parseInt(document.getElementById('sport-edit-index').value);
   if (editIndex >= 0) sports[editIndex] = newSport;
   else { if (sports.length >= 2) return; sports.push(newSport); }
-  await sb.from('profiles').update({ sports: JSON.stringify(sports) }).eq('id', currentProfile.id);
+  const { error: sportError } = await sb.from('profiles')
+    .update({ sports: JSON.stringify(sports) })
+    .eq('id', currentProfile.id);
+
+  if (sportError) {
+    console.error('Sports opslaan mislukt:', sportError);
+    const errEl = document.getElementById('sport-modal-error');
+    if (errEl) {
+      errEl.textContent = 'Opslaan mislukt. Controleer of de sports kolom bestaat in Supabase (zie migrations.sql).';
+      errEl.style.display = '';
+    }
+    return;
+  }
+
   currentProfile.sports = sports;
   closeAddSportModal();
   renderProfileSportsList();
@@ -4127,8 +4140,10 @@ async function saveProfileSport() {
 async function deleteProfileSport(index) {
   const sports = getProfileSports(currentProfile);
   sports.splice(index, 1);
-  await sb.from('profiles').update({ sports: JSON.stringify(sports) }).eq('id', currentProfile.id);
-  currentProfile.sports = sports;
+  const { error: delError } = await sb.from('profiles')
+    .update({ sports: JSON.stringify(sports) })
+    .eq('id', currentProfile.id);
+  if (!delError) currentProfile.sports = sports;
   renderProfileSportsList();
 }
 
@@ -4719,7 +4734,14 @@ async function deductCredit(cost, reason) {
     amount: deduction,
     reason: reason || 'AI aanroep',
   });
-  if (error) { console.error('Credit deduct error:', error); return true; } // bij fout: niet blokkeren
+  if (error) {
+    console.error('Credit deduct error:', error);
+    // Tabel bestaat mogelijk nog niet - toon melding aan ouder
+    if (currentProfile?.role === 'parent') {
+      console.warn('Credits tabel niet bereikbaar. Voer migrations.sql uit in Supabase.');
+    }
+    return true; // niet blokkeren bij technische fout
+  }
 
   cachedCredits = current + deduction;
   renderCreditsDisplay();
@@ -4728,15 +4750,20 @@ async function deductCredit(cost, reason) {
 
 async function initCreditsIfNew() {
   // Geeft nieuwe gezinnen 200 startcredits als ze nog geen transacties hebben
-  const { data } = await sb.from('credits')
+  const { data, error } = await sb.from('credits')
     .select('id').eq('family_id', currentProfile.family_id).limit(1);
+  if (error) {
+    console.warn('Credits tabel niet gevonden. Voer migrations.sql uit:', error.message);
+    cachedCredits = AI_CREDITS_START; // gebruik geheugen-fallback
+    return;
+  }
   if (!data || data.length === 0) {
-    await sb.from('credits').insert({
+    const { error: insertError } = await sb.from('credits').insert({
       family_id: currentProfile.family_id,
       amount: AI_CREDITS_START,
       reason: 'Startcredits',
     });
-    cachedCredits = AI_CREDITS_START;
+    if (!insertError) cachedCredits = AI_CREDITS_START;
   }
 }
 
