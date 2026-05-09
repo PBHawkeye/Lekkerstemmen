@@ -1633,7 +1633,7 @@ async function loadData() {
     availRes,
   ] = await Promise.all([
     sb.from('meals').select('*').eq('family_id',familyId).eq('eaten_at',todayStr()).maybeSingle(),
-    sb.from('checkins_with_context').select('*').eq('profile_id',profileId).gte('eaten_at',sinceStr).order('eaten_at',{ascending:false}).limit(60),
+    profileId && profileId !== 'temp' ? sb.from('checkins_with_context').select('*').eq('profile_id',profileId).gte('eaten_at',sinceStr).order('eaten_at',{ascending:false}).limit(60) : Promise.resolve({data:[]}),
     sb.from('custom_meals').select('*').eq('family_id',familyId).order('created_at',{ascending:true}),
     sb.from('weekly_menu').select('*').eq('family_id',familyId)
       .gte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset-7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })())
@@ -1675,7 +1675,7 @@ async function loadData() {
 
   // Check-ins laden
   let cis = cisRes.data||[];
-  if (cis.length === 0) {
+  if (cis.length === 0 && profileId && profileId !== 'temp') {
     const {data:direct} = await sb.from('checkins')
       .select('id,profile_id,meal_id,score,drink,comment,pre_sport_food,post_sport_food,ate_with_family,sport_type')
       .eq('profile_id',profileId).order('id',{ascending:false}).limit(60);
