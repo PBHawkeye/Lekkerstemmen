@@ -1157,11 +1157,11 @@ let testDayOffset = 0;
 const TEST_FAMILY_ID = 'a0164d7e-bcf5-4258-92b0-7296cce776f5';
 
 const TEST_UUIDS = {
-  paul:   'a0000000-0000-0000-0000-000000000001',
-  dorres: 'a0000000-0000-0000-0000-000000000002',
-  tjeerd: 'a0000000-0000-0000-0000-000000000003',
-  faas:   'a0000000-0000-0000-0000-000000000004',
-  biek:   'a0000000-0000-0000-0000-000000000005',
+  paul:   '5bce07bd-bb9b-49dc-a202-88a9ec249ac9',
+  dorres: 'b48d4bb8-bf67-4bf4-b2b7-93628c3a19da',
+  tjeerd: '311762ce-c83d-4e18-8f8d-897d85f35fe5',
+  faas:   'a87f1532-ab06-46e6-b9dd-4afa92fd3ad6',
+  biek:   '80575d7c-5230-44b8-b279-923f6723450b',
 };
 
 function testUuid(personId) {
@@ -1172,8 +1172,8 @@ const TEST_PERSONS = [
   { id:'paul',   name:'Paul',   role:'parent', emoji:'\uD83D\uDC68' },
   { id:'dorres', name:'Dorres', role:'parent', emoji:'\uD83D\uDC69' },
   { id:'tjeerd', name:'Tjeerd', role:'child',  emoji:'\uD83E\uDDD2' },
-  { id:'faas',   name:'Faas',   role:'child',  emoji:'\uD83E\uDDD2' },
-  { id:'biek',   name:'Biek',   role:'child',  emoji:'\uD83E\uDDD2' },
+  { id:'faas',   name:'Faas',   role:'child',  emoji:'\uD83E\uDD73' },
+  { id:'biek',   name:'Biek',   role:'child',  emoji:'\uD83E\uDD73' },
 ];
 let testPersonId = 'paul';
 
@@ -1616,17 +1616,18 @@ async function loadData() {
   since.setDate(since.getDate()-21);
   const sinceStr = since.toISOString().split('T')[0];
 
-  // Haal sports op voor huidig profiel
-  // currentProfile.id is altijd het echte Supabase profiel-ID na login
-  const { data: profileData } = await sb.from('profiles')
-    .select('sports')
-    .eq('id', currentProfile.id)
-    .maybeSingle();
-  if (profileData?.sports && currentProfile) {
-    try {
-      currentProfile.sports = typeof profileData.sports === 'string'
-        ? JSON.parse(profileData.sports) : profileData.sports;
-    } catch(e) {}
+  // Haal sports op voor huidig profiel (niet bij tijdelijk boot-profiel)
+  if (currentProfile.id && currentProfile.id !== 'temp') {
+    const { data: profileData } = await sb.from('profiles')
+      .select('sports')
+      .eq('id', currentProfile.id)
+      .maybeSingle();
+    if (profileData?.sports && currentProfile) {
+      try {
+        currentProfile.sports = typeof profileData.sports === 'string'
+          ? JSON.parse(profileData.sports) : profileData.sports;
+      } catch(e) {}
+    }
   }
 
   // Alles parallel ophalen
@@ -3664,9 +3665,14 @@ async function saveSportSchedule() {
       });
     });
   });
-  await sb.from('sport_schedule').upsert(rows, {onConflict:'family_id,profile_id,sport_date'});
+  const { error: sportSaveErr } = await sb.from('sport_schedule').upsert(rows, {onConflict:'family_id,profile_id,sport_date'});
   const btn = document.querySelector('[onclick="saveSportSchedule()"]');
-  if (btn) { btn.textContent='✓ Opgeslagen!'; setTimeout(()=>btn.textContent='Sportdagen opslaan ✓',1500); }
+  if (sportSaveErr) {
+    console.error('Sport save fout:', sportSaveErr);
+    if (btn) { btn.textContent = 'Fout bij opslaan'; setTimeout(()=>btn.textContent='Sportdagen opslaan ✓',2000); }
+  } else {
+    if (btn) { btn.textContent='✓ Opgeslagen!'; setTimeout(()=>btn.textContent='Sportdagen opslaan ✓',1500); }
+  }
 }
 
 // ── AI MENUVOORSTEL ──────────────────────────────────────────────
