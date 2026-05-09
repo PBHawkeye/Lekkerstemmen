@@ -1378,7 +1378,6 @@ async function simulateWeek() {
       eaten_at: dateStr,
       meal_type: w.meal,
       ate_together: w.together,
-      had_sport: w.sport,
     },{onConflict:'family_id,eaten_at'}).select().single();
 
     if (!meal) { console.error('Meal error:', mealErr); continue; }
@@ -1678,13 +1677,13 @@ async function loadData() {
   let cis = cisRes.data||[];
   if (cis.length === 0) {
     const {data:direct} = await sb.from('checkins')
-      .select('id,profile_id,meal_id,score,drink,comment,checked_in_at,meals(eaten_at,meal_type,ate_together,had_sport)')
+      .select('id,profile_id,meal_id,score,drink,comment,meals(eaten_at,meal_type,ate_together)')
       .eq('profile_id',profileId).order('checked_in_at',{ascending:false}).limit(60);
     if (direct?.length) {
       cis = direct.map(c=>({
         ...c,
         eaten_at:c.meals?.eaten_at, meal_type:c.meals?.meal_type,
-        ate_together:c.meals?.ate_together, had_sport:c.meals?.had_sport,
+        ate_together:c.meals?.ate_together, had_sport:false,
         child_name:currentProfile.name, family_id:familyId,
       }));
     }
@@ -1870,7 +1869,7 @@ function refreshHome() {
     const isFuture = ds > todayStr();
     const menuEntry = weeklyMenu.find(m=>m.day_date===ds&&m.published);
     const ci = checkins.find(c=>c.eaten_at===ds);
-    const score = ci?.score??null;
+    const score = ci?.score != null ? parseInt(ci.score) : null;
 
     const cell = document.createElement('div');
     cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer';
@@ -2003,9 +2002,9 @@ function refreshHome() {
     // STEM label onder het bolletje
     const stemLabel = document.createElement('div');
     stemLabel.style.cssText = 'font-size:8px;font-weight:900;letter-spacing:.06em;height:10px;margin-top:1px;text-align:center';
-    if (!isFuture && !score && menuEntry && !didNotEat) {
+    if (isToday && !score && menuEntry && !didNotEat) {
       stemLabel.textContent = 'STEM';
-      stemLabel.style.color = isPast ? 'var(--coral)' : 'var(--green)';
+      stemLabel.style.color = 'var(--green)';
     }
     cell.appendChild(stemLabel);
     row.appendChild(cell);
@@ -2257,7 +2256,7 @@ async function doLog() {
   document.getElementById('log-btn').textContent='Opslaan...';
   const {error} = await sb.from('meals').upsert({
     family_id:currentProfile.family_id, eaten_at:todayStr(),
-    meal_type:selectedMeal, ate_together:togTogether, had_sport:togSport,
+    meal_type:selectedMeal, ate_together:togTogether,
   },{onConflict:'family_id,eaten_at'});
   if (error) {
     const errEl=document.getElementById('log-error');
@@ -2815,7 +2814,7 @@ async function renderStats() {
   // Als view leeg is, haal direct op via joins
   if (!allCis || allCis.length === 0) {
     const {data:directAll} = await sb.from('checkins')
-      .select('*, profiles(name, family_id), meals(eaten_at, meal_type, ate_together, had_sport)')
+      .select('*, profiles(name, family_id), meals(eaten_at, meal_type, ate_together)')
       .eq('profiles.family_id', familyId)
       .order('checked_in_at',{ascending:false})
       .limit(100);
@@ -2828,7 +2827,7 @@ async function renderStats() {
           eaten_at: c.meals?.eaten_at,
           meal_type: c.meals?.meal_type,
           ate_together: c.meals?.ate_together,
-          had_sport: c.meals?.had_sport,
+          had_sport: false,
           family_id: familyId,
         }));
     }
