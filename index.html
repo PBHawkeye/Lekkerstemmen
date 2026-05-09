@@ -2613,8 +2613,10 @@ function selectDrink(d) {
 async function doCheckin() {
   if (!selectedScore) return;
 
-  // Gebruik todayMeal (uit checkins) OF weekmenu entry voor vandaag
+  console.log("[Checkin] START score:", selectedScore, "profile:", currentProfile?.id, "family:", currentProfile?.family_id);
+
   const todayDateStr2 = todayStr();
+  console.log("[Checkin] datum:", todayDateStr2, "todayMeal:", todayMeal?.id, "homeDayOffset:", homeDayOffset);
   const menuEntry = weeklyMenu.find(m => m.day_date === todayDateStr2 && m.published);
   
   // Bepaal meal_id: eerst todayMeal, anders weekmenu
@@ -2647,6 +2649,7 @@ async function doCheckin() {
     }
   }
 
+  console.log("[Checkin] mealId:", mealId);
   document.getElementById('checkin-btn').textContent='Opslaan...';
   const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
   // Verwijder bestaande checkin voor dit meal, dan opnieuw invoegen
@@ -2660,6 +2663,7 @@ async function doCheckin() {
     ate_with_family: sportAteTogether||null,
     sport_type: todaySportKey||null,
   });
+  console.log("[Checkin] insert result, error:", ciError);
   if (ciError) {
     console.error('Checkin error:', ciError);
     document.getElementById('checkin-btn').textContent='Opslaan ✓';
