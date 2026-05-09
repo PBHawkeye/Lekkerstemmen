@@ -1154,7 +1154,7 @@ let selectedCorvee = [];
 // ── TEST MODE ──────────────────────────────────────────────────
 const TEST_MODE = false;
 let testDayOffset = 0;
-const TEST_FAMILY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const TEST_FAMILY_ID = 'a0164d7e-bcf5-4258-92b0-7296cce776f5';
 
 const TEST_UUIDS = {
   paul:   'a0000000-0000-0000-0000-000000000001',
@@ -1278,7 +1278,9 @@ function renderTestPersons() {
     const btn = document.createElement('button');
     const isActive = currentProfile && currentProfile.name.toLowerCase() === key;
     btn.style.cssText = 'padding:5px 10px;border-radius:99px;border:1.5px solid '+(isActive?'#1D9E75':'#444')+';background:'+(isActive?'#1D9E75':'transparent')+';font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:12px;color:'+(isActive?'white':'#aaa')+';cursor:pointer;margin:2px';
-    btn.textContent = (p.emoji || '') + ' ' + p.name;
+    const es = document.createElement('span'); es.textContent = p.emoji || '';
+    const ns = document.createElement('span'); ns.textContent = ' ' + p.name;
+    btn.appendChild(es); btn.appendChild(ns);
     btn.onclick = () => switchTestPerson(p.name.toLowerCase());
     el.appendChild(btn);
   });
@@ -1322,11 +1324,11 @@ function testResetToFriday() {
 
 async function switchTestPerson(name) {
   testPersonId = name;
-  await setTestProfile(name);
   homeDayOffset = 0;
-  renderTestPersons();
   show('loading');
   await loadData();
+  await setTestProfile(name);
+  renderTestPersons();
   refreshHome();
   show('home');
 }
@@ -1565,14 +1567,10 @@ async function doSetup() {
 
 // ── LOAD ───────────────────────────────────────────────────────
 async function bootTestMode() {
-  // Laad gezinsleden direct via family_id (geen Supabase auth nodig)
-  const {data: members} = await sb.from('profiles')
-    .select('id,name,role,emoji,sports')
-    .eq('family_id', TEST_FAMILY_ID);
-  familyProfiles = members || [];
+  currentProfile = { family_id: TEST_FAMILY_ID, id: 'temp', name: 'Laden...', role: 'parent' };
+  await loadData();
   await setTestProfile(testPersonId);
   updateScenarioHighlight();
-  await loadData();
   renderTestPersons();
   syncTestCreditsInput();
   refreshHome();
@@ -4537,6 +4535,8 @@ function renderProfileEmojiPicker() {
       // Direct opslaan
       await sb.from('profiles').update({emoji: e}).eq('id', currentProfile.id);
       currentProfile.emoji = e;
+      const fp = familyProfiles.find(p => p.id === currentProfile.id);
+      if (fp) fp.emoji = e;
       showProfileSaveMsg();
     };
     picker.appendChild(btn);
@@ -4550,6 +4550,8 @@ async function saveProfileName() {
   currentProfile.name = name;
   document.getElementById('profile-name-display').textContent = name;
   document.getElementById('home-name').textContent = name;
+  const fpn = familyProfiles.find(p => p.id === currentProfile.id);
+  if (fpn) fpn.name = name;
   // Update avatar initiaal
   const avatar = document.getElementById('home-avatar');
   if (avatar) avatar.textContent = initials(name);
