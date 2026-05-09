@@ -1905,7 +1905,7 @@ function refreshHome() {
         borderColor = ev.border || 'var(--border)';
         borderWidth = '1.5px';
         content_html = '<div style="font-size:22px;line-height:1">'+ev.emoji+'</div>';
-      } else if (menuEntry && score) {
+      } else if (score) {
         // Verleden + ingecheckt → grote smiley
         const smiley = score===3?'\uD83D\uDE0B':score===2?'\uD83D\uDE10':'\uD83D\uDE15';
         bgColor = score===3?'var(--green-bg)':score===2?'#FFF4DC':'#FFEEEE';
@@ -1913,7 +1913,7 @@ function refreshHome() {
         borderWidth = '1.5px';
         content_html = '<div style="font-size:26px;line-height:1">'+smiley+'</div>';
       } else if (menuEntry && !score) {
-        // Verleden + niet ingecheckt → uitroepteken
+        // Verleden + menu maar niet ingecheckt → uitroepteken
         bgColor = '#FFEEEE';
         borderColor = 'var(--coral)';
         borderWidth = '1.5px';
@@ -2614,15 +2614,17 @@ async function doCheckin() {
 
   document.getElementById('checkin-btn').textContent='Opslaan...';
   const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
-  const {error:ciError} = await sb.from('checkins').upsert({
+  // Verwijder bestaande checkin voor dit meal, dan opnieuw invoegen
+  await sb.from('checkins').delete().eq('profile_id', currentProfile.id).eq('meal_id', mealId);
+  const {error:ciError} = await sb.from('checkins').insert({
     profile_id:currentProfile.id, meal_id:mealId,
     score:selectedScore, drink:selectedDrink,
     comment: commentVal||null,
     pre_sport_food: preSportFood||null,
     post_sport_food: postSportFood||null,
     ate_with_family: sportAteTogether||null,
-    sport_type: todaySportKey||null,  // bijv. 'sport:voetbal' of null
-  },{onConflict:'profile_id,meal_id'});
+    sport_type: todaySportKey||null,
+  });
   if (ciError) {
     console.error('Checkin error:', ciError);
     document.getElementById('checkin-btn').textContent='Opslaan ✓';
