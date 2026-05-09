@@ -764,7 +764,7 @@
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+  <div style="flex:1;padding:0 16px 120px">
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5" id="sport-desc">
       Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
     </div>
@@ -3464,7 +3464,7 @@ async function renderSportSchedule() {
   // Instructie tekst
   const instr = document.createElement('p');
   instr.style.cssText = 'font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5';
-  instr.textContent = 'Klik een cel om te wisselen: ⚽ sport → \uD83D\uDD50 laat thuis → \uD83C\uDF7D zakelijk diner → ✈️ op reis → leeg';
+  instr.textContent = 'Klik een cel om te wisselen: sport1 → sport2 → \uD83D\uDD50 laat thuis → \uD83C\uDF7D weg → ✈️ op reis → leeg';
   grid.appendChild(instr);
 
   // Header
@@ -4000,7 +4000,8 @@ function getSportsForProfile(profileId) {
   if (testModeActive) return testSportProfiles[profileId] || [];
   if (profileId === currentProfile?.id) return getProfileSports(currentProfile);
   const fp = familyProfiles.find(p => p.id === profileId);
-  return getProfileSports(fp);
+  if (fp) return getProfileSports(fp);
+  return [];
 }
 
 function renderProfileSportsList() {
@@ -6525,7 +6526,7 @@ async function openPinLogin() {
   pinBuffer = ''; pinLoginProfile = null;
   const savedFamilyId = localStorage.getItem('lk_family_id');
   if (!savedFamilyId) { show('auth'); return; }
-  const {data:members} = await sb.from('profiles').select('id,name,emoji,role').eq('family_id', savedFamilyId);
+  const {data:members} = await sb.from('profiles').select('id,name,emoji,role,sports').eq('family_id', savedFamilyId);
   const container = document.getElementById('pin-login-members');
   if (container && members) {
     container.innerHTML = '';
@@ -6838,7 +6839,7 @@ boot();
     <div class="field" style="margin-bottom:20px">
       <input type="url" id="new-meal-url" placeholder="https://..." />
     </div>
-    <button class="btn btn-primary" onclick="addCustomMeal()" style="width:100%">Toevoegen ✓</button>
+    <button class="btn btn-primary" onclick="addCustomMeal()" style="width:100%;margin-bottom:16px">Toevoegen ✓</button>
   </div>
 </div>
 
