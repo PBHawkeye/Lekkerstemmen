@@ -1703,13 +1703,13 @@ async function loadData() {
       (mealsData||[]).forEach(m => { mealsMap[m.id] = m; });
       cis = direct.map(c=>({
         ...c,
-        eaten_at: mealsMap[c.meal_id]?.eaten_at,
-        meal_type: mealsMap[c.meal_id]?.meal_type,
-        ate_together: mealsMap[c.meal_id]?.ate_together,
+        eaten_at: mealsMap[c.meal_id]?.eaten_at || null,
+        meal_type: mealsMap[c.meal_id]?.meal_type || null,
+        ate_together: mealsMap[c.meal_id]?.ate_together || null,
         had_sport: false,
         child_name: currentProfile.name,
         family_id: familyId,
-      }));
+      })).filter(c => c.eaten_at); // alleen met geldige datum
     }
   }
   checkins = cis;
@@ -2664,6 +2664,22 @@ async function doCheckin() {
       meal_choice_1:choices[0], meal_choice_2:choices[1],
     },{onConflict:'profile_id,week_of'});
   }
+  // Update lokale checkins direct zodat week-cellen meteen de score tonen
+  const todayDateForCheckin = todayStr();
+  const existingIdx = checkins.findIndex(c => c.eaten_at === todayDateForCheckin && c.profile_id === currentProfile.id);
+  const newCheckin = {
+    profile_id: currentProfile.id,
+    meal_id: mealId,
+    score: selectedScore,
+    drink: selectedDrink,
+    eaten_at: todayDateForCheckin,
+    meal_type: menuEntry?.meal_id || todayMeal?.meal_type,
+    family_id: currentProfile.family_id,
+    child_name: currentProfile.name,
+  };
+  if (existingIdx >= 0) checkins[existingIdx] = newCheckin;
+  else checkins.unshift(newCheckin);
+
   await loadData();
   const msgs = {3:['\uD83D\uDE0B','Geweldig!','Fijn dat het smaakte!'],2:['\uD83D\uDE10','Oké dan!','Goed dat je het hebt doorgegeven.'],1:['\uD83D\uDE15','Noteer!','Vrijdag mag jij kiezen wat er volgende week op tafel komt.']};
   const m = msgs[selectedScore];
