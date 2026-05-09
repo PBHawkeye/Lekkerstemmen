@@ -764,7 +764,7 @@
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 16px 100px">
+  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5" id="sport-desc">
       Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
     </div>
@@ -1685,7 +1685,7 @@ function goScreen(name) {
   else if (name==='menu') { menuBaseOffset = getRealWeekOffset(); menuWeekOffset = menuBaseOffset; renderMenuScreen().then(()=>show('menu')); }
   else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
   else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus().then(()=>show('status')); }
-  else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; renderSportSchedule(); show('sport'); }
+  else if (name==='sport') { sportBaseOffset = getRealWeekOffset(); sportWeekOffset = sportBaseOffset; sportScheduleData = {}; renderSportSchedule(); show('sport'); }
   else if (name==='shopping') { openShoppingScreen(); }
   else if (name==='profile') { openProfileScreen(); }
   else if (name==='cook') { show('cook'); }
@@ -3439,10 +3439,20 @@ async function renderSportSchedule() {
     .eq('family_id', currentProfile.family_id)
     .gte('sport_date', dates[0])
     .lte('sport_date', dates[6]);
-  sportScheduleData = {};
+  // Laad DB data maar overschrijf geen lokale wijzigingen die nog niet opgeslagen zijn
+  const dbData = {};
   (existing||[]).forEach(s => {
-    if (!sportScheduleData[s.sport_date]) sportScheduleData[s.sport_date] = {};
-    sportScheduleData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
+    if (!dbData[s.sport_date]) dbData[s.sport_date] = {};
+    dbData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
+  });
+  // Merge: DB als basis, lokale sportScheduleData (al gewijzigd) heeft voorrang
+  Object.keys(dbData).forEach(date => {
+    if (!sportScheduleData[date]) sportScheduleData[date] = {};
+    Object.keys(dbData[date]).forEach(pid => {
+      if (sportScheduleData[date][pid] === undefined) {
+        sportScheduleData[date][pid] = dbData[date][pid];
+      }
+    });
   });
 
   const grid = document.getElementById('sport-schedule-grid');
@@ -4509,16 +4519,25 @@ function showProfileSaveMsg() {
 // ── ANTHROPIC API KEY ────────────────────────────────────────────
 
 // ── RECEPT FOTO ANALYSE ────────────────────────────────────────
-function openRecipePhotoCapture() {
-  const input = document.getElementById('recipe-photo-input');
-  if (input) input.click();
+function openRecipeCamera() {
+  // Opent direct de camera (geen bestandskiezer)
+  const input = document.getElementById('recipe-camera-input');
+  if (input) { input.value = ''; input.click(); }
+}
+
+function openRecipeFile() {
+  // Opent de fotobibliotheek / bestandskiezer
+  const input = document.getElementById('recipe-file-input');
+  if (input) { input.value = ''; input.click(); }
 }
 
 function clearRecipePhoto() {
   const status = document.getElementById('meal-ai-photo-status');
-  const input = document.getElementById('recipe-photo-input');
+  ['recipe-camera-input','recipe-file-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   if (status) status.style.display = 'none';
-  if (input) input.value = '';
 }
 
 async function analyzeRecipePhoto(inputEl) {
@@ -6781,7 +6800,8 @@ boot();
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">Gerecht toevoegen</div>
       <div style="display:flex;align-items:center;gap:8px">
-        <button onclick="openRecipePhotoCapture()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer" title="Foto van recept analyseren">&#x1F4F7; Foto</button>
+        <button onclick="openRecipeCamera()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer" title="Foto maken met camera">&#x1F4F7; Camera</button>
+        <button onclick="openRecipeFile()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:12px;cursor:pointer" title="Foto kiezen uit bibliotheek">&#x1F5BC; Kies foto</button>
         <button onclick="closeAddMealSheet()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">✕</button>
       </div>
     </div>
@@ -6796,8 +6816,9 @@ boot();
         <button onclick="clearRecipePhoto()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)" title="Verwijder foto">✕</button>
       </div>
     </div>
-    <!-- Verborgen camera input -->
-    <input type="file" id="recipe-photo-input" accept="image/*" capture="environment" style="display:none" onchange="analyzeRecipePhoto(this)" />
+    <!-- Camera: twee aparte inputs voor camera vs bestandskiezer -->
+    <input type="file" id="recipe-camera-input" accept="image/*" capture="environment" style="display:none" onchange="analyzeRecipePhoto(this)" />
+    <input type="file" id="recipe-file-input"   accept="image/*" style="display:none" onchange="analyzeRecipePhoto(this)" />
 
     <div class="label" style="margin-bottom:8px">Emoji</div>
     <div class="emoji-picker" id="emoji-picker" style="margin-bottom:16px"></div>
