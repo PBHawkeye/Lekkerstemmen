@@ -1712,7 +1712,10 @@ async function loadData() {
       })).filter(c => c.eaten_at); // alleen met geldige datum
     }
   }
-  checkins = cis;
+  // Merge: bewaar lokale checkins die nog niet in DB zitten (net opgeslagen)
+  const dbEatenAts = new Set(cis.map(c => c.eaten_at + '|' + c.profile_id));
+  const localOnly = checkins.filter(c => c.eaten_at && !dbEatenAts.has(c.eaten_at + '|' + c.profile_id));
+  checkins = [...cis, ...localOnly];
 
   // Beschikbare stemmaaltijden
   const avail = availRes.data||[];
