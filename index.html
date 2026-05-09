@@ -1269,20 +1269,13 @@ function renderTestPersons() {
   const el = document.getElementById('test-persons');
   if (!el) return;
   el.innerHTML = '';
-  TEST_PERSONS.forEach(p => {
+  const persons = familyProfiles.length > 0 ? familyProfiles : TEST_PERSONS;
+  persons.forEach(p => {
     const btn = document.createElement('button');
-    const isActive = p.id === testPersonId;
-    btn.style.padding = '5px 10px';
-    btn.style.borderRadius = '99px';
-    btn.style.border = '1.5px solid '+(isActive?'#1D9E75':'#444');
-    btn.style.background = isActive?'#1D9E75':'transparent';
-    btn.style.fontFamily = "'DM Sans',sans-serif";
-    btn.style.fontWeight = '700';
-    btn.style.fontSize = '12px';
-    btn.style.color = isActive?'white':'#aaa';
-    btn.style.cursor = 'pointer';
-    btn.textContent = p.emoji + ' ' + p.name;
-    btn.onclick = () => switchTestPerson(p.id);
+    const isActive = currentProfile && p.name.toLowerCase() === currentProfile.name.toLowerCase();
+    btn.style.cssText = 'padding:5px 10px;border-radius:99px;border:1.5px solid '+(isActive?'#1D9E75':'#444')+';background:'+(isActive?'#1D9E75':'transparent')+';font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:12px;color:'+(isActive?'white':'#aaa')+';cursor:pointer';
+    btn.textContent = (p.emoji || '\uD83D\uDC64') + ' ' + p.name;
+    btn.onclick = () => switchTestPerson(p.name.toLowerCase());
     el.appendChild(btn);
   });
 }
@@ -1325,9 +1318,12 @@ function testResetToFriday() {
 
 async function switchTestPerson(id) {
   testPersonId = id;
-  const p = TEST_PERSONS.find(x=>x.id===id);
-  currentProfile = { id: testUuid(id), name:p.name, role:p.role, family_id:TEST_FAMILY_ID };
-  homeDayOffset = -testDayOffset; // compenseer
+  const real = familyProfiles.find(p => p.name.toLowerCase() === id.toLowerCase())
+    || familyProfiles.find(p => p.name.toLowerCase().startsWith(id.toLowerCase()));
+  if (real) {
+    currentProfile = { ...real, sports: real.sports ? (typeof real.sports === 'string' ? JSON.parse(real.sports) : real.sports) : [] };
+  }
+  homeDayOffset = 0;
   renderTestPersons();
   show('loading');
   await loadData();
@@ -2910,26 +2906,14 @@ async function renderStats() {
 }
 
 function getFamilyMembers() {
-  if (typeof TEST_PERSONS !== 'undefined' && testModeActive) {
-    return TEST_PERSONS.map(p => ({
-      id: testUuid(p.id),
-      shortId: p.id,
-      name: p.name,
-      emoji: p.emoji,
-      role: p.role
-    }));
-  }
-  // Productie: gebruik geladen familyProfiles
   if (familyProfiles.length > 0) {
     return familyProfiles.map(p => ({
-      id: p.id,
-      shortId: p.id,
-      name: p.name,
-      emoji: p.emoji || '\uD83D\uDC64',
-      role: p.role
+      id: p.id, shortId: p.id, name: p.name,
+      emoji: p.emoji || '\uD83D\uDC64', role: p.role
     }));
   }
-  return [{id: currentProfile.id, shortId: currentProfile.id, name: currentProfile.name, emoji: currentProfile.emoji || '\uD83D\uDC64', role: currentProfile.role}];
+  if (currentProfile) return [{ id: currentProfile.id, shortId: currentProfile.id, name: currentProfile.name, emoji: currentProfile.emoji || '\uD83D\uDC64', role: currentProfile.role }];
+  return [];
 }
 
 function renderPersonGrid(containerId, selectedId, onClickFn, highlightClass='selected') {
@@ -4006,14 +3990,7 @@ function getProfileSports(profile) {
 }
 
 function getSportsForProfile(profileId) {
-  // Eigen profiel: gebruik currentProfile.sports (ook in testmodus, na loadData)
-  if (profileId === currentProfile?.id) {
-    const own = getProfileSports(currentProfile);
-    if (own.length > 0) return own;
-  }
-  // Testmodus fallback voor andere gezinsleden
-  if (testModeActive) return testSportProfiles[profileId] || [];
-  // Productie: zoek in familyProfiles
+  if (profileId === currentProfile?.id) return getProfileSports(currentProfile);
   const fp = familyProfiles.find(p => p.id === profileId);
   if (fp) return getProfileSports(fp);
   return [];
