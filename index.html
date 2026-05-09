@@ -42,7 +42,7 @@
       --teal-light:   #E8F7F2;
     }
     html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
-    .screen { display: none; min-height: 100vh; flex-direction: column; max-width: 480px; margin: 0 auto; padding-bottom: 80px; position: relative; z-index: 0; }
+    .screen { display: none; height: 100vh; flex-direction: column; max-width: 480px; margin: 0 auto; overflow: hidden; position: relative; z-index: 0; }
     .screen.active { display: flex; }
     .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 12px; }
     .logo { display:flex; align-items:center; }
@@ -764,7 +764,7 @@
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 16px 120px">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5" id="sport-desc">
       Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
     </div>
@@ -799,7 +799,7 @@
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 16px 100px">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
     <div style="padding:0 0 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px">Week van</div>
       <div style="font-size:18px;font-weight:800;color:var(--text)" id="status-week-label">—</div>
@@ -883,7 +883,7 @@
     </div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 24px 100px">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 100px">
 
     <!-- Gezinsleden sectie -->
     <div style="margin-bottom:24px">
@@ -958,7 +958,7 @@
     </div>
     <button id="md-recipe-btn" onclick="openMealDetailRecipe()" style="display:none;width:36px;height:36px;border-radius:50%;background:var(--green-bg);border:1.5px solid var(--border);font-size:18px;cursor:pointer" title="Recept">&#x1F4D6;</button>
   </div>
-  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px;overflow-y:auto">
     <div style="text-align:center;padding:12px 0 20px">
       <div style="font-size:26px;font-weight:800;color:var(--text);font-family:'Fraunces',serif" id="md-name">—</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px" id="md-note"></div>
@@ -3439,19 +3439,19 @@ async function renderSportSchedule() {
     .eq('family_id', currentProfile.family_id)
     .gte('sport_date', dates[0])
     .lte('sport_date', dates[6]);
-  // Laad DB data maar overschrijf geen lokale wijzigingen die nog niet opgeslagen zijn
-  const dbData = {};
+  // Bewaar lokale wijzigingen (kliks nog niet opgeslagen)
+  const localSnapshot = JSON.parse(JSON.stringify(sportScheduleData));
+  // Laad DB data als basis
+  sportScheduleData = {};
   (existing||[]).forEach(s => {
-    if (!dbData[s.sport_date]) dbData[s.sport_date] = {};
-    dbData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
+    if (!sportScheduleData[s.sport_date]) sportScheduleData[s.sport_date] = {};
+    sportScheduleData[s.sport_date][s.profile_id] = s.note || (s.has_sport ? 'sport' : null);
   });
-  // Merge: DB als basis, lokale sportScheduleData (al gewijzigd) heeft voorrang
-  Object.keys(dbData).forEach(date => {
+  // Herstel lokale wijzigingen: lokale state heeft altijd voorrang
+  Object.keys(localSnapshot).forEach(date => {
     if (!sportScheduleData[date]) sportScheduleData[date] = {};
-    Object.keys(dbData[date]).forEach(pid => {
-      if (sportScheduleData[date][pid] === undefined) {
-        sportScheduleData[date][pid] = dbData[date][pid];
-      }
+    Object.keys(localSnapshot[date]).forEach(pid => {
+      sportScheduleData[date][pid] = localSnapshot[date][pid];
     });
   });
 
@@ -3618,11 +3618,7 @@ function updateSportCell(cell, info) {
 }
 
 function toggleSport(dateStr, profileId) {
-  // Legacy - gebruik cycleSportEvent
-  if (!sportScheduleData[dateStr]) sportScheduleData[dateStr] = {};
-  const hasSport = sportScheduleData[dateStr][profileId] === 'sport';
-  sportScheduleData[dateStr][profileId] = hasSport ? null : 'sport';
-  renderSportSchedule();
+  // Legacy stub — cycleSportEvent wordt gebruikt
 }
 
 function sportWeekStep(delta) {
@@ -6797,7 +6793,7 @@ boot();
 </div>
 
 <div id="add-meal-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
-  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px 24px 40px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">Gerecht toevoegen</div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -6849,7 +6845,7 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Mijn profiel</div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 24px 100px">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 100px">
 
     <!-- Avatar groot -->
     <div style="text-align:center;padding:24px 0 20px">
@@ -6930,7 +6926,7 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Boodschappen</div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px;overflow-y:auto">
 
     <!-- Voor welke dagen? -->
     <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
@@ -6996,7 +6992,7 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Vanavond koken</div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px;overflow-y:auto">
 
     <!-- Gerecht info -->
     <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--green);padding:20px;margin-bottom:16px">
@@ -7051,7 +7047,7 @@ boot();
 
 <!-- Sport toevoegen/bewerken modal -->
 <div id="add-sport-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:600;align-items:flex-end;justify-content:center">
-  <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px 24px 48px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:18px" id="sport-modal-title">Sport toevoegen</div>
       <button onclick="closeAddSportModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">&#x2715;</button>
