@@ -2619,19 +2619,31 @@ async function doCheckin() {
   
   // Bepaal meal_id: eerst todayMeal, anders weekmenu
   let mealId = todayMeal?.id;
-  if (!mealId && menuEntry) {
-    // Maak eerst een meals record aan voor dit weekmenu item
+  if (!mealId) {
+    // Maak meal record aan: gebruik menuEntry als beschikbaar, anders generiek
+    const mealType = menuEntry?.meal_id || 'anders';
     const {data:newMeal, error:mealErr} = await sb.from('meals').upsert({
       family_id: currentProfile.family_id,
-      meal_type: menuEntry.meal_id,
+      meal_type: mealType,
       eaten_at: todayDateStr2,
       ate_together: true,
     }, {onConflict:'family_id,eaten_at'}).select().single();
-    if (!mealErr && newMeal) mealId = newMeal.id;
+    if (!mealErr && newMeal) {
+      mealId = newMeal.id;
+      todayMeal = newMeal;
+    }
   }
 
   if (!mealId) {
-    alert('Geen gerecht gevonden voor vandaag. Log eerst een gerecht.');
+    // Laatste poging: zoek bestaand meal record voor deze dag
+    const {data:existMeal} = await sb.from('meals')
+      .select('id').eq('family_id', currentProfile.family_id)
+      .eq('eaten_at', todayDateStr2).maybeSingle();
+    if (existMeal) mealId = existMeal.id;
+  }
+
+  if (!mealId) {
+    alert('Kon geen gerecht record aanmaken. Probeer opnieuw.');
     return;
   }
 
