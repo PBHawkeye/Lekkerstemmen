@@ -1596,36 +1596,17 @@ async function loadData() {
   since.setDate(since.getDate()-21);
   const sinceStr = since.toISOString().split('T')[0];
 
-  // Haal sports + echt id op voor huidig profiel (ook in testmodus)
-  // In testmodus is profileId een fake UUID — zoek het echte op via naam
-  let realProfileId = profileId;
-  if (testModeActive) {
-    const p = TEST_PERSONS.find(x => testUuid(x.id) === profileId);
-    if (p) {
-      const { data: realProfile } = await sb.from('profiles')
-        .select('id, sports')
-        .eq('family_id', TEST_FAMILY_ID)
-        .ilike('name', p.name)
-        .maybeSingle();
-      if (realProfile) {
-        realProfileId = realProfile.id;
-        if (currentProfile) currentProfile.realId = realProfile.id;
-        if (realProfile.sports && currentProfile) {
-          try {
-            currentProfile.sports = typeof realProfile.sports === 'string'
-              ? JSON.parse(realProfile.sports) : realProfile.sports;
-          } catch(e) {}
-        }
-      }
-    }
-  } else {
-    const { data: profileData } = await sb.from('profiles').select('sports').eq('id', profileId).maybeSingle();
-    if (profileData?.sports && currentProfile) {
-      try {
-        currentProfile.sports = typeof profileData.sports === 'string'
-          ? JSON.parse(profileData.sports) : profileData.sports;
-      } catch(e) {}
-    }
+  // Haal sports op voor huidig profiel
+  // currentProfile.id is altijd het echte Supabase profiel-ID na login
+  const { data: profileData } = await sb.from('profiles')
+    .select('sports')
+    .eq('id', currentProfile.id)
+    .maybeSingle();
+  if (profileData?.sports && currentProfile) {
+    try {
+      currentProfile.sports = typeof profileData.sports === 'string'
+        ? JSON.parse(profileData.sports) : profileData.sports;
+    } catch(e) {}
   }
 
   // Alles parallel ophalen
@@ -4138,11 +4119,9 @@ async function saveProfileSport() {
   const editIndex = parseInt(document.getElementById('sport-edit-index').value);
   if (editIndex >= 0) sports[editIndex] = newSport;
   else { if (sports.length >= 2) return; sports.push(newSport); }
-  // Gebruik het echte Supabase ID (in testmodus verschilt currentProfile.id van het echte id)
-  const updateId = currentProfile.realId || currentProfile.id;
   const { error: sportError } = await sb.from('profiles')
     .update({ sports: JSON.stringify(sports) })
-    .eq('id', updateId);
+    .eq('id', currentProfile.id);
 
   if (sportError) {
     console.error('Sports opslaan mislukt:', sportError);
@@ -4162,10 +4141,9 @@ async function saveProfileSport() {
 async function deleteProfileSport(index) {
   const sports = getProfileSports(currentProfile);
   sports.splice(index, 1);
-  const deleteId = currentProfile.realId || currentProfile.id;
   const { error: delError } = await sb.from('profiles')
     .update({ sports: JSON.stringify(sports) })
-    .eq('id', deleteId);
+    .eq('id', currentProfile.id);
   if (!delError) currentProfile.sports = sports;
   renderProfileSportsList();
 }
@@ -6481,7 +6459,7 @@ function homeGetDate() {
 }
 
 // ── TEST TOGGLE ────────────────────────────────────────────────
-let testModeActive = true;
+let testModeActive = false;
 
 function toggleTestMode() {
   testModeActive = !testModeActive;
