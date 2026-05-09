@@ -6456,7 +6456,15 @@ async function confirmMealPick() {
     return member ? member.name : null;
   }).filter(Boolean);
 
-  await sb.from('weekly_menu').upsert({
+  console.log('[Menu] Opslaan:', dateStr, mealName, 'family:', currentProfile.family_id);
+
+  // Verwijder bestaand menu-item voor deze dag, dan opnieuw invoegen
+  await sb.from('weekly_menu')
+    .delete()
+    .eq('family_id', currentProfile.family_id)
+    .eq('day_date', dateStr);
+
+  const { error: menuErr } = await sb.from('weekly_menu').insert({
     family_id: currentProfile.family_id,
     week_of: weekStart,
     day_date: dateStr,
@@ -6470,8 +6478,15 @@ async function confirmMealPick() {
     corvee_ids: selectedCorvee.length ? JSON.stringify(selectedCorvee) : null,
     corvee_names: corveeNames.length ? corveeNames.join(', ') : null,
     published: false,
-  },{onConflict:'family_id,day_date'});
+  });
 
+  if (menuErr) {
+    console.error('[Menu] Opslaan mislukt:', menuErr);
+    alert('Menu opslaan mislukt: ' + menuErr.message);
+    return;
+  }
+
+  console.log('[Menu] Opgeslagen OK');
   await loadData();
   renderMenuScreen();
   show('menu');
