@@ -2696,10 +2696,15 @@ async function doCheckin() {
   if (existingIdx >= 0) checkins[existingIdx] = newCheckin;
   else checkins.unshift(newCheckin);
 
+  // Toon success meteen met lokale data (voor snelle feedback)
+  refreshHome();
+
   // Reset naar vandaag na stemmen
   homeDayOffset = 0;
-  // Herlaad data op de achtergrond
-  loadData().then(() => refreshHome());
+  refreshHome(); // opnieuw met juiste dag
+
+  // Herlaad data op de achtergrond zonder refreshHome te overschrijven
+  loadData();
   const msgs = {3:['\uD83D\uDE0B','Geweldig!','Fijn dat het smaakte!'],2:['\uD83D\uDE10','Oké dan!','Goed dat je het hebt doorgegeven.'],1:['\uD83D\uDE15','Noteer!','Vrijdag mag jij kiezen wat er volgende week op tafel komt.']};
   const m = msgs[selectedScore];
   document.getElementById('success-emoji').textContent=m[0];
