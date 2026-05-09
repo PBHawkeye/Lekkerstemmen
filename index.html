@@ -1611,6 +1611,7 @@ async function loadData() {
   if (!currentProfile) return;
   const familyId = currentProfile.family_id;
   const profileId = currentProfile.id;
+  console.log('[loadData] familyId:', familyId, 'profileId:', profileId);
   const weekStart = testMondayOfWeek();
   const since = new Date();
   since.setDate(since.getDate()-21);
