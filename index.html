@@ -1677,8 +1677,8 @@ async function loadData() {
   let cis = cisRes.data||[];
   if (cis.length === 0) {
     const {data:direct} = await sb.from('checkins')
-      .select('id,profile_id,meal_id,score,drink,comment,meals(eaten_at,meal_type,ate_together)')
-      .eq('profile_id',profileId).order('checked_in_at',{ascending:false}).limit(60);
+      .select('id,profile_id,meal_id,score,drink,comment,pre_sport_food,post_sport_food,ate_with_family,sport_type,meals(eaten_at,meal_type,ate_together)')
+      .eq('profile_id',profileId).order('id',{ascending:false}).limit(60);
     if (direct?.length) {
       cis = direct.map(c=>({
         ...c,
@@ -2816,7 +2816,7 @@ async function renderStats() {
     const {data:directAll} = await sb.from('checkins')
       .select('*, profiles(name, family_id), meals(eaten_at, meal_type, ate_together)')
       .eq('profiles.family_id', familyId)
-      .order('checked_in_at',{ascending:false})
+      .order('id',{ascending:false})
       .limit(100);
     if (directAll) {
       allCis = directAll
