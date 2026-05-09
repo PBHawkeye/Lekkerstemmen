@@ -1270,11 +1270,15 @@ function renderTestPersons() {
   if (!el) return;
   el.innerHTML = '';
   const persons = familyProfiles.length > 0 ? familyProfiles : TEST_PERSONS;
+  const seen = new Set();
   persons.forEach(p => {
+    const key = p.name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
     const btn = document.createElement('button');
-    const isActive = currentProfile && p.name.toLowerCase() === currentProfile.name.toLowerCase();
-    btn.style.cssText = 'padding:5px 10px;border-radius:99px;border:1.5px solid '+(isActive?'#1D9E75':'#444')+';background:'+(isActive?'#1D9E75':'transparent')+';font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:12px;color:'+(isActive?'white':'#aaa')+';cursor:pointer';
-    btn.textContent = (p.emoji || '\uD83D\uDC64') + ' ' + p.name;
+    const isActive = currentProfile && currentProfile.name.toLowerCase() === key;
+    btn.style.cssText = 'padding:5px 10px;border-radius:99px;border:1.5px solid '+(isActive?'#1D9E75':'#444')+';background:'+(isActive?'#1D9E75':'transparent')+';font-family:\'DM Sans\',sans-serif;font-weight:700;font-size:12px;color:'+(isActive?'white':'#aaa')+';cursor:pointer;margin:2px';
+    btn.textContent = (p.emoji || '') + ' ' + p.name;
     btn.onclick = () => switchTestPerson(p.name.toLowerCase());
     el.appendChild(btn);
   });
@@ -1316,13 +1320,9 @@ function testResetToFriday() {
   testScenario(-8);
 }
 
-async function switchTestPerson(id) {
-  testPersonId = id;
-  const real = familyProfiles.find(p => p.name.toLowerCase() === id.toLowerCase())
-    || familyProfiles.find(p => p.name.toLowerCase().startsWith(id.toLowerCase()));
-  if (real) {
-    currentProfile = { ...real, sports: real.sports ? (typeof real.sports === 'string' ? JSON.parse(real.sports) : real.sports) : [] };
-  }
+async function switchTestPerson(name) {
+  testPersonId = name;
+  await setTestProfile(name);
   homeDayOffset = 0;
   renderTestPersons();
   show('loading');
@@ -1564,6 +1564,32 @@ async function doSetup() {
 }
 
 // ── LOAD ───────────────────────────────────────────────────────
+async function bootTestMode() {
+  // Laad gezinsleden direct via family_id (geen Supabase auth nodig)
+  const {data: members} = await sb.from('profiles')
+    .select('id,name,role,emoji,sports')
+    .eq('family_id', TEST_FAMILY_ID);
+  familyProfiles = members || [];
+  await setTestProfile(testPersonId);
+  updateScenarioHighlight();
+  await loadData();
+  renderTestPersons();
+  syncTestCreditsInput();
+  refreshHome();
+  show('home');
+}
+
+async function setTestProfile(nameOrId) {
+  const target = familyProfiles.find(p => p.name.toLowerCase() === nameOrId.toLowerCase())
+    || familyProfiles.find(p => p.name.toLowerCase().startsWith(nameOrId));
+  const src = target || familyProfiles[0];
+  if (!src) return false;
+  let sports = [];
+  try { sports = src.sports ? (typeof src.sports === 'string' ? JSON.parse(src.sports) : src.sports) : []; } catch(e) {}
+  currentProfile = { ...src, sports };
+  return true;
+}
+
 async function loadProfile() {
   if (TEST_MODE && currentProfile) { await loadData(); return; }
   const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
@@ -6789,32 +6815,24 @@ async function boot() {
   show('loading');
   initTestBar();
 
-  // Testmodus + productie: altijd via echte Supabase sessie
+  if (testModeActive) {
+    // Testmodus: direct opstarten via TEST_FAMILY_ID, geen auth vereist
+    await bootTestMode();
+    return;
+  }
+
+  // Productie: via Supabase auth sessie
   const {data:{session}} = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
-    await loadProfile(); // laadt echte currentProfile en familyProfiles
-    if (testModeActive) {
-      // Wissel naar gewenste testpersoon als die verschilt van ingelogde
-      const target = familyProfiles.find(p => p.name.toLowerCase() === testPersonId.toLowerCase())
-        || familyProfiles.find(p => p.name.toLowerCase().startsWith(testPersonId));
-      if (target && target.id !== currentProfile.id) {
-        currentProfile = { ...target, sports: target.sports ? (typeof target.sports === 'string' ? JSON.parse(target.sports) : target.sports) : [] };
-        await loadData();
-      }
-      updateScenarioHighlight();
-      syncTestCreditsInput();
-      renderTestPersons();
-    }
+    await loadProfile();
     refreshHome();
     show('home');
   } else {
     show('auth');
     sb.auth.onAuthStateChange(async(event,session)=>{
-      if (!testModeActive) {
-        if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); show('home'); }
-        else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
-      }
+      if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); refreshHome(); show('home'); }
+      else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
     });
   }
 }
