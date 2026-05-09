@@ -1673,18 +1673,27 @@ async function loadData() {
   await initCreditsIfNew();
   await loadCredits();
 
-  // Check-ins: als view leeg, direct ophalen
+  // Check-ins laden
   let cis = cisRes.data||[];
   if (cis.length === 0) {
     const {data:direct} = await sb.from('checkins')
-      .select('id,profile_id,meal_id,score,drink,comment,pre_sport_food,post_sport_food,ate_with_family,sport_type,meals(eaten_at,meal_type,ate_together)')
+      .select('id,profile_id,meal_id,score,drink,comment,pre_sport_food,post_sport_food,ate_with_family,sport_type')
       .eq('profile_id',profileId).order('id',{ascending:false}).limit(60);
     if (direct?.length) {
+      const mealIds = [...new Set(direct.map(c=>c.meal_id).filter(Boolean))];
+      const {data:mealsData} = mealIds.length
+        ? await sb.from('meals').select('id,eaten_at,meal_type,ate_together').in('id', mealIds)
+        : {data:[]};
+      const mealsMap = {};
+      (mealsData||[]).forEach(m => { mealsMap[m.id] = m; });
       cis = direct.map(c=>({
         ...c,
-        eaten_at:c.meals?.eaten_at, meal_type:c.meals?.meal_type,
-        ate_together:c.meals?.ate_together, had_sport:false,
-        child_name:currentProfile.name, family_id:familyId,
+        eaten_at: mealsMap[c.meal_id]?.eaten_at,
+        meal_type: mealsMap[c.meal_id]?.meal_type,
+        ate_together: mealsMap[c.meal_id]?.ate_together,
+        had_sport: false,
+        child_name: currentProfile.name,
+        family_id: familyId,
       }));
     }
   }
@@ -2813,23 +2822,29 @@ async function renderStats() {
 
   // Als view leeg is, haal direct op via joins
   if (!allCis || allCis.length === 0) {
-    const {data:directAll} = await sb.from('checkins')
-      .select('*, profiles(name, family_id), meals(eaten_at, meal_type, ate_together)')
-      .eq('profiles.family_id', familyId)
-      .order('id',{ascending:false})
-      .limit(100);
-    if (directAll) {
-      allCis = directAll
-        .filter(c => c.profiles?.family_id === familyId)
-        .map(c => ({
+    // Haal checkins op via profiel IDs van dit gezin
+    const memberIds = getFamilyMembers().map(m => m.id).filter(Boolean);
+    if (memberIds.length) {
+      const {data:directAll2} = await sb.from('checkins')
+        .select('id,profile_id,meal_id,score,drink,comment,pre_sport_food,post_sport_food,ate_with_family,sport_type')
+        .in('profile_id', memberIds)
+        .order('id',{ascending:false})
+        .limit(100);
+      if (directAll2?.length) {
+        const mids = [...new Set(directAll2.map(c=>c.meal_id).filter(Boolean))];
+        const {data:mdata} = mids.length ? await sb.from('meals').select('id,eaten_at,meal_type,ate_together').in('id',mids) : {data:[]};
+        const mmap = {}; (mdata||[]).forEach(m=>{mmap[m.id]=m;});
+        const pmap = {}; getFamilyMembers().forEach(m=>{pmap[m.id]=m;});
+        allCis = directAll2.map(c=>({
           ...c,
-          child_name: c.profiles?.name || 'Onbekend',
-          eaten_at: c.meals?.eaten_at,
-          meal_type: c.meals?.meal_type,
-          ate_together: c.meals?.ate_together,
+          child_name: pmap[c.profile_id]?.name || 'Onbekend',
+          eaten_at: mmap[c.meal_id]?.eaten_at,
+          meal_type: mmap[c.meal_id]?.meal_type,
+          ate_together: mmap[c.meal_id]?.ate_together,
           had_sport: false,
           family_id: familyId,
         }));
+      }
     }
   }
   const cis = allCis||[];
