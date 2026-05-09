@@ -1596,6 +1596,16 @@ async function loadData() {
   since.setDate(since.getDate()-21);
   const sinceStr = since.toISOString().split('T')[0];
 
+  // Haal sports op voor huidig profiel (ook in testmodus)
+  const { data: profileData } = await sb.from('profiles').select('sports').eq('id', profileId).maybeSingle();
+  if (profileData?.sports && currentProfile) {
+    try {
+      currentProfile.sports = typeof profileData.sports === 'string'
+        ? JSON.parse(profileData.sports)
+        : profileData.sports;
+    } catch(e) {}
+  }
+
   // Alles parallel ophalen
   const [
     mealRes,
@@ -3970,15 +3980,17 @@ let selectedSportColor = null;
 
 // Test sport profielen (testmodus)
 const testSportProfiles = {
+  // Testdata voor andere gezinsleden (niet het ingelogde profiel)
+  // Paul en Dorres: geen hardcoded sport, gebruiken eigen profiel via loadData
   'a0000000-0000-0000-0000-000000000003': [
-    { id:'voetbal', label:'Voetbal', emoji:'\u26bd', color:'#2ECC71', bg:'#E8F8F0', border:'#2ECC71' }
+    { id:'voetbal',  label:'Voetbal',  emoji:'\u26bd',         color:'#2ECC71', bg:'#E8F8F0', border:'#2ECC71' }
   ],
   'a0000000-0000-0000-0000-000000000004': [
-    { id:'zwemmen', label:'Zwemmen', emoji:'\uD83C\uDFCA', color:'#3498DB', bg:'#EBF5FB', border:'#3498DB' },
-    { id:'tennis',  label:'Tennis',  emoji:'\uD83C\uDFBE', color:'#F39C12', bg:'#FEF9E7', border:'#F39C12' }
+    { id:'zwemmen',  label:'Zwemmen',  emoji:'\uD83C\uDFCA',   color:'#3498DB', bg:'#EBF5FB', border:'#3498DB' },
+    { id:'tennis',   label:'Tennis',   emoji:'\uD83C\uDFBE',   color:'#F39C12', bg:'#FEF9E7', border:'#F39C12' }
   ],
   'a0000000-0000-0000-0000-000000000005': [
-    { id:'turnen', label:'Turnen', emoji:'\uD83E\uDD38', color:'#9B59B6', bg:'#F5EEF8', border:'#9B59B6' }
+    { id:'turnen',   label:'Turnen',   emoji:'\uD83E\uDD38',   color:'#9B59B6', bg:'#F5EEF8', border:'#9B59B6' }
   ],
 };
 
@@ -3993,8 +4005,14 @@ function getProfileSports(profile) {
 }
 
 function getSportsForProfile(profileId) {
+  // Eigen profiel: gebruik currentProfile.sports (ook in testmodus, na loadData)
+  if (profileId === currentProfile?.id) {
+    const own = getProfileSports(currentProfile);
+    if (own.length > 0) return own;
+  }
+  // Testmodus fallback voor andere gezinsleden
   if (testModeActive) return testSportProfiles[profileId] || [];
-  if (profileId === currentProfile?.id) return getProfileSports(currentProfile);
+  // Productie: zoek in familyProfiles
   const fp = familyProfiles.find(p => p.id === profileId);
   if (fp) return getProfileSports(fp);
   return [];
