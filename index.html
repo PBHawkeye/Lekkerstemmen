@@ -4096,18 +4096,33 @@ async function saveProfileSport() {
   const editIndex = parseInt(document.getElementById('sport-edit-index').value);
   if (editIndex >= 0) sports[editIndex] = newSport;
   else { if (sports.length >= 2) return; sports.push(newSport); }
-  const { error: sportError } = await sb.from('profiles')
+  console.log('[Sport] Opslaan voor profiel ID:', currentProfile.id);
+  console.log('[Sport] Sports data:', JSON.stringify(sports));
+
+  const { data: updateData, error: sportError } = await sb.from('profiles')
     .update({ sports: JSON.stringify(sports) })
-    .eq('id', currentProfile.id);
+    .eq('id', currentProfile.id)
+    .select();
+
+  console.log('[Sport] Update resultaat:', updateData, 'Fout:', sportError);
 
   if (sportError) {
-    console.error('Sports opslaan mislukt:', sportError);
+    console.error('[Sport] Opslaan mislukt:', sportError);
     const errEl = document.getElementById('sport-modal-error');
     if (errEl) {
-      errEl.textContent = 'Opslaan mislukt. Controleer of de sports kolom bestaat in Supabase (zie migrations.sql).';
+      errEl.textContent = 'Fout: ' + sportError.message;
       errEl.style.display = '';
     }
     return;
+  }
+
+  if (!updateData || updateData.length === 0) {
+    console.warn('[Sport] Update uitgevoerd maar geen rijen aangepast. Profiel ID klopt niet of RLS blokkeert.');
+    const errEl = document.getElementById('sport-modal-error');
+    if (errEl) {
+      errEl.textContent = 'Opgeslagen maar 0 rijen aangepast — controleer of je ingelogd bent.';
+      errEl.style.display = '';
+    }
   }
 
   currentProfile.sports = sports;
