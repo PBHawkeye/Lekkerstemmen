@@ -2618,10 +2618,12 @@ async function doCheckin() {
 
   const todayDateStr2 = todayStr();
   const menuEntry = weeklyMenu.find(m => m.day_date === todayDateStr2 && m.published);
+  console.log("[Checkin] todayStr:", todayDateStr2, "homeDayOffset:", homeDayOffset, "testDayOffset:", testDayOffset);
+  console.log("[Checkin] todayMeal:", todayMeal?.id, "eaten_at:", todayMeal?.eaten_at);
   
   // Gebruik todayMeal alleen als die voor DEZE dag is
   let mealId = (todayMeal?.eaten_at === todayDateStr2) ? todayMeal?.id : null;
-  console.log("[Checkin] datum:", todayDateStr2, "mealId:", mealId, "todayMeal.eaten_at:", todayMeal?.eaten_at);
+  console.log("[Checkin] mealId na check:", mealId);
   if (!mealId) {
     // Zoek bestaand meal record voor deze dag
     const {data:existMeal} = await sb.from('meals')
