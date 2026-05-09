@@ -1596,14 +1596,36 @@ async function loadData() {
   since.setDate(since.getDate()-21);
   const sinceStr = since.toISOString().split('T')[0];
 
-  // Haal sports op voor huidig profiel (ook in testmodus)
-  const { data: profileData } = await sb.from('profiles').select('sports').eq('id', profileId).maybeSingle();
-  if (profileData?.sports && currentProfile) {
-    try {
-      currentProfile.sports = typeof profileData.sports === 'string'
-        ? JSON.parse(profileData.sports)
-        : profileData.sports;
-    } catch(e) {}
+  // Haal sports + echt id op voor huidig profiel (ook in testmodus)
+  // In testmodus is profileId een fake UUID — zoek het echte op via naam
+  let realProfileId = profileId;
+  if (testModeActive) {
+    const p = TEST_PERSONS.find(x => testUuid(x.id) === profileId);
+    if (p) {
+      const { data: realProfile } = await sb.from('profiles')
+        .select('id, sports')
+        .eq('family_id', TEST_FAMILY_ID)
+        .ilike('name', p.name)
+        .maybeSingle();
+      if (realProfile) {
+        realProfileId = realProfile.id;
+        if (currentProfile) currentProfile.realId = realProfile.id;
+        if (realProfile.sports && currentProfile) {
+          try {
+            currentProfile.sports = typeof realProfile.sports === 'string'
+              ? JSON.parse(realProfile.sports) : realProfile.sports;
+          } catch(e) {}
+        }
+      }
+    }
+  } else {
+    const { data: profileData } = await sb.from('profiles').select('sports').eq('id', profileId).maybeSingle();
+    if (profileData?.sports && currentProfile) {
+      try {
+        currentProfile.sports = typeof profileData.sports === 'string'
+          ? JSON.parse(profileData.sports) : profileData.sports;
+      } catch(e) {}
+    }
   }
 
   // Alles parallel ophalen
@@ -3606,9 +3628,7 @@ function cycleSportEvent(dateStr, profileId, cell) {
 function buildSportCycle(personalSports) {
   // Cyclus: null → sport1 → sport2 (als aanwezig) → laat thuis → weg → reis
   const cycle = [null];
-  if (!personalSports || personalSports.length === 0) {
-    cycle.push({ key: 'sport', isSport: false });
-  } else {
+  if (personalSports && personalSports.length > 0) {
     personalSports.forEach(sport => {
       cycle.push({ key: 'sport:' + sport.id, isSport: true, sport, late: false });
     });
@@ -4118,9 +4138,11 @@ async function saveProfileSport() {
   const editIndex = parseInt(document.getElementById('sport-edit-index').value);
   if (editIndex >= 0) sports[editIndex] = newSport;
   else { if (sports.length >= 2) return; sports.push(newSport); }
+  // Gebruik het echte Supabase ID (in testmodus verschilt currentProfile.id van het echte id)
+  const updateId = currentProfile.realId || currentProfile.id;
   const { error: sportError } = await sb.from('profiles')
     .update({ sports: JSON.stringify(sports) })
-    .eq('id', currentProfile.id);
+    .eq('id', updateId);
 
   if (sportError) {
     console.error('Sports opslaan mislukt:', sportError);
@@ -4140,9 +4162,10 @@ async function saveProfileSport() {
 async function deleteProfileSport(index) {
   const sports = getProfileSports(currentProfile);
   sports.splice(index, 1);
+  const deleteId = currentProfile.realId || currentProfile.id;
   const { error: delError } = await sb.from('profiles')
     .update({ sports: JSON.stringify(sports) })
-    .eq('id', currentProfile.id);
+    .eq('id', deleteId);
   if (!delError) currentProfile.sports = sports;
   renderProfileSportsList();
 }
@@ -4587,8 +4610,6 @@ async function analyzeRecipePhoto(inputEl) {
     const base64 = await fileToBase64(file);
     const mediaType = file.type || 'image/jpeg';
 
-    if (!getApiKey()) throw new Error('Geen API key. Stel die in via \u22EF \u2192 Profiel.');
-
     if (msgEl) msgEl.textContent = 'AI herkent recept...';
 
     const prompt = `Analyseer dit receptfoto en geef de volgende informatie terug als JSON:
@@ -4772,6 +4793,12 @@ async function anthropicFetch(body, cost, reason) {
   // Kinderen worden nooit geblokkeerd — alleen ouder ziet de melding
   const isParent = currentProfile?.role === 'parent';
 
+  // API key check centraal
+  if (!getApiKey()) {
+    showApiKeyWarning();
+    return null;
+  }
+
   if (isParent) {
     const ok = await deductCredit(cost || AI_CREDIT_COST, reason);
     if (!ok) {
@@ -4789,6 +4816,20 @@ async function anthropicFetch(body, cost, reason) {
     body: JSON.stringify(body),
   });
   return res;
+}
+
+function showApiKeyWarning() {
+  const msg = 'Geen API key ingesteld. Ga naar \u22EF \u2192 Profiel om je Anthropic API key in te voeren.';
+  let toast = document.getElementById('credit-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'credit-toast';
+    toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#E67E22;color:white;padding:12px 20px;border-radius:var(--r);font-weight:700;font-size:14px;z-index:3000;max-width:320px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.2)';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.display = '';
+  setTimeout(() => { toast.style.display = 'none'; }, 6000);
 }
 
 function showCreditWarning() {
@@ -4983,7 +5024,6 @@ async function generateShoppingList() {
   ].join('\n');
 
   try {
-    if (!getApiKey()) throw new Error('Geen API key. Ga naar \u22EF \u2192 Profiel.');
     const res = await anthropicFetch({
         model:'claude-sonnet-4-5',
         max_tokens:800,
