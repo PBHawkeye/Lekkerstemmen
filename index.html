@@ -2616,14 +2616,12 @@ function selectDrink(d) {
 async function doCheckin() {
   if (!selectedScore) return;
 
-  console.log("[Checkin] START score:", selectedScore, "profile:", currentProfile?.id, "family:", currentProfile?.family_id);
-
   const todayDateStr2 = todayStr();
-  console.log("[Checkin] datum:", todayDateStr2, "todayMeal:", todayMeal?.id, "homeDayOffset:", homeDayOffset);
   const menuEntry = weeklyMenu.find(m => m.day_date === todayDateStr2 && m.published);
   
-  // Bepaal meal_id: eerst todayMeal, anders weekmenu
-  let mealId = todayMeal?.id;
+  // Gebruik todayMeal alleen als die voor DEZE dag is
+  let mealId = (todayMeal?.eaten_at === todayDateStr2) ? todayMeal?.id : null;
+  console.log("[Checkin] datum:", todayDateStr2, "mealId:", mealId, "todayMeal.eaten_at:", todayMeal?.eaten_at);
   if (!mealId) {
     // Zoek bestaand meal record voor deze dag
     const {data:existMeal} = await sb.from('meals')
