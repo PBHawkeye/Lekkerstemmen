@@ -340,6 +340,14 @@
       <button class="test-day" onclick="testSetDay(1)" title="Morgen">+1</button>
       <button class="test-sim" onclick="simulateWeek()">⚡ Week</button>
     </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+      <span style="font-size:10px;font-weight:700;color:#FFB830;text-transform:uppercase;letter-spacing:.06em">Credits:</span>
+      <input type="number" id="test-credits-input" min="0" max="9999" value="200"
+        style="width:64px;padding:3px 7px;border-radius:6px;border:1px solid #444;background:#111;color:white;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif"
+        onkeydown="if(event.key==='Enter')setTestCredits()" />
+      <button onclick="setTestCredits()" style="padding:3px 10px;border-radius:99px;border:1px solid #FFB830;background:transparent;color:#FFB830;font-weight:700;font-size:11px;cursor:pointer">Instellen</button>
+      <span id="test-credits-display" style="font-size:11px;color:#aaa;margin-left:4px"></span>
+    </div>
   </div>
 </div>
 
@@ -1236,6 +1244,12 @@ function initTestBar() {
   updateTestDayDisplay();
   updateScenarioHighlight();
   console.log('[TestBar] Done, persons:', TEST_PERSONS.map(p=>p.name));
+}
+
+function syncTestCreditsInput() {
+  // Zet het invoerveld op het huidige saldo
+  const input = document.getElementById('test-credits-input');
+  if (input && cachedCredits !== null) input.value = cachedCredits;
 }
 
 function updateScenarioHighlight() {
@@ -4120,6 +4134,30 @@ function enableTestMode() {
   location.reload();
 }
 
+async function setTestCredits() {
+  const input = document.getElementById('test-credits-input');
+  const display = document.getElementById('test-credits-display');
+  const val = parseInt(input?.value);
+  if (isNaN(val) || val < 0) return;
+
+  // Verwijder bestaande transacties en schrijf nieuw saldo
+  const familyId = currentProfile?.family_id;
+  if (!familyId) { if (display) display.textContent = 'Geen gezin'; return; }
+
+  await sb.from('credits').delete().eq('family_id', familyId);
+  await sb.from('credits').insert({
+    family_id: familyId,
+    amount: val,
+    reason: 'Test: handmatig ingesteld',
+  });
+  cachedCredits = val;
+  renderCreditsDisplay();
+  if (display) {
+    display.textContent = '✓ ' + val + ' ingesteld';
+    setTimeout(() => { display.textContent = ''; }, 2000);
+  }
+}
+
 
 // ── KOKEN SCHERM ────────────────────────────────────────────────
 let currentCookEntry = null;
@@ -6694,6 +6732,7 @@ async function boot() {
       console.error('[Boot] loadData error:', e);
     }
     refreshHome();
+    syncTestCreditsInput();
     show('home');
   } else {
     const {data:{session}} = await sb.auth.getSession();
