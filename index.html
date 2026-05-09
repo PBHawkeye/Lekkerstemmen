@@ -42,7 +42,7 @@
       --teal-light:   #E8F7F2;
     }
     html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
-    .screen { display: none; height: 100vh; flex-direction: column; max-width: 480px; margin: 0 auto; overflow: hidden; position: relative; z-index: 0; }
+    .screen { display: none; min-height: 100vh; flex-direction: column; max-width: 480px; margin: 0 auto; padding-bottom: 80px; position: relative; z-index: 0; }
     .screen.active { display: flex; }
     .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 12px; }
     .logo { display:flex; align-items:center; }
@@ -764,7 +764,7 @@
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
+  <div style="flex:1;padding:0 16px 100px">
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5" id="sport-desc">
       Plan hier de sportdagen van de kinderen. Dit helpt bij het kiezen van een passend gerecht op drukke dagen.
     </div>
@@ -799,7 +799,7 @@
 </svg><span style="font-family:'Fraunces',serif;font-weight:700;font-size:20px;color:var(--text);letter-spacing:-0.3px">Lekker</span><span style="font-family:'Fraunces',serif;font-weight:900;font-size:20px;color:var(--green);letter-spacing:-0.3px">stemmen</span></div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
+  <div style="flex:1;padding:0 16px 100px">
     <div style="padding:0 0 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px">Week van</div>
       <div style="font-size:18px;font-weight:800;color:var(--text)" id="status-week-label">—</div>
@@ -883,7 +883,7 @@
     </div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 100px">
+  <div style="flex:1;padding:0 24px 100px">
 
     <!-- Gezinsleden sectie -->
     <div style="margin-bottom:24px">
@@ -958,7 +958,7 @@
     </div>
     <button id="md-recipe-btn" onclick="openMealDetailRecipe()" style="display:none;width:36px;height:36px;border-radius:50%;background:var(--green-bg);border:1.5px solid var(--border);font-size:18px;cursor:pointer" title="Recept">&#x1F4D6;</button>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
+  <div style="flex:1;padding:0 16px 100px">
     <div style="text-align:center;padding:12px 0 20px">
       <div style="font-size:26px;font-weight:800;color:var(--text);font-family:'Fraunces',serif" id="md-name">—</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px" id="md-note"></div>
@@ -6933,7 +6933,7 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Mijn profiel</div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 24px 100px">
+  <div style="flex:1;padding:0 24px 100px">
 
     <!-- Avatar groot -->
     <div style="text-align:center;padding:24px 0 20px">
@@ -7014,7 +7014,7 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Boodschappen</div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
+  <div style="flex:1;padding:0 16px 100px">
 
     <!-- Voor welke dagen? -->
     <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
@@ -7080,7 +7080,7 @@ boot();
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Vanavond koken</div>
     <div style="width:38px"></div>
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 100px">
+  <div style="flex:1;padding:0 16px 100px">
 
     <!-- Gerecht info -->
     <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--green);padding:20px;margin-bottom:16px">
