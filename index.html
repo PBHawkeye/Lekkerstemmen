@@ -3647,32 +3647,56 @@ function sportWeekStep(delta) {
 }
 
 async function saveSportSchedule() {
-  const kids = getFamilyMembers().filter(p=>p.role==='child');
   const dates = getSportWeekDates(sportWeekOffset);
   const familyId = currentProfile.family_id;
-  const rows = [];
   const allMembers = getFamilyMembers();
+  const btn = document.querySelector('[onclick="saveSportSchedule()"]');
+
+  console.log('[Sport save] familyId:', familyId);
+  console.log('[Sport save] members:', allMembers.map(m=>m.name+':'+m.id));
+  console.log('[Sport save] data:', JSON.stringify(sportScheduleData));
+
+  // Verwijder bestaande data voor deze week en leden, dan opnieuw invoegen
+  const memberIds = allMembers.map(m => m.id);
+
+  const { error: delErr } = await sb.from('sport_schedule')
+    .delete()
+    .eq('family_id', familyId)
+    .gte('sport_date', dates[0])
+    .lte('sport_date', dates[6])
+    .in('profile_id', memberIds);
+
+  if (delErr) { console.error('[Sport save] Delete fout:', delErr); }
+
+  // Alleen niet-lege cellen invoegen
+  const rows = [];
   dates.forEach(d => {
     allMembers.forEach(member => {
       const eventType = sportScheduleData[d]?.[member.id] || null;
-      const hasSport = eventType !== null;
-      rows.push({
-        family_id: familyId,
-        profile_id: member.id,
-        sport_date: d,
-        has_sport: hasSport,
-        note: eventType, // sla type op als note
-      });
+      if (eventType !== null) {
+        rows.push({
+          family_id: familyId,
+          profile_id: member.id,
+          sport_date: d,
+          has_sport: true,
+          note: eventType,
+        });
+      }
     });
   });
-  const { error: sportSaveErr } = await sb.from('sport_schedule').upsert(rows, {onConflict:'family_id,profile_id,sport_date'});
-  const btn = document.querySelector('[onclick="saveSportSchedule()"]');
-  if (sportSaveErr) {
-    console.error('Sport save fout:', sportSaveErr);
-    if (btn) { btn.textContent = 'Fout bij opslaan'; setTimeout(()=>btn.textContent='Sportdagen opslaan ✓',2000); }
-  } else {
-    if (btn) { btn.textContent='✓ Opgeslagen!'; setTimeout(()=>btn.textContent='Sportdagen opslaan ✓',1500); }
+
+  console.log('[Sport save] Rows to insert:', rows.length, rows);
+
+  if (rows.length > 0) {
+    const { error: insErr } = await sb.from('sport_schedule').insert(rows);
+    if (insErr) {
+      console.error('[Sport save] Insert fout:', insErr);
+      if (btn) { btn.textContent = 'Fout: ' + insErr.message; setTimeout(()=>btn.textContent='Sportdagen opslaan \u2713',3000); }
+      return;
+    }
   }
+
+  if (btn) { btn.textContent='\u2713 Opgeslagen!'; setTimeout(()=>btn.textContent='Sportdagen opslaan \u2713',1500); }
 }
 
 // ── AI MENUVOORSTEL ──────────────────────────────────────────────
@@ -4200,7 +4224,7 @@ async function setTestCredits() {
   if (isNaN(val) || val < 0) return;
 
   // Verwijder bestaande transacties en schrijf nieuw saldo
-  const familyId = currentProfile?.family_id;
+  const familyId = currentProfile?.family_id || TEST_FAMILY_ID;
   if (!familyId) { if (display) display.textContent = 'Geen gezin'; return; }
 
   await sb.from('credits').delete().eq('family_id', familyId);
@@ -4725,11 +4749,14 @@ let cachedCredits = null;        // lokale cache om DB-calls te minimaliseren
 
 async function loadCredits() {
   // Haal huidig saldo op: som van alle transacties voor dit gezin
+  const famId = currentProfile?.family_id || TEST_FAMILY_ID;
   const { data, error } = await sb.from('credits')
     .select('amount')
-    .eq('family_id', currentProfile.family_id);
+    .eq('family_id', famId);
   if (error) { console.error('Credits load error:', error); return AI_CREDITS_START; }
   cachedCredits = (data || []).reduce((sum, r) => sum + r.amount, 0);
+  renderCreditsDisplay();
+  syncTestCreditsInput();
   return cachedCredits;
 }
 
@@ -4747,29 +4774,28 @@ function renderCreditsDisplay() {
 }
 
 async function deductCredit(cost, reason) {
-  // Schrijf negatieve transactie naar credits tabel
-  // Geeft true terug als gelukt, false bij onvoldoende saldo
   const current = getAICredits();
   const needed = cost || AI_CREDIT_COST;
   if (current < needed) return false;
 
+  const familyId = currentProfile?.family_id;
+  if (!familyId) { console.warn('deductCredit: geen family_id'); return true; }
+
   const deduction = -(needed);
   const { error } = await sb.from('credits').insert({
-    family_id: currentProfile.family_id,
+    family_id: familyId,
     amount: deduction,
     reason: reason || 'AI aanroep',
   });
+
   if (error) {
-    console.error('Credit deduct error:', error);
-    // Tabel bestaat mogelijk nog niet - toon melding aan ouder
-    if (currentProfile?.role === 'parent') {
-      console.warn('Credits tabel niet bereikbaar. Voer migrations.sql uit in Supabase.');
-    }
+    console.error('Credit deduct error:', error.message, error);
     return true; // niet blokkeren bij technische fout
   }
 
   cachedCredits = current + deduction;
   renderCreditsDisplay();
+  syncTestCreditsInput(); // update ook testbalk
   return true;
 }
 
