@@ -1895,7 +1895,7 @@ function refreshHome() {
     const isPast = ds < todayStr();
     const isFuture = ds > todayStr();
     const menuEntry = weeklyMenu.find(m=>m.day_date===ds&&m.published);
-    const ci = checkins.find(c=>c.eaten_at===ds);
+    const ci = checkins.find(c=>c.eaten_at===ds && c.profile_id===currentProfile.id);
     const score = ci?.score != null ? parseInt(ci.score) : null;
 
     const cell = document.createElement('div');
