@@ -2437,6 +2437,8 @@ function renderCustomMealsList() {
 
 
 function openAddMealSheet() {
+  recipePhotos = [];
+  renderRecipePhotos();
   const sheet = document.getElementById('add-meal-sheet');
   if (sheet) { sheet.style.display = 'flex'; renderEmojiPicker(); }
   // Reset velden
@@ -2457,6 +2459,8 @@ function closeAddMealSheet() {
 async function addCustomMeal() {
   const name = document.getElementById('new-meal-name').value.trim();
   const note = document.getElementById('new-meal-note').value.trim();
+  const ingredients = document.getElementById('new-meal-ingredients')?.value?.trim() || null;
+  const instructions = document.getElementById('new-meal-instructions')?.value?.trim() || null;
   const errEl = document.getElementById('meals-error');
   hide(errEl);
   if (!name) { unhide(errEl); errEl.textContent='Geef de gerecht een naam.'; return; }
@@ -2465,6 +2469,7 @@ async function addCustomMeal() {
   const {error} = await sb.from('custom_meals').insert({
     family_id:currentProfile.family_id, name, emoji:selectedEmoji, note:note||null,
     recipe_url: url||null, side_dish: side||null,
+    ingredients: ingredients||null, instructions: instructions||null,
   });
   if (error) {
     unhide(errEl);
@@ -4712,6 +4717,97 @@ function clearRecipePhoto() {
     if (el) el.value = '';
   });
   if (status) status.style.display = 'none';
+}
+
+let recipePhotos = [];
+
+function addRecipePhoto(inputEl) {
+  Array.from(inputEl.files || []).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      recipePhotos.push({ base64: e.target.result.split(',')[1], mediaType: file.type || 'image/jpeg' });
+      renderRecipePhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  inputEl.value = '';
+}
+
+function renderRecipePhotos() {
+  const strip = document.getElementById('recipe-photos-strip');
+  const thumbs = document.getElementById('recipe-photos-thumbs');
+  const countEl = document.getElementById('recipe-photo-count');
+  if (!strip) return;
+  strip.style.display = recipePhotos.length ? '' : 'none';
+  if (countEl) countEl.textContent = recipePhotos.length;
+  if (!thumbs) return;
+  thumbs.innerHTML = '';
+  recipePhotos.forEach((p, i) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;flex-shrink:0';
+    const img = document.createElement('img');
+    img.src = 'data:' + p.mediaType + ';base64,' + p.base64;
+    img.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border)';
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.style.cssText = 'position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--coral);color:white;border:none;font-size:10px;cursor:pointer;padding:0';
+    del.onclick = () => { recipePhotos.splice(i, 1); renderRecipePhotos(); };
+    wrap.appendChild(img);
+    wrap.appendChild(del);
+    thumbs.appendChild(wrap);
+  });
+}
+
+async function analyzeAllRecipePhotos() {
+  if (!recipePhotos.length) return;
+  const statusEl = document.getElementById('meal-ai-photo-status');
+  const msgEl = document.getElementById('meal-ai-photo-msg');
+  const subEl = document.getElementById('meal-ai-photo-sub');
+  if (statusEl) statusEl.style.display = '';
+  if (msgEl) msgEl.textContent = 'AI analyseert ' + recipePhotos.length + ' foto’s...';
+  if (subEl) subEl.textContent = 'Even geduld';
+  try {
+    const existingName = document.getElementById('new-meal-name')?.value?.trim() || '';
+    const existingIngr = document.getElementById('new-meal-ingredients')?.value?.trim() || '';
+    const existingInst = document.getElementById('new-meal-instructions')?.value?.trim() || '';
+    const naamTip = existingName ? (', huidige naam: ' + existingName) : '';
+    const ingrTip = existingIngr ? ('Aanvullen met: ' + existingIngr) : 'Volledig uit foto';
+    const instTip = existingInst ? ('Combineer met: ' + existingInst.slice(0,100)) : '';
+    const prompt = 'Analyseer ' + recipePhotos.length + ' receptfoto(s). Geef terug als JSON object met deze velden: '
+      + '"naam" (gerechtnaam max 30 tekens' + naamTip + '), '
+      + '"emoji" (voedsel-emoji 1 teken), '
+      + '"notitie" (bereidingstip max 80 tekens), '
+      + '"ingredienten" (' + ingrTip + ', max 500 tekens), '
+      + '"bereidingswijze" (genummerde stappen' + instTip + ', max 2000 tekens), '
+      + '"bijgerecht" (of lege string), '
+      + '"recept_url" (indien zichtbaar of lege string). '
+      + 'Geef ALLEEN het JSON object terug, geen andere tekst.';
+    const imageContent = recipePhotos.map(p => ({ type: 'image', source: { type: 'base64', media_type: p.mediaType, data: p.base64 } }));
+    const response = await callAnthropicAPI({
+      model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+      messages: [{ role: 'user', content: [...imageContent, { type: 'text', text: prompt }] }]
+    });
+    if (!response) { if (msgEl) { msgEl.textContent = 'Geen credits.'; msgEl.style.color = 'var(--coral)'; } return; }
+    if (!response.ok) throw new Error('API ' + response.status);
+    const apiData = await response.json();
+    const raw = (apiData.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (!jm) throw new Error('Geen JSON');
+    const parsed = JSON.parse(jm[0]);
+    if (parsed.naam && !existingName) { const el = document.getElementById('new-meal-name'); if (el) el.value = parsed.naam; }
+    if (parsed.emoji) { mealSelectedEmoji = parsed.emoji; renderEmojiPickerInSheet(); }
+    if (parsed.notitie) { const el = document.getElementById('new-meal-note'); if (el) el.value = parsed.notitie; }
+    if (parsed.ingredienten) { const el = document.getElementById('new-meal-ingredients'); if (el) el.value = parsed.ingredienten; }
+    if (parsed.bereidingswijze) { const el = document.getElementById('new-meal-instructions'); if (el) el.value = parsed.bereidingswijze; }
+    if (parsed.bijgerecht) { const el = document.getElementById('new-meal-side'); if (el) el.value = parsed.bijgerecht; }
+    if (parsed.recept_url) { const el = document.getElementById('new-meal-url'); if (el) el.value = parsed.recept_url; }
+    if (msgEl) { msgEl.textContent = '✓ Velden ingevuld!'; msgEl.style.color = 'var(--green)'; }
+    if (subEl) subEl.textContent = 'Controleer en pas aan waar nodig';
+    setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 3000);
+  } catch(e) {
+    console.error('Recipe photos error:', e);
+    if (msgEl) { msgEl.textContent = 'Fout: ' + e.message; msgEl.style.color = 'var(--coral)'; }
+  }
 }
 
 async function analyzeRecipePhoto(inputEl) {
@@ -7034,9 +7130,17 @@ boot();
       </div>
     </div>
     <!-- Camera: twee aparte inputs voor camera vs bestandskiezer -->
-    <input type="file" id="recipe-camera-input" accept="image/*" capture="environment" style="display:none" onchange="analyzeRecipePhoto(this)" />
-    <input type="file" id="recipe-file-input"   accept="image/*" style="display:none" onchange="analyzeRecipePhoto(this)" />
+    <input type="file" id="recipe-camera-input" accept="image/*" capture="environment" style="display:none" onchange="addRecipePhoto(this)" multiple />
+    <input type="file" id="recipe-file-input" accept="image/*" style="display:none" onchange="addRecipePhoto(this)" multiple />
 
+    <!-- Foto strip -->
+    <div id="recipe-photos-strip" style="display:none;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Foto’s (<span id="recipe-photo-count">0</span>)</div>
+        <button onclick="analyzeAllRecipePhotos()" style="padding:5px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer">✨ AI analyseren</button>
+      </div>
+      <div id="recipe-photos-thumbs" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px"></div>
+    </div>
     <div class="label" style="margin-bottom:8px">Emoji</div>
     <div class="emoji-picker" id="emoji-picker" style="margin-bottom:16px"></div>
     <div class="label" style="margin-bottom:6px">Naam</div>
@@ -7045,7 +7149,15 @@ boot();
     </div>
     <div class="label" style="margin-bottom:6px">Notitie <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
     <div class="field" style="margin-bottom:10px">
-      <textarea id="new-meal-note" placeholder="bijv. met spekjes en worst" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:72px"></textarea>
+      <textarea id="new-meal-note" placeholder="bijv. met spekjes en worst" maxlength="200" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:60px"></textarea>
+    </div>
+    <div class="label" style="margin-bottom:6px">Ingrediënten <span style="font-weight:400;color:var(--muted)">(eigen aanpassingen)</span></div>
+    <div class="field" style="margin-bottom:10px">
+      <textarea id="new-meal-ingredients" placeholder="bijv. extra knoflook, zonder ui..." maxlength="500" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:80px"></textarea>
+    </div>
+    <div class="label" style="margin-bottom:6px">Bereidingswijze <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
+    <div class="field" style="margin-bottom:10px">
+      <textarea id="new-meal-instructions" placeholder="bijv. 1. ui fruiten, 2. ..." maxlength="2000" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:100px"></textarea>
     </div>
     <div class="label" style="margin-bottom:6px">Bijgerecht <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
     <div class="field" style="margin-bottom:10px">
