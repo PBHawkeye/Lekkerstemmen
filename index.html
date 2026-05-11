@@ -517,14 +517,14 @@
     <div class="insight" id="insight-personal-wrap">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="insight-badge">Jouw observatie</div>
-        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">\u21bb Nieuw</button>
+        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
       </div>
       <div class="insight-text" id="insight-text"></div>
     </div>
     <div class="insight" id="insight-family-wrap" style="margin-top:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="insight-badge">Gezinsweetje</div>
-        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">\u21bb Nieuw</button>
+        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
       </div>
       <div class="insight-text" id="insight-family-text">Laden...</div>
     </div>
@@ -1802,7 +1802,7 @@ async function refreshInsightPersonal() {
   } catch(e) {
     console.error('Personal insight fout:', e);
   } finally {
-    if (btn) { btn.textContent = '\u21bb Nieuw'; btn.disabled = false; }
+    if (btn) { btn.textContent = '↻ Nieuw'; btn.disabled = false; }
   }
 }
 
@@ -1936,10 +1936,14 @@ async function addSuggestedMeal(btn) {
   const { error } = await sb.from('custom_meals').insert({ family_id: currentProfile.family_id, name: naam, emoji: emoji });
   if (!error) {
     await loadData();
+    renderMealsScreen(); // ververs gerechtenlijst
     btn.textContent = '\u2713 Toegevoegd';
     btn.style.background = 'var(--green)'; btn.style.color = 'white';
+    btn.style.border = '1.5px solid var(--green)';
   } else {
-    btn.textContent = 'Fout'; btn.disabled = false;
+    console.error('Toevoegen mislukt:', error);
+    btn.textContent = 'Fout: ' + (error.message||'onbekend');
+    btn.disabled = false;
   }
 }
 
@@ -2033,7 +2037,7 @@ async function refreshInsightFamily(silent) {
     console.error('Family insight fout:', e);
     if (el && !el.textContent) el.textContent = 'Niet gelukt. Probeer opnieuw.';
   } finally {
-    if (!silent && btn) { btn.textContent = '\u21bb Nieuw'; btn.disabled = false; }
+    if (!silent && btn) { btn.textContent = '↻ Nieuw'; btn.disabled = false; }
   }
 }
 
@@ -4779,10 +4783,8 @@ async function openChangeMeal() {
   if (!currentCookEntry) return;
   const dateStr = currentCookEntry.day_date;
   if (!dateStr) return;
-  // Bereken dayIndex (0=maandag ... 6=zondag)
   const d = new Date(dateStr + 'T12:00:00');
   const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
-  // Gebruik de bestaande openMealPicker maar zet vlag voor terugkeer naar cook
   window._afterChangeMeal = true;
   openMealPicker(dateStr, dayIndex, currentCookEntry);
 }
