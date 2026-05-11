@@ -1791,14 +1791,14 @@ async function refreshInsightPersonal() {
     + 'Gebruik een passende emoji. Spreek ' + name + ' direct aan.';
 
   try {
-    const response = await callAnthropicAPI({
-      model: 'claude-sonnet-4-20250514', max_tokens: 150,
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5', max_tokens: 150,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!response || !response.ok) throw new Error('API fout');
     const apiData = await response.json();
     const txt = (apiData.content?.[0]?.text || '').trim();
-    if (txt && el) el.textContent = txt;
+    if (txt && el) { el.textContent = txt; try { localStorage.setItem('family_insight_refreshed_' + (currentProfile&&currentProfile.family_id||'') + '_text', txt); } catch(e2) {} }
   } catch(e) {
     console.error('Personal insight fout:', e);
   } finally {
@@ -1892,7 +1892,7 @@ function buildSuggestionsPrompt() {
 
 async function callSuggestionsAPI(prompt, intro) {
   try {
-    const response = await callAnthropicAPI({ model:'claude-sonnet-4-20250514', max_tokens:800, messages:[{role:'user',content:prompt}] });
+    const response = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:800, messages:[{role:'user',content:prompt}] });
     if (!response||!response.ok) throw new Error('API fout');
     const apiData = await response.json();
     const raw = (apiData.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
@@ -1960,16 +1960,13 @@ async function maybeAutoRefreshFamilyInsight() {
     else if (isSaturday && daysSince >= 1) shouldRefresh = true; // Op zaterdag, niet vandaag al gedaan
   }
 
-  if (shouldRefresh) {
+  const cached = localStorage.getItem(key + '_text');
+  if (shouldRefresh || !cached) {
     localStorage.setItem(key, now.toISOString());
-    await generateFamilyInsight();
+    await refreshInsightFamily(true);
   } else {
-    // Toon gecachede tekst als die er is
-    const cached = localStorage.getItem(key + '_text');
-    if (cached) {
-      const el = document.getElementById('insight-family-text');
-      if (el) el.textContent = cached;
-    }
+    const el = document.getElementById('insight-family-text');
+    if (el) el.textContent = cached;
   }
 }
 
@@ -2019,8 +2016,8 @@ async function refreshInsightFamily(silent) {
     + 'Geef een leuke, specifieke observatie van max 2 zinnen. Gebruik een emoji. Wees grappig en concreet.';
 
   try {
-    const response = await callAnthropicAPI({
-      model: 'claude-sonnet-4-20250514', max_tokens: 150,
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5', max_tokens: 150,
       messages: [{ role: 'user', content: prompt }]
     });
     if (!response || !response.ok) throw new Error('API fout');
@@ -4782,20 +4779,12 @@ async function openChangeMeal() {
   if (!currentCookEntry) return;
   const dateStr = currentCookEntry.day_date;
   if (!dateStr) return;
+  // Bereken dayIndex (0=maandag ... 6=zondag)
   const d = new Date(dateStr + 'T12:00:00');
-  const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
-  document.getElementById('meal-picker-title').textContent = dayNames[d.getDay()] + ' ' + d.getDate();
-  document.getElementById('meal-picker-sub').textContent = 'Kies een ander gerecht voor vanavond:';
-  document.getElementById('meal-picker-custom').value = '';
-  document.getElementById('meal-picker-note').value = currentCookEntry.note || '';
-  const msgEl = document.getElementById('meal-picker-message');
-  if (msgEl) msgEl.value = '';
-  selectedCook = currentCookEntry.cook_id || null;
-  renderCookPicker();
   const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
-  currentPickDay = { dateStr, dayIndex, existing: currentCookEntry };
+  // Gebruik de bestaande openMealPicker maar zet vlag voor terugkeer naar cook
   window._afterChangeMeal = true;
-  show('meal-picker');
+  openMealPicker(dateStr, dayIndex, currentCookEntry);
 }
 
 function generateCookRecipe() {
@@ -5139,8 +5128,8 @@ async function analyzeAllRecipePhotos() {
       + '"recept_url" (indien zichtbaar of lege string). '
       + 'Geef ALLEEN het JSON object terug, geen andere tekst.';
     const imageContent = recipePhotos.map(p => ({ type: 'image', source: { type: 'base64', media_type: p.mediaType, data: p.base64 } }));
-    const response = await callAnthropicAPI({
-      model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5', max_tokens: 1000,
       messages: [{ role: 'user', content: [...imageContent, { type: 'text', text: prompt }] }]
     });
     if (!response) { if (msgEl) { msgEl.textContent = 'Geen credits.'; msgEl.style.color = 'var(--coral)'; } return; }
@@ -7697,7 +7686,7 @@ boot();
       <div id="cook-side-dish" style="font-size:14px;color:var(--muted);margin-top:4px"></div>
       <div id="cook-note" style="font-size:13px;color:var(--muted);margin-top:4px;font-style:italic"></div>
       <div id="cook-change-btn-wrap" style="display:none;margin-top:14px">
-        <button onclick="openChangeMeal()" style="padding:8px 16px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.6);background:rgba(255,255,255,0.2);color:white;font-weight:700;font-size:13px;cursor:pointer">🔄 Toch iets anders?</button>
+        <button onclick="openChangeMeal()" style="padding:8px 16px;border-radius:99px;border:1.5px solid white;background:white;color:var(--green);font-weight:700;font-size:13px;cursor:pointer">🔄 Toch iets anders?</button>
       </div>
     </div>
 
