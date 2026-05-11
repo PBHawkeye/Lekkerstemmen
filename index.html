@@ -514,7 +514,20 @@
   <div class="week-row" id="week-row"></div>
   <div id="insight-block" class="hidden">
     <div class="section-title">Inzicht</div>
-    <div class="insight"><div class="insight-badge">AI observatie</div><div class="insight-text" id="insight-text"></div></div>
+    <div class="insight" id="insight-personal-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Jouw observatie</div>
+        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">\u21bb Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-text"></div>
+    </div>
+    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Gezinsweetje</div>
+        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">\u21bb Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-family-text">Laden...</div>
+    </div>
   </div>
   <div id="friday-block" class="hidden">
     <div class="section-title" id="stemdag-title">Stem voor volgende week &#x1F5F3;</div>
@@ -615,9 +628,14 @@
   </div>
   <div class="meals-wrap">
     <div style="padding:0 0 12px">
-      <button onclick="openAddMealSheet()" class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px">
-        <span style="font-size:18px">+</span> Gerecht toevoegen
-      </button>
+      <div style="display:flex;gap:8px">
+        <button onclick="openAddMealSheet()" class="btn btn-primary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:18px">+</span> Toevoegen
+        </button>
+        <button onclick="openMealSuggestions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green)">
+          <span style="font-size:16px">✨</span> AI voorstellen
+        </button>
+      </div>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
     <div class="label" style="margin-bottom:8px">Onze gerechtenlijst</div>
@@ -1753,6 +1771,275 @@ function navAction() {
   goScreen('checkin');
 }
 
+async function refreshInsightPersonal() {
+  const btn = document.getElementById('insight-personal-btn');
+  const el = document.getElementById('insight-text');
+  if (!el || !checkins.length) return;
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  // Bouw context op uit recente check-ins van deze persoon
+  const recent = checkins.slice(0, 10);
+  const lines = recent.map(c => {
+    const score = c.score === 3 ? 'lekker' : c.score === 2 ? 'matig' : 'niet lekker';
+    return (c.meal_type || 'gerecht') + ': ' + score + (c.comment ? ' (' + c.comment + ')' : '');
+  }).join(', ');
+  const name = currentProfile.name;
+
+  const prompt = 'Geef een persoonlijke, verrassende observatie voor ' + name + ' over zijn/haar eetgewoonten. '
+    + 'Recente check-ins: ' + lines + '. '
+    + 'Wees specifiek, grappig of inzichtelijk. Max 2 zinnen. Geen generieke tips. '
+    + 'Gebruik een passende emoji. Spreek ' + name + ' direct aan.';
+
+  try {
+    const response = await callAnthropicAPI({
+      model: 'claude-sonnet-4-20250514', max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!response || !response.ok) throw new Error('API fout');
+    const apiData = await response.json();
+    const txt = (apiData.content?.[0]?.text || '').trim();
+    if (txt && el) el.textContent = txt;
+  } catch(e) {
+    console.error('Personal insight fout:', e);
+  } finally {
+    if (btn) { btn.textContent = '\u21bb Nieuw'; btn.disabled = false; }
+  }
+}
+
+let mealSuggestionsAnswers = {};
+const CUISINES = ['Nederlands','Italiaans','Aziatisch','Mexicaans','Grieks','Indisch','Turks','Amerikaans'];
+const ADVENTURES = ['Vertrouwd','Beetje nieuw','Avontuurlijk'];
+const TIMES = ['< 30 min','30-45 min','> 45 min'];
+const DIETS = ['Geen','Vegetarisch','Glutenvrij','Lactosevrij','Geen vis','Geen noten'];
+
+function openMealSuggestions() {
+  const modal = document.getElementById('meal-suggestions-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  mealSuggestionsAnswers = {};
+  const uniqueMeals = new Set(checkins.filter(c=>c.score>=2).map(c=>c.meal_type)).size;
+  if (uniqueMeals >= 3) {
+    document.getElementById('meal-suggestions-questions').style.display = 'none';
+    document.getElementById('meal-suggestions-results').style.display = 'none';
+    document.getElementById('meal-suggestions-loading').style.display = '';
+    generateMealSuggestionsFromData();
+  } else {
+    renderSuggestionQuestions();
+    document.getElementById('meal-suggestions-questions').style.display = '';
+    document.getElementById('meal-suggestions-results').style.display = 'none';
+    document.getElementById('meal-suggestions-loading').style.display = 'none';
+  }
+}
+
+function closeMealSuggestions() {
+  const modal = document.getElementById('meal-suggestions-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderSuggestionQuestions() {
+  function makeChips(id, options, key, multi) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    if (!mealSuggestionsAnswers[key]) mealSuggestionsAnswers[key] = multi ? [] : null;
+    options.forEach(opt => {
+      const isActive = multi ? (mealSuggestionsAnswers[key]||[]).includes(opt) : mealSuggestionsAnswers[key] === opt;
+      const btn = document.createElement('button');
+      btn.textContent = opt;
+      btn.style.cssText = 'padding:7px 14px;border-radius:99px;border:1.5px solid ' + (isActive?'var(--green)':'var(--border)') + ';background:' + (isActive?'var(--green-bg)':'white') + ';color:' + (isActive?'var(--green)':'var(--text)') + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit';
+      btn.onclick = () => {
+        if (multi) {
+          if (!mealSuggestionsAnswers[key]) mealSuggestionsAnswers[key] = [];
+          const idx2 = mealSuggestionsAnswers[key].indexOf(opt);
+          if (idx2 >= 0) mealSuggestionsAnswers[key].splice(idx2,1); else mealSuggestionsAnswers[key].push(opt);
+        } else { mealSuggestionsAnswers[key] = opt; }
+        renderSuggestionQuestions();
+      };
+      el.appendChild(btn);
+    });
+  }
+  makeChips('q-cuisine', CUISINES, 'cuisine', true);
+  makeChips('q-adventure', ADVENTURES, 'adventure', false);
+  makeChips('q-time', TIMES, 'time', false);
+  makeChips('q-diet', DIETS, 'diet', true);
+}
+
+async function generateMealSuggestionsFromQuestions() {
+  document.getElementById('meal-suggestions-questions').style.display = 'none';
+  document.getElementById('meal-suggestions-loading').style.display = '';
+  const a = mealSuggestionsAnswers;
+  const prompt = 'Stel 10 avondgerechten voor voor een gezin. Voorkeuren: keuken: ' + ((a.cuisine||[]).join(', ')||'alles') + ', avontuur: ' + (a.adventure||'gemiddeld') + ', kooktijd: ' + (a.time||'flexibel') + ', dieet: ' + ((a.diet||[]).join(', ')||'geen') + '. ' + buildSuggestionsPrompt();
+  await callSuggestionsAPI(prompt, 'Op basis van jullie voorkeuren:');
+}
+
+async function generateMealSuggestionsFromData() {
+  const liked = [...new Set(checkins.filter(c=>c.score===3).map(c=>c.meal_type).filter(Boolean))].slice(0,8);
+  const disliked = [...new Set(checkins.filter(c=>c.score===1).map(c=>c.meal_type).filter(Boolean))].slice(0,5);
+  const existing = customMeals.map(m=>m.name);
+  const prompt = 'Stel 10 nieuwe avondgerechten voor op basis van: lekker gevonden: ' + (liked.join(', ')||'onbekend') + '. ' + (disliked.length ? 'NIET voorstellen: ' + disliked.join(', ') + '. ' : '') + (existing.length ? 'Al in lijst (niet herhalen): ' + existing.join(', ') + '. ' : '') + 'Gebruik collaborative filtering. ' + buildSuggestionsPrompt();
+  await callSuggestionsAPI(prompt, 'Op basis van wat jullie al lekker vinden:');
+}
+
+async function generateMealSuggestionsAgain() {
+  document.getElementById('meal-suggestions-results').style.display = 'none';
+  document.getElementById('meal-suggestions-loading').style.display = '';
+  await generateMealSuggestionsFromData();
+}
+
+function buildSuggestionsPrompt() {
+  return 'Geef terug als JSON array van 10 objecten: [{"naam":"...","emoji":"...","waarom":"max 1 zin waarom dit past","tijd":"bijv. 30 min"}]. Gevarieerd, gezinsvriendelijk. ALLEEN de JSON array terug.';
+}
+
+async function callSuggestionsAPI(prompt, intro) {
+  try {
+    const response = await callAnthropicAPI({ model:'claude-sonnet-4-20250514', max_tokens:800, messages:[{role:'user',content:prompt}] });
+    if (!response||!response.ok) throw new Error('API fout');
+    const apiData = await response.json();
+    const raw = (apiData.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    const arr = JSON.parse(raw.match(/\[[\s\S]*\]/)[0]);
+    renderMealSuggestions(arr, intro);
+  } catch(e) {
+    console.error('Suggestions fout:', e);
+    document.getElementById('meal-suggestions-loading').style.display = 'none';
+    document.getElementById('meal-suggestions-intro').textContent = 'Er ging iets mis: ' + e.message;
+    document.getElementById('meal-suggestions-results').style.display = '';
+    document.getElementById('meal-suggestions-list').innerHTML = '';
+  }
+}
+
+function renderMealSuggestions(suggestions, intro) {
+  document.getElementById('meal-suggestions-loading').style.display = 'none';
+  document.getElementById('meal-suggestions-intro').textContent = intro;
+  const list = document.getElementById('meal-suggestions-list');
+  list.innerHTML = '';
+  suggestions.forEach(s => {
+    const alreadyHave = customMeals.some(m => m.name.toLowerCase() === s.naam.toLowerCase());
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);margin-bottom:8px;background:' + (alreadyHave?'var(--bg)':'white');
+    const badge = alreadyHave ? ' <span style="font-size:11px;font-weight:400;color:var(--muted)">(al in lijst)</span>' : '';
+    const actionHtml = alreadyHave
+      ? '<span style="font-size:20px;color:var(--green)">\u2713</span>'
+      : '<button data-naam="' + s.naam + '" data-emoji="' + (s.emoji||'\uD83C\uDF7D') + '" onclick="addSuggestedMeal(this)" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0;font-family:inherit">+ Voeg toe</button>';
+    item.innerHTML = '<div style="font-size:28px;flex-shrink:0">' + (s.emoji||'\uD83C\uDF7D') + '</div>'
+      + '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">' + s.naam + badge + '</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + (s.waarom||'') + (s.tijd?' \u00b7 '+s.tijd:'') + '</div></div>'
+      + actionHtml;
+    list.appendChild(item);
+  });
+  document.getElementById('meal-suggestions-results').style.display = '';
+}
+
+async function addSuggestedMeal(btn) {
+  const naam = btn.dataset.naam;
+  const emoji = btn.dataset.emoji;
+  btn.textContent = '...'; btn.disabled = true;
+  const { error } = await sb.from('custom_meals').insert({ family_id: currentProfile.family_id, name: naam, emoji: emoji });
+  if (!error) {
+    await loadData();
+    btn.textContent = '\u2713 Toegevoegd';
+    btn.style.background = 'var(--green)'; btn.style.color = 'white';
+  } else {
+    btn.textContent = 'Fout'; btn.disabled = false;
+  }
+}
+
+async function maybeAutoRefreshFamilyInsight() {
+  // Ververs automatisch 1x per week, bij voorkeur op zaterdag
+  const key = 'family_insight_refreshed_' + currentProfile?.family_id;
+  const lastRefresh = localStorage.getItem(key);
+  const now = new Date();
+  const isSaturday = now.getDay() === 6;
+  let shouldRefresh = false;
+
+  if (!lastRefresh) {
+    shouldRefresh = true; // Eerste keer
+  } else {
+    const last = new Date(lastRefresh);
+    const daysSince = (now - last) / (1000 * 60 * 60 * 24);
+    if (daysSince >= 7) shouldRefresh = true; // Meer dan een week geleden
+    else if (isSaturday && daysSince >= 1) shouldRefresh = true; // Op zaterdag, niet vandaag al gedaan
+  }
+
+  if (shouldRefresh) {
+    localStorage.setItem(key, now.toISOString());
+    await generateFamilyInsight();
+  } else {
+    // Toon gecachede tekst als die er is
+    const cached = localStorage.getItem(key + '_text');
+    if (cached) {
+      const el = document.getElementById('insight-family-text');
+      if (el) el.textContent = cached;
+    }
+  }
+}
+
+async function generateFamilyInsight() {
+  await refreshInsightFamily(true);
+}
+
+async function refreshInsightFamily(silent) {
+  const btn = document.getElementById('insight-family-btn');
+  const el = document.getElementById('insight-family-text');
+  if (!el) return;
+  if (!silent && btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  // Bouw gezinscontext op
+  const allCis = checkins.slice(0, 30);
+  if (allCis.length < 2) {
+    if (el) el.textContent = 'Nog te weinig data voor een gezinsweetje.';
+    return;
+  }
+
+  // Groepeer per persoon
+  const byPerson = {};
+  allCis.forEach(c => {
+    const name = c.child_name || c.profile_name || 'onbekend';
+    if (!byPerson[name]) byPerson[name] = [];
+    byPerson[name].push(c);
+  });
+
+  const summary = Object.entries(byPerson).map(([name, cis]) => {
+    const avg = cis.filter(c=>c.score).reduce((s,c)=>s+c.score,0) / (cis.filter(c=>c.score).length||1);
+    const fav = cis.filter(c=>c.score===3).map(c=>c.meal_type).filter(Boolean)[0];
+    return name + ': gemiddeld ' + avg.toFixed(1) + (fav ? ', favoriet: ' + fav : '');
+  }).join('; ');
+
+  // Varieer het type observatie
+  const types = [
+    'Wie is de moeilijkste eter van het gezin en waarom?',
+    'Wat is een opvallend patroon in de eetgewoonten van het gezin?',
+    'Vergelijk de smaken van de gezinsleden op een grappige manier.',
+    'Wat zou een perfecte maaltijd zijn die iedereen lekker vindt?',
+    'Welk gezinslid heeft de meest avontuurlijke smaak?',
+  ];
+  const type = types[Math.floor(Math.random() * types.length)];
+
+  const prompt = 'Gezinsdata Brentjens: ' + summary + '. '
+    + 'Vraag: ' + type + ' '
+    + 'Geef een leuke, specifieke observatie van max 2 zinnen. Gebruik een emoji. Wees grappig en concreet.';
+
+  try {
+    const response = await callAnthropicAPI({
+      model: 'claude-sonnet-4-20250514', max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    if (!response || !response.ok) throw new Error('API fout');
+    const apiData = await response.json();
+    const txt = (apiData.content?.[0]?.text || '').trim();
+    if (txt && el) {
+      el.textContent = txt;
+      // Cache voor volgende laad
+      const cacheKey = 'family_insight_refreshed_' + currentProfile?.family_id + '_text';
+      localStorage.setItem(cacheKey, txt);
+    }
+  } catch(e) {
+    console.error('Family insight fout:', e);
+    if (el && !el.textContent) el.textContent = 'Niet gelukt. Probeer opnieuw.';
+  } finally {
+    if (!silent && btn) { btn.textContent = '\u21bb Nieuw'; btn.disabled = false; }
+  }
+}
+
 function refreshHome() {
   if (!currentProfile) return;
   const p = currentProfile;
@@ -1837,7 +2124,7 @@ function refreshHome() {
     }
     else if (hasCheckedIn) unhide(document.getElementById('today-child-done'));
       // Vul done card met check-in info
-      const myCI = checkins.find(c => c.eaten_at === todayDateStr || c.meal_id === todayMeal?.id);
+      const myCI = checkins.find(c => (c.eaten_at === todayDateStr || c.meal_id === todayMeal?.id) && c.profile_id === currentProfile.id);
       const doneNameEl = document.getElementById('done-meal-name');
       const doneScoreEl = document.getElementById('done-score-display');
       const doneCommentEl = document.getElementById('done-comment-display');
@@ -2125,10 +2412,13 @@ function refreshHome() {
       }
     }
 
-    // Toon het meest relevante inzicht (eerste)
-    const txt = insights[0] || '';
+    // Toon persoonlijk inzicht (lokaal gegenereerd)
+    const txt = insights[Math.floor(Math.random() * insights.length)] || '';
     document.getElementById('insight-text').textContent = txt;
     unhide(document.getElementById('insight-block'));
+
+    // Laad gezinsweetje: alleen automatisch 1x per week (op zaterdag)
+    maybeAutoRefreshFamilyInsight();
   } else hide(document.getElementById('insight-block'));
 
   // ── Vanavond kaart ─────────────────────────────────────────
@@ -2153,7 +2443,8 @@ function refreshHome() {
         if (voteBtn) {
           if (myVote && menuPublished) {
             voteBtn.textContent = 'Jouw stem bekijken';
-            voteBtn.style.background = 'rgba(255,255,255,0.2)';
+            voteBtn.style.background = 'var(--green)';
+            voteBtn.style.color = 'white';
           } else if (myVote) {
             voteBtn.textContent = 'Stem wijzigen →';
           } else {
@@ -3982,6 +4273,15 @@ async function applyProposalDay(dateStr, mealId, mealName, mealEmoji) {
     published: false,
   },{onConflict:'family_id,day_date'});
   await loadData();
+
+  if (window._afterChangeMeal) {
+    window._afterChangeMeal = false;
+    const newEntry = weeklyMenu.find(m => m.day_date === currentPickDay.dateStr);
+    if (newEntry) openCookScreen(newEntry);
+    else show('cook');
+    return;
+  }
+
   await renderMenuScreen();
   show('menu');
 }
@@ -4375,6 +4675,8 @@ async function openCookScreen(menuEntry) {
     if (meal.instructions) { instTxt.textContent = meal.instructions; instSec.style.display = ''; }
     else instSec.style.display = 'none';
   }
+  const changeWrap = document.getElementById('cook-change-btn-wrap');
+  if (changeWrap) changeWrap.style.display = currentProfile.role === 'parent' ? '' : 'none';
   const recipeLink = document.getElementById('cook-recipe-link');
   const aiBtn = document.getElementById('cook-ai-recipe-btn');
 
@@ -4409,63 +4711,91 @@ async function openCookScreen(menuEntry) {
 function renderCookHistory(history) {
   const el = document.getElementById('cook-history');
   const scoresEl = document.getElementById('cook-scores');
+
   if (!history.length) {
-    el.innerHTML = '<span style="color:var(--muted);font-style:italic">Nog niet eerder gegeten.</span>';
+    el.innerHTML = '<div style="color:var(--muted);font-style:italic;font-size:13px">Nog niet eerder gegeten.</div>';
     if (scoresEl) scoresEl.innerHTML = '';
     return;
   }
+
   const byDate = {};
-  history.forEach(c => { if (!byDate[c.eaten_at]) byDate[c.eaten_at] = []; byDate[c.eaten_at].push(c); });
+  history.forEach(c => {
+    if (!byDate[c.eaten_at]) byDate[c.eaten_at] = [];
+    byDate[c.eaten_at].push(c);
+  });
+
+  const SE = {1:'\uD83D\uDE15', 2:'\uD83D\uDE10', 3:'\uD83D\uDE0B'};
+  const SL = {1:'Niet lekker', 2:'Ok\u00e9', 3:'Lekker!'};
   const sortedDates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
-  const SE = {1:'😕', 2:'😐', 3:'😋'};
-  const SL = {1:'Niet lekker', 2:'Oké', 3:'Lekker!'};
+
   let histHtml = '';
-  sortedDates.slice(0, 6).forEach(date => {
+  sortedDates.slice(0, 5).forEach(date => {
     const cis = byDate[date];
     const d = new Date(date+'T12:00:00');
-    const dStr = d.toLocaleDateString('nl-NL', {weekday:'short', day:'numeric', month:'long', year:'numeric'});
-    const together = cis.some(c => c.ate_together);
-    const validScores = cis.filter(c => c.score);
-    const avg = validScores.length ? validScores.reduce((s,c)=>s+(parseInt(c.score)||0),0)/validScores.length : 0;
-    const ov = avg >= 2.5 ? '😋' : avg >= 1.5 ? '😐' : '😕';
-    let rows = '';
-    cis.forEach(c => {
-      const se = SE[parseInt(c.score)] || '';
-      const drink = c.drink ? ' · 🥤 ' + c.drink : '';
-      const comment = c.comment ? '<div style="font-size:12px;font-style:italic;color:var(--text);padding-left:24px;margin-top:2px">„' + c.comment + '”</div>' : '';
-      rows += '<div style="padding:3px 0"><div style="display:flex;align-items:center;gap:6px">'
-        + '<span style="font-size:16px">' + se + '</span>'
-        + '<span style="font-size:13px;font-weight:600;flex:1">' + (c.child_name||c.profile_name||'?') + '</span>'
-        + '<span style="font-size:11px;color:var(--muted)">' + (SL[parseInt(c.score)]||'')+drink + '</span>'
-        + '</div>' + comment + '</div>';
-    });
-    const togetherBadge = together
-      ? '<span style="font-size:11px;color:var(--green);background:var(--green-bg);padding:1px 6px;border-radius:99px;margin-left:auto">👨‍👩‍👧 Samen</span>'
-      : '<span style="font-size:11px;color:var(--muted);margin-left:auto">Apart</span>';
-    histHtml += '<div style="padding:10px 0;border-bottom:1px solid var(--border)">'
-      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
-      + '<span style="font-size:18px">' + ov + '</span>'
-      + '<span style="font-size:12px;font-weight:700">' + dStr + '</span>'
-      + togetherBadge + '</div>' + rows + '</div>';
+    const dateStr = d.toLocaleDateString('nl-NL', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const scoredCis = cis.filter(c => c.score);
+    const avg = scoredCis.length ? scoredCis.reduce((s,c)=>s+c.score,0)/scoredCis.length : 0;
+    const avgE = avg >= 2.5 ? '\uD83D\uDE0B' : avg >= 1.5 ? '\uD83D\uDE10' : avg > 0 ? '\uD83D\uDE15' : '';
+
+    const rows = cis.map(c => {
+      let r = '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--border)">';
+      r += '<span style="font-size:18px;width:26px;flex-shrink:0;text-align:center">' + (SE[c.score] || '\u2022') + '</span>';
+      r += '<div style="flex:1;min-width:0">';
+      r += '<div style="font-weight:700;font-size:13px">' + (c.child_name||c.profile_name||'?') + '</div>';
+      const meta = [];
+      if (c.score) meta.push(SL[c.score]);
+      if (c.drink) meta.push('\uD83E\uDD64 ' + c.drink);
+      if (meta.length) r += '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + meta.join(' \u00b7 ') + '</div>';
+      if (c.comment) r += '<div style="font-size:13px;color:var(--text);margin-top:3px;font-style:italic">\u201E' + c.comment + '\u201C</div>';
+      r += '</div></div>';
+      return r;
+    }).join('');
+
+    histHtml += '<div style="background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:12px;margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:capitalize">' + dateStr + '</div>' +
+        '<div style="font-size:20px">' + avgE + '</div>' +
+      '</div>' + rows + '</div>';
   });
   el.innerHTML = histHtml;
+
+  // Scores per persoon
   const personScores = {};
   history.forEach(c => {
-    const nm = c.child_name || c.profile_name || '?';
-    if (!personScores[nm]) personScores[nm] = [];
-    if (c.score) personScores[nm].push(parseInt(c.score));
+    if (!personScores[c.child_name]) personScores[c.child_name] = [];
+    personScores[c.child_name].push(c.score);
   });
-  let scHtml = '';
+  let scoresHtml = '';
   Object.entries(personScores).forEach(([name, scores]) => {
-    const avg2 = scores.reduce((a,b)=>a+b,0)/scores.length;
-    const em = avg2 >= 2.5 ? '😋' : avg2 >= 1.5 ? '😐' : '😕';
-    scHtml += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">'
-      + '<span style="font-weight:700;flex:1">' + name + '</span>'
-      + '<span style="font-size:20px">' + em + '</span>'
-      + '<span style="font-size:13px;color:var(--muted)">' + avg2.toFixed(1) + ' gem. (' + scores.length + 'x)</span>'
-      + '</div>';
+    const avg = scores.reduce((a,b)=>a+b,0) / scores.length;
+    const emoji = avg >= 2.5 ? '\uD83D\uDE0B' : avg >= 1.5 ? '\uD83D\uDE10' : '\uD83D\uDE15';
+    scoresHtml += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">' +
+      '<span style="font-weight:700;flex:1">' + name + '</span>' +
+      '<span style="font-size:20px">' + emoji + '</span>' +
+      '<span style="font-size:13px;color:var(--muted)">' + avg.toFixed(1) + ' gem. (' + scores.length + 'x)</span>' +
+      '</div>';
   });
-  if (scoresEl) scoresEl.innerHTML = scHtml;
+  scoresEl.innerHTML = scoresHtml;
+}
+
+async function openChangeMeal() {
+  if (!currentCookEntry) return;
+  const dateStr = currentCookEntry.day_date;
+  if (!dateStr) return;
+  const d = new Date(dateStr + 'T12:00:00');
+  const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+  document.getElementById('meal-picker-title').textContent = dayNames[d.getDay()] + ' ' + d.getDate();
+  document.getElementById('meal-picker-sub').textContent = 'Kies een ander gerecht voor vanavond:';
+  document.getElementById('meal-picker-custom').value = '';
+  document.getElementById('meal-picker-note').value = currentCookEntry.note || '';
+  const msgEl = document.getElementById('meal-picker-message');
+  if (msgEl) msgEl.value = '';
+  selectedCook = currentCookEntry.cook_id || null;
+  renderCookPicker();
+  const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  currentPickDay = { dateStr, dayIndex, existing: currentCookEntry };
+  window._afterChangeMeal = true;
+  show('meal-picker');
 }
 
 function generateCookRecipe() {
@@ -7366,6 +7696,9 @@ boot();
       <div id="cook-meal-name" style="font-family:'Fraunces',serif;font-weight:800;font-size:24px;color:var(--green)"></div>
       <div id="cook-side-dish" style="font-size:14px;color:var(--muted);margin-top:4px"></div>
       <div id="cook-note" style="font-size:13px;color:var(--muted);margin-top:4px;font-style:italic"></div>
+      <div id="cook-change-btn-wrap" style="display:none;margin-top:14px">
+        <button onclick="openChangeMeal()" style="padding:8px 16px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.6);background:rgba(255,255,255,0.2);color:white;font-weight:700;font-size:13px;cursor:pointer">🔄 Toch iets anders?</button>
+      </div>
     </div>
 
     <!-- Ingrediënten -->
@@ -7441,5 +7774,36 @@ boot();
   </div>
 </div>
 
+
+<!-- AI Gerechten Voorstellen Modal -->
+<div id="meal-suggestions-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:600;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:20px 20px 0 0;padding:24px 24px 48px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Fraunces',serif;font-weight:900;font-size:20px">✨ AI Gerechten Voorstellen</div>
+      <button onclick="closeMealSuggestions()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted)">×</button>
+    </div>
+    <div id="meal-suggestions-questions" style="display:none">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5">Beantwoord even deze vragen zodat de AI passende gerechten kan voorstellen.</p>
+      <div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Welke keuken?</div><div style="display:flex;flex-wrap:wrap;gap:6px" id="q-cuisine"></div></div>
+      <div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Hoe avontuurlijk?</div><div style="display:flex;gap:8px;flex-wrap:wrap" id="q-adventure"></div></div>
+      <div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Kooktijd?</div><div style="display:flex;gap:8px;flex-wrap:wrap" id="q-time"></div></div>
+      <div style="margin-bottom:20px"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Dieetwensen?</div><div style="display:flex;flex-wrap:wrap;gap:6px" id="q-diet"></div></div>
+      <button onclick="generateMealSuggestionsFromQuestions()" class="btn btn-primary" style="width:100%">✨ Genereer 10 voorstellen</button>
+    </div>
+    <div id="meal-suggestions-loading" style="display:none;text-align:center;padding:32px 0">
+      <div style="font-size:40px;margin-bottom:12px">✨</div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:6px">AI denkt na...</div>
+      <div style="font-size:13px;color:var(--muted)">Even geduld</div>
+    </div>
+    <div id="meal-suggestions-results" style="display:none">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5" id="meal-suggestions-intro"></p>
+      <div id="meal-suggestions-list"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button onclick="generateMealSuggestionsAgain()" class="btn" style="flex:1;background:var(--bg);border:1.5px solid var(--border)">↻ Nieuwe voorstellen</button>
+        <button onclick="closeMealSuggestions()" class="btn btn-primary" style="flex:1">Klaar</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
