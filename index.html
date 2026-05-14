@@ -1086,6 +1086,20 @@
 </div>
 
 <script>
+const APP_VERSION = "v2007b-menu-fixed";
+console.log("[APP] Versie:", APP_VERSION);
+
+// Controleer menu volgorde bij laden
+document.addEventListener("DOMContentLoaded", function() {
+  var days = document.getElementById("menu-days-list");
+  var kies = document.querySelector("button[onclick*='vote-setup']");
+  if (days && kies) {
+    var daysPos = days.compareDocumentPosition(kies);
+    // 4 = kies komt NA days (correct)
+    console.log("[MENU ORDER] days-list vs kieslijst:", daysPos === 4 ? "CORRECT (days eerst)" : "FOUT (kieslijst eerst)");
+  }
+});
+
 const sb = supabase.createClient(
   'https://wzdxkyclnwpopbfembpp.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZHhreWNsbndwb3BiZmVtYnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjM0NzUsImV4cCI6MjA5MzM5OTQ3NX0.9cDCZmN4QzHkIcCmaQB8R4bm2wGIPSLqU2pSJ8V5POI'
