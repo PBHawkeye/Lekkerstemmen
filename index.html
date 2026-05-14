@@ -4795,47 +4795,53 @@ function renderForWhoChips(existing) {
   const members = getFamilyMembers();
   if (!members.length) return;
 
-  // Altijd opnieuw initialiseren bij elke render
   if (window._secondDishForIds) {
     forWhoSelected = [...window._secondDishForIds];
   } else if (existing && existing.for_profile_ids) {
     try { forWhoSelected = JSON.parse(existing.for_profile_ids); }
     catch(e) { forWhoSelected = members.map(m=>m.id); }
   } else {
-    // Geen bestaande selectie of null for_profile_ids = iedereen
     forWhoSelected = members.map(m=>m.id);
   }
 
-  // Gebruik innerHTML met inline onclick voor iOS compatibiliteit
-  container.innerHTML = members.map(m => {
-    const sel = forWhoSelected.includes(m.id);
-    const border = sel ? 'var(--green)' : 'var(--border)';
-    const bg = sel ? 'var(--green-bg)' : 'white';
-    const color = sel ? 'var(--green)' : 'var(--text)';
-    const emoji = (m.emoji||'').replace(/'/g, '');
-    const name = m.name.replace(/'/g, '');
-    return '<button type="button" '
-      + 'onclick="toggleForWho(\''+m.id+'\','+members.length+')" '
-      + 'style="padding:6px 12px;border-radius:99px;border:1.5px solid '+border
-      + ';background:'+bg+';color:'+color
-      + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin:2px">'
-      + emoji + ' ' + name + '</button>';
-  }).join('');
+  container.innerHTML = '';
+  members.forEach(function(m) {
+    var sel = forWhoSelected.indexOf(m.id) >= 0;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-mid', m.id);
+    btn.setAttribute('data-total', members.length);
+    btn.style.padding = '6px 12px';
+    btn.style.borderRadius = '99px';
+    btn.style.border = '1.5px solid ' + (sel ? 'var(--green)' : 'var(--border)');
+    btn.style.background = sel ? 'var(--green-bg)' : 'white';
+    btn.style.color = sel ? 'var(--green)' : 'var(--text)';
+    btn.style.fontSize = '13px';
+    btn.style.fontWeight = '600';
+    btn.style.cursor = 'pointer';
+    btn.style.fontFamily = 'inherit';
+    btn.style.margin = '2px';
+    btn.style.webkitAppearance = 'none';
+    btn.textContent = (m.emoji || '') + ' ' + m.name;
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var mid = this.getAttribute('data-mid');
+      var total = parseInt(this.getAttribute('data-total'));
+      var idx = forWhoSelected.indexOf(mid);
+      if (idx >= 0) {
+        if (forWhoSelected.length > 1) forWhoSelected.splice(idx, 1);
+      } else {
+        forWhoSelected.push(mid);
+      }
+      renderForWhoChips(null);
+    });
+    container.appendChild(btn);
+  });
 
   if (secondSection) {
     secondSection.style.display = forWhoSelected.length < members.length ? '' : 'none';
   }
-}
-
-function toggleForWho(memberId, totalCount) {
-  if (forWhoSelected.includes(memberId)) {
-    if (forWhoSelected.length > 1) {
-      forWhoSelected = forWhoSelected.filter(id => id !== memberId);
-    }
-  } else {
-    forWhoSelected.push(memberId);
-  }
-  renderForWhoChips(null);
 }
 
 function getForWhoSelection() {
