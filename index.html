@@ -496,23 +496,6 @@
   </div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
-  <div id="insight-block" class="hidden">
-    <div class="section-title">Inzicht</div>
-    <div class="insight" id="insight-personal-wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="insight-badge">Jouw observatie</div>
-        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">\u21bb Nieuw</button>
-      </div>
-      <div class="insight-text" id="insight-text"></div>
-    </div>
-    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="insight-badge">Gezinsweetje</div>
-        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">\u21bb Nieuw</button>
-      </div>
-      <div class="insight-text" id="insight-family-text">Laden...</div>
-    </div>
-  </div>
   <div id="friday-block" class="hidden">
     <div class="section-title" id="stemdag-title">Stem voor volgende week &#x1F5F3;</div>
     <div class="card" style="margin:0 16px">
@@ -531,7 +514,7 @@
       <div class="smiley" id="sm-2" onclick="selectSmiley(2)">&#x1F610;</div>
       <div class="smiley" id="sm-3" onclick="selectSmiley(3)">&#x1F60B;</div>
     </div>
-    <div id="drink-section" class="drink-section hidden">
+    <div id="drink-section" class="drink-section">
       <div class="drink-title">Wat dronk je erbij? <span class="optional">optioneel</span></div>
       <div class="drink-grid">
         <button class="drink-btn" id="drink-water" onclick="selectDrink('water')"><span class="drink-emoji">&#x1F4A7;</span>Water</button>
@@ -541,7 +524,7 @@
       </div>
     </div>
     <!-- Comment sectie -->
-    <div id="comment-section" class="comment-section hidden">
+    <div id="comment-section" class="comment-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="drink-title" id="comment-label">Wil je nog iets zeggen? <span class="optional">optioneel</span></div>
         <button id="voice-comment-btn" type="button" onclick="toggleVoiceComment()"
@@ -558,10 +541,14 @@
       <div class="drink-title" style="margin-bottom:12px" id="sport-nutrition-title">&#9917; Jij had sport vandaag!</div>
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Heb je mee gegeten?</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="sport-ate-together-options"></div>
+      <div id="pre-sport-section">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">V&#243;&#243;r het sporten gegeten/gedronken?</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="pre-sport-options"></div>
+      </div>
+      <div id="post-sport-section">
       <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Na het sporten?</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="post-sport-options"></div>
+      </div>
     </div>
 
     <div id="checkin-autosave" class="actions hidden" style="text-align:center;padding-bottom:8px">
@@ -581,6 +568,7 @@
     <h2 class="success-title" id="success-title">Geweldig!</h2>
     <p class="success-sub" id="success-sub">Fijn dat het smaakte.</p>
     <button class="btn btn-primary" style="max-width:280px" onclick="goScreen('home')">Terug naar home</button>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Ga je automatisch naartoe...</p>
   </div>
 </div>
 
@@ -647,8 +635,8 @@
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:8px">Stemmen kinderen</div>
         <div id="vote-summary-list" style="font-size:13px;color:var(--text)"></div>
       </div>
-    </div>
-    <div id="menu-days-list" style="padding:0 16px 20px"></div>
+    </div><div id="menu-days-list" style="padding:0 16px 20px"></div>
+    
     <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:8px">
       <div style="padding:0 16px 8px">
       <button class="btn" style="background:var(--green-bg);color:var(--green);margin-bottom:8px" onclick="goScreen('vote-setup')">&#9881; Kieslijst instellen →</button>
@@ -1038,8 +1026,19 @@
   </div>
 </div>
 <div id="s-vote" class="screen">
-  <div class="topbar"><h2 style="font-weight:900;font-size:20px">Stem voor volgende week &#x1F5F3;</h2></div>
-  <div style="padding:0 16px 100px">
+  <div class="topbar">
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Jouw stem</div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px 0">
+    <button onclick="voteWeekStep(-1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;flex-shrink:0">←</button>
+    <div style="flex:1;text-align:center">
+      <div style="font-weight:800;font-size:15px" id="vote-week-label">—</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px" id="vote-week-sub"></div>
+    </div>
+    <button onclick="voteWeekStep(1)" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:16px;cursor:pointer;flex-shrink:0">→</button>
+  </div>
+  <div style="padding:8px 16px 100px">
     <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
       Kies <strong>2 gerechten</strong> die je graag wilt eten. Je ouder beslist het definitieve menu.
     </p>
@@ -1108,6 +1107,7 @@ let weeklyMenu = [];
 let currentPickDay = null;
 let menuWeekOffset = 0;
 let menuBaseOffset = 0;
+let voteWeekOffset = 0;
 let selectedCook = null;
 let selectedCorvee = [];
 
@@ -1587,7 +1587,16 @@ async function loadData() {
   const familyId = currentProfile.family_id;
   const profileId = currentProfile.id;
   console.log('[loadData] familyId:', familyId, 'profileId:', profileId);
-  const weekStart = testMondayOfWeek();
+  const weekStart = getVoteWeekStart();
+  const vwLabel = document.getElementById('vote-week-label');
+  const vwSub = document.getElementById('vote-week-sub');
+  if (vwLabel) {
+    const wDate = new Date(weekStart + 'T12:00:00');
+    const wEnd = new Date(wDate); wEnd.setDate(wDate.getDate() + 6);
+    const fmt = {day:'numeric', month:'long'};
+    vwLabel.textContent = wDate.toLocaleDateString('nl-NL', fmt) + ' t/m ' + wEnd.toLocaleDateString('nl-NL', fmt);
+    if (vwSub) vwSub.textContent = voteWeekOffset === 0 ? 'volgende week' : voteWeekOffset === 1 ? 'over 2 weken' : voteWeekOffset > 1 ? 'over ' + (voteWeekOffset+1) + ' weken' : 'vorige week';
+  }
   const since = new Date();
   since.setDate(since.getDate()-21);
   const sinceStr = since.toISOString().split('T')[0];
@@ -1682,7 +1691,10 @@ async function loadData() {
   }
   // Merge: bewaar lokale checkins die nog niet in DB zitten (net opgeslagen)
   const dbEatenAts = new Set(cis.map(c => c.eaten_at + '|' + c.profile_id));
-  const localOnly = checkins.filter(c => c.eaten_at && !dbEatenAts.has(c.eaten_at + '|' + c.profile_id));
+  // Alleen lokale checkins van het huidige profiel meenemen
+  const localOnly = checkins.filter(c => c.eaten_at
+    && c.profile_id === profileId
+    && !dbEatenAts.has(c.eaten_at + '|' + c.profile_id));
   checkins = [...cis, ...localOnly];
 
   // Beschikbare stemmaaltijden
@@ -1752,7 +1764,7 @@ async function refreshInsightPersonal() {
   } catch(e) {
     console.error('Personal insight fout:', e);
   } finally {
-    if (btn) { btn.textContent = '\u21bb Nieuw'; btn.disabled = false; }
+    if (btn) { btn.textContent = '↻ Nieuw'; btn.disabled = false; }
   }
 }
 
@@ -1983,7 +1995,7 @@ async function refreshInsightFamily(silent) {
     console.error('Family insight fout:', e);
     if (el && !el.textContent) el.textContent = 'Niet gelukt. Probeer opnieuw.';
   } finally {
-    if (!silent && btn) { btn.textContent = '\u21bb Nieuw'; btn.disabled = false; }
+    if (!silent && btn) { btn.textContent = '↻ Nieuw'; btn.disabled = false; }
   }
 }
 
@@ -2400,10 +2412,13 @@ function refreshHome() {
             voteBtn.textContent = 'Jouw stem bekijken';
             voteBtn.style.background = 'var(--green)';
             voteBtn.style.color = 'white';
+            voteBtn.onclick = () => goScreen('vote');
           } else if (myVote) {
             voteBtn.textContent = 'Stem wijzigen →';
+            voteBtn.onclick = () => goScreen('vote');
           } else {
             voteBtn.textContent = 'Stem nu →';
+            voteBtn.onclick = () => goScreen('vote');
           }
         }
         // Toon ook wat al gestemd is
@@ -2750,7 +2765,6 @@ function resetCheckin() {
   stopVoiceComment();
   [1,2,3].forEach(i=>document.getElementById('sm-'+i).className='smiley');
   ['water','milk','juice','soda'].forEach(d=>document.getElementById('drink-'+d).classList.remove('selected'));
-  hide(document.getElementById('drink-section'));
   hide(document.getElementById('checkin-autosave'));
   unhide(document.getElementById('checkin-skip'));
   // Reset gerecht selectie
@@ -2785,7 +2799,6 @@ function resetCheckin() {
   preSportFood=null; postSportFood=null; sportAteTogether=null; todaySportKey=null;
   const commentEl=document.getElementById('checkin-comment');
   if(commentEl) commentEl.value='';
-  hide(document.getElementById('comment-section'));
   hide(document.getElementById('vote-inline-section'));
   hide(document.getElementById('sport-nutrition-section'));
 }
@@ -2793,7 +2806,6 @@ function resetCheckin() {
 function selectSmiley(score) {
   selectedScore=score;
   [1,2,3].forEach(i=>document.getElementById('sm-'+i).className='smiley'+(i===score?' sel-'+score:''));
-  unhide(document.getElementById('drink-section'));
   // Comment sectie
   const commentLabel = document.getElementById('comment-label');
   if (currentProfile&&currentProfile.role==='parent') {
@@ -2803,7 +2815,6 @@ function selectSmiley(score) {
     commentLabel.innerHTML = 'Wil je nog iets zeggen? <span class="optional">optioneel</span>';
     document.getElementById('checkin-comment').placeholder = 'bijv. lekker! of: de saus was te zuur...';
   }
-  unhide(document.getElementById('comment-section'));
   // Inline voorkeur verwijderd - apart scherm
   unhide(document.getElementById('checkin-autosave'));
   hide(document.getElementById('checkin-skip'));
@@ -2839,6 +2850,12 @@ function selectSmiley(score) {
           btn.innerHTML = '<span>'+opt.emoji+'</span><span>'+opt.label+'</span>';
           btn.onclick = () => {
             sportAteTogether = opt.id;
+            // Toon/verberg voor/na sport secties op basis van keuze
+            var ateMee = opt.id === 'ja' || opt.id === 'opgewarmd';
+            var preSection = document.getElementById('pre-sport-section');
+            var postSection = document.getElementById('post-sport-section');
+            if (preSection) preSection.style.display = ateMee ? 'none' : '';
+            if (postSection) postSection.style.display = ateMee ? 'none' : '';
             // Herrender zodat selectie zichtbaar is
             const ev = document.createEvent('Event');
             document.getElementById('sport-ate-together-options').querySelectorAll('button').forEach(b => {
@@ -2853,6 +2870,12 @@ function selectSmiley(score) {
       }
       renderSportNutritionOptions('pre-sport-options', null, (id) => { preSportFood = id; });
       renderSportNutritionOptions('post-sport-options', null, (id) => { postSportFood = id; });
+      // Verberg voor/na secties als al meegegeten is geselecteerd
+      var initAteMee = sportAteTogether === 'ja' || sportAteTogether === 'opgewarmd';
+      var preS = document.getElementById('pre-sport-section');
+      var postS = document.getElementById('post-sport-section');
+      if (preS) preS.style.display = initAteMee ? 'none' : '';
+      if (postS) postS.style.display = initAteMee ? 'none' : '';
       unhide(sportSection);
     } else {
       hide(sportSection);
@@ -3013,9 +3036,26 @@ async function doCheckin() {
   const skipBtn = document.getElementById('checkin-skip')?.querySelector('button');
   if (skipBtn) skipBtn.onclick = ()=>goScreen('home');
   show('success');
+  // Automatisch naar home na 2 seconden
+  setTimeout(function() { goScreen('home'); }, 2000);
 }
 
 // ── VOTE ───────────────────────────────────────────────────────
+
+function voteWeekStep(delta) {
+  voteWeekOffset += delta;
+  openVoteScreen();
+}
+
+function getVoteWeekStart() {
+  const now = new Date();
+  now.setDate(now.getDate() + testDayOffset);
+  const day = now.getDay();
+  const diff = day === 0 ? 1 : 8 - day;
+  const next = new Date(now);
+  next.setDate(now.getDate() + diff + (voteWeekOffset * 7));
+  return next.toISOString().split('T')[0];
+}
 
 async function openVoteScreen() {
   const familyId = currentProfile.family_id;
@@ -5094,6 +5134,9 @@ function openProfileScreen() {
   // Emoji
   profileSelectedEmoji = p.emoji || '\uD83D\uDE0A';
   document.getElementById('profile-emoji-display').textContent = profileSelectedEmoji;
+  // Toon gekozen emoji in compact display
+  const chosenEl = document.getElementById('profile-emoji-chosen');
+  if (chosenEl) chosenEl.textContent = profileSelectedEmoji || currentProfile.emoji || '\ud83d\ude0a';
   renderProfileEmojiPicker();
 
   // Pincode sectie alleen voor kinderen
@@ -5144,6 +5187,16 @@ async function loadCreditsHistory() {
   }).join('');
 }
 
+function toggleProfileEmojiPicker() {
+  const picker = document.getElementById('profile-emoji-picker');
+  if (!picker) return;
+  const isOpen = picker.style.display !== 'none';
+  picker.style.display = isOpen ? 'none' : 'flex';
+  const btn = document.getElementById('profile-emoji-edit-btn');
+  if (btn) btn.textContent = isOpen ? '\u270f\ufe0f Wijzigen' : '\u2715 Sluiten';
+  if (!isOpen) renderProfileEmojiPicker();
+}
+
 function renderProfileEmojiPicker() {
   const picker = document.getElementById('profile-emoji-picker');
   if (!picker) return;
@@ -5159,7 +5212,17 @@ function renderProfileEmojiPicker() {
     btn.onclick = async () => {
       profileSelectedEmoji = e;
       document.getElementById('profile-emoji-display').textContent = e;
+      // Update compact display
+      var chosenEl = document.getElementById('profile-emoji-chosen');
+      if (chosenEl) chosenEl.textContent = e;
       renderProfileEmojiPicker();
+      // Sluit picker na selectie
+      setTimeout(function() {
+        var picker = document.getElementById('profile-emoji-picker');
+        if (picker) picker.style.display = 'none';
+        var editBtn = document.getElementById('profile-emoji-edit-btn');
+        if (editBtn) editBtn.textContent = '✏️ Wijzigen';
+      }, 200);
       // Direct opslaan
       await sb.from('profiles').update({emoji: e}).eq('id', currentProfile.id);
       currentProfile.emoji = e;
@@ -7299,19 +7362,28 @@ async function analyseWeekMenu() {
     + '1. Voedingswaarde en gezondheid (vitamines, groenten, eiwitten, koolhydraten)\n'
     + '2. Afwisseling en variatie\n'
     + '3. Concrete suggesties voor verbetering\n'
-    + 'Wees specifiek en gebruik de gerechtnamen. Max 200 woorden. Gebruik emoji voor leesbaarheid.';
+    + 'Wees specifiek en gebruik de gerechtnamen. Gebruik emoji voor leesbaarheid. Geen markdown headers (##), wel vetgedrukte tekst en bullets mogen.';
 
   try {
     const response = await anthropicFetch({
       model: 'claude-sonnet-4-5',
-      max_tokens: 400,
+      max_tokens: 800,
       messages: [{ role: 'user', content: prompt }]
     });
 
     if (!response || !response.ok) throw new Error('API fout');
     const apiData = await response.json();
-    const txt = (apiData.content?.[0]?.text || '').trim();
-    textEl.textContent = txt;
+    const raw = (apiData.content?.[0]?.text || '').trim();
+    // Render markdown naar HTML
+    const txt = raw
+      .replace(/^### (.+)$/gm, '<h4 style="margin:10px 0 4px;font-size:14px;font-weight:700">$1</h4>')
+      .replace(/^## (.+)$/gm, '<h3 style="margin:12px 0 4px;font-size:15px;font-weight:800">$1</h3>')
+      .replace(/^# (.+)$/gm, '<h2 style="margin:8px 0 6px;font-size:17px;font-weight:900">$1</h2>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.+)$/gm, '<div style="margin:2px 0;padding-left:4px">\u2022 $1</div>')
+      .replace(/\n\n/g, '<br>')
+      .replace(/\n/g, '<br>');
+    textEl.innerHTML = txt;
     resultDiv.style.display = '';
     resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch(e) {
@@ -7848,7 +7920,16 @@ boot();
     <!-- Emoji kiezen -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Emoji</div>
-      <div id="profile-emoji-picker" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <!-- Compacte weergave: gekozen emoji + edit knop -->
+      <div id="profile-emoji-compact" style="display:flex;align-items:center;gap:12px">
+        <span id="profile-emoji-chosen" style="font-size:40px"></span>
+        <button type="button" onclick="toggleProfileEmojiPicker()" id="profile-emoji-edit-btn"
+          style="padding:6px 14px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:14px;cursor:pointer;font-family:inherit">
+          ✏️ Wijzigen
+        </button>
+      </div>
+      <!-- Volledige picker, standaard verborgen -->
+      <div id="profile-emoji-picker" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
     </div>
 
     <!-- Pincode wijzigen (als kind) -->
@@ -8092,3 +8173,20 @@ boot();
 </div>
 </body>
 </html>
+  <div id="insight-block" class="hidden">
+    <div class="section-title">Inzicht</div>
+    <div class="insight" id="insight-personal-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Jouw observatie</div>
+        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-text"></div>
+    </div>
+    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Gezinsweetje</div>
+        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-family-text">Laden...</div>
+    </div>
+  </div>
