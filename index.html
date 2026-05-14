@@ -4787,57 +4787,47 @@ async function openChangeMeal() {
 let forWhoSelected = [];
 
 function renderForWhoChips(existing) {
-  const container = document.getElementById('meal-picker-forwho-chips');
-  const section = document.getElementById('meal-picker-forwho-section');
-  const secondSection = document.getElementById('meal-picker-second-section');
+  var container = document.getElementById('meal-picker-forwho-chips');
+  var section = document.getElementById('meal-picker-forwho-section');
+  var secondSection = document.getElementById('meal-picker-second-section');
   if (!container || !section) return;
 
-  const members = getFamilyMembers();
+  var members = getFamilyMembers();
   if (!members.length) return;
 
   if (window._secondDishForIds) {
-    forWhoSelected = [...window._secondDishForIds];
+    forWhoSelected = window._secondDishForIds.slice();
   } else if (existing && existing.for_profile_ids) {
     try { forWhoSelected = JSON.parse(existing.for_profile_ids); }
-    catch(e) { forWhoSelected = members.map(m=>m.id); }
+    catch(e2) { forWhoSelected = members.map(function(x){return x.id;}); }
   } else {
-    forWhoSelected = members.map(m=>m.id);
+    forWhoSelected = members.map(function(x){return x.id;});
   }
 
-  container.innerHTML = '';
-  members.forEach(function(m) {
+  // Gebruik event delegation op de container
+  container.onclick = function(e) {
+    var btn = e.target.closest('button[data-mid]');
+    if (!btn) return;
+    var mid = btn.getAttribute('data-mid');
+    var i = forWhoSelected.indexOf(mid);
+    if (i >= 0) {
+      if (forWhoSelected.length > 1) forWhoSelected.splice(i, 1);
+    } else {
+      forWhoSelected.push(mid);
+    }
+    renderForWhoChips(null);
+  };
+
+  container.innerHTML = members.map(function(m) {
     var sel = forWhoSelected.indexOf(m.id) >= 0;
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.setAttribute('data-mid', m.id);
-    btn.setAttribute('data-total', members.length);
-    btn.style.padding = '6px 12px';
-    btn.style.borderRadius = '99px';
-    btn.style.border = '1.5px solid ' + (sel ? 'var(--green)' : 'var(--border)');
-    btn.style.background = sel ? 'var(--green-bg)' : 'white';
-    btn.style.color = sel ? 'var(--green)' : 'var(--text)';
-    btn.style.fontSize = '13px';
-    btn.style.fontWeight = '600';
-    btn.style.cursor = 'pointer';
-    btn.style.fontFamily = 'inherit';
-    btn.style.margin = '2px';
-    btn.style.webkitAppearance = 'none';
-    btn.textContent = (m.emoji || '') + ' ' + m.name;
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var mid = this.getAttribute('data-mid');
-      var total = parseInt(this.getAttribute('data-total'));
-      var idx = forWhoSelected.indexOf(mid);
-      if (idx >= 0) {
-        if (forWhoSelected.length > 1) forWhoSelected.splice(idx, 1);
-      } else {
-        forWhoSelected.push(mid);
-      }
-      renderForWhoChips(null);
-    });
-    container.appendChild(btn);
-  });
+    return '<button type="button" data-mid="' + m.id + '" style="'
+      + 'padding:6px 12px;border-radius:99px;'
+      + 'border:1.5px solid ' + (sel ? 'var(--green)' : 'var(--border)') + ';'
+      + 'background:' + (sel ? 'var(--green-bg)' : 'white') + ';'
+      + 'color:' + (sel ? 'var(--green)' : 'var(--text)') + ';'
+      + 'font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin:2px'
+      + '">' + (m.emoji || '') + ' ' + m.name + '</button>';
+  }).join('');
 
   if (secondSection) {
     secondSection.style.display = forWhoSelected.length < members.length ? '' : 'none';
