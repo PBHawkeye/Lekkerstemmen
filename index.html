@@ -5560,8 +5560,8 @@ async function renderShoppingDayPicker() {
 
   console.log('[Shopping] alle gepubliceerde dagen:', allMenuDays?.length, allMenuDays?.map(m=>m.day_date));
 
-  // Toon alle gepubliceerde dagen (geen datum filter - werkt ook in testmodus)
-  const menuDays = allMenuDays || [];
+  // Alleen vandaag en toekomstige dagen tonen
+  const menuDays = (allMenuDays || []).filter(m => m.day_date >= today);
 
   picker.innerHTML = '';
 
@@ -6795,8 +6795,16 @@ async function renderMenuScreen() {
         daysList.appendChild(row2);
       }
 
-      // Knop: 2e gerecht toevoegen (alleen ouders, alleen als er nog geen 2e is)
-      if (currentProfile.role === 'parent' && existing && !existing2) {
+      // Knop: 2e gerecht toevoegen (alleen als er leden zijn die niet al toegewezen zijn)
+      var allMemberIds = getFamilyMembers().map(function(m){return m.id;});
+      var firstForIds = [];
+      if (existing && existing.for_profile_ids) {
+        try { firstForIds = JSON.parse(existing.for_profile_ids); } catch(e3) { firstForIds = allMemberIds; }
+      } else {
+        firstForIds = allMemberIds; // null = iedereen
+      }
+      var restIds = allMemberIds.filter(function(id){ return firstForIds.indexOf(id) < 0; });
+      if (currentProfile.role === 'parent' && existing && !existing2 && restIds.length > 0) {
         const addSecondBtn = document.createElement('button');
         addSecondBtn.style.cssText = 'width:100%;padding:6px;border:1.5px dashed var(--border);border-radius:0 0 var(--r) var(--r);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;margin-top:-4px;display:block';
         addSecondBtn.textContent = '+ 2e gerecht toevoegen voor rest gezin';
