@@ -312,7 +312,9 @@
     .stat-ai-soon { font-size:12px; opacity:0.7; margin-top:8px; }
     .score-dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0; }
 
-  </style>
+  
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.2)} }
+</style>
 </head>
 <body>
 
@@ -540,7 +542,15 @@
     </div>
     <!-- Comment sectie -->
     <div id="comment-section" class="comment-section hidden">
-      <div class="drink-title" id="comment-label">Wil je nog iets zeggen? <span class="optional">optioneel</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="drink-title" id="comment-label">Wil je nog iets zeggen? <span class="optional">optioneel</span></div>
+        <button id="voice-comment-btn" type="button" onclick="toggleVoiceComment()"
+          style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:white;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">🎙️</button>
+      </div>
+      <div id="voice-status" style="display:none;font-size:12px;color:var(--green);margin-bottom:6px;align-items:center;gap:6px">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--coral);display:inline-block;animation:pulse 1s infinite"></span>
+        <span id="voice-status-text">Luisteren...</span>
+      </div>
       <textarea class="comment-textarea" id="checkin-comment" placeholder="bijv. te zout, lekker met kaassaus..." maxlength="200"></textarea>
     </div>
     <!-- Sport voeding sectie -->
@@ -645,6 +655,15 @@
       <button class="btn" style="background:#E0FAF4;color:#0F6E56;margin-bottom:8px" onclick="showAIProposal()">&#10024; AI menuvoorstel →</button>
     </div>
     <div id="ai-proposal-container" style="margin:0 16px 12px;display:none"></div>
+    <!-- AI analyse knop -->
+    <button class="btn" id="menu-analyse-btn" onclick="analyseWeekMenu()" style="width:100%;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green);margin-bottom:8px">✨ AI: Is dit menu gezond en evenwichtig?</button>
+    <div id="menu-analyse-result" style="display:none;background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">AI ANALYSE</div>
+        <button onclick="document.getElementById('menu-analyse-result').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">×</button>
+      </div>
+      <div id="menu-analyse-text" style="font-size:14px;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
+    </div>
     <button class="btn btn-primary" id="menu-publish-btn" onclick="publishMenu()">Menu publiceren voor kinderen →</button>
       <button class="btn" style="background:var(--teal-light);color:#0F6E56" id="menu-update-btn" onclick="publishMenu()" style="display:none">Menu bijwerken ✓</button>
       <button class="btn btn-ghost" onclick="goScreen('home')">Annuleren</button>
@@ -2728,6 +2747,7 @@ async function deleteCustomMeal(id) {
 
 // ── CHECKIN ────────────────────────────────────────────────────
 function resetCheckin() {
+  stopVoiceComment();
   [1,2,3].forEach(i=>document.getElementById('sm-'+i).className='smiley');
   ['water','milk','juice','soda'].forEach(d=>document.getElementById('drink-'+d).classList.remove('selected'));
   hide(document.getElementById('drink-section'));
@@ -4870,6 +4890,56 @@ function switchCheckinDish() {
   if (mealNameEl) mealNameEl.textContent = other.meal_emoji + ' ' + other.meal_name;
   const switchBtn = document.getElementById('checkin-switch-btn');
   if (switchBtn) switchBtn.textContent = '\uD83D\uDD04 Wissel naar: ' + (current?.meal_emoji||'') + ' ' + (current?.meal_name||'');
+}
+
+// Voice transcriptie voor commentaar
+var voiceRecognition = null;
+var voiceActive = false;
+
+function toggleVoiceComment() {
+  if (voiceActive) stopVoiceComment(); else startVoiceComment();
+}
+
+function startVoiceComment() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Spraakherkenning niet ondersteund. Probeer Chrome.'); return; }
+  voiceRecognition = new SR();
+  voiceRecognition.lang = 'nl-NL';
+  voiceRecognition.continuous = true;
+  voiceRecognition.interimResults = true;
+  var btn = document.getElementById('voice-comment-btn');
+  var statusEl = document.getElementById('voice-status');
+  var statusText = document.getElementById('voice-status-text');
+  var ta = document.getElementById('checkin-comment');
+  voiceActive = true;
+  if (btn) { btn.style.background='var(--coral)'; btn.style.borderColor='var(--coral)'; }
+  if (statusEl) statusEl.style.display = 'flex';
+  var baseText = ta ? ta.value : '';
+  voiceRecognition.onresult = function(e) {
+    var final = baseText, interim = '';
+    for (var i=0; i<e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim = e.results[i][0].transcript;
+    }
+    if (ta) ta.value = final + interim;
+  };
+  voiceRecognition.onerror = function(e) {
+    if (statusText) statusText.textContent = 'Fout: ' + e.error;
+    setTimeout(stopVoiceComment, 1500);
+  };
+  voiceRecognition.onend = function() {
+    if (voiceActive) { try { voiceRecognition.start(); } catch(e){} }
+  };
+  try { voiceRecognition.start(); } catch(e) { voiceActive=false; }
+}
+
+function stopVoiceComment() {
+  voiceActive = false;
+  if (voiceRecognition) { try { voiceRecognition.stop(); } catch(e){} voiceRecognition=null; }
+  var btn = document.getElementById('voice-comment-btn');
+  var statusEl = document.getElementById('voice-status');
+  if (btn) { btn.style.background='white'; btn.style.borderColor='var(--border)'; }
+  if (statusEl) statusEl.style.display='none';
 }
 
 function generateCookRecipe() {
@@ -7185,6 +7255,72 @@ async function confirmMealPick() {
   await loadData();
   renderMenuScreen();
   show('menu');
+}
+
+async function analyseWeekMenu() {
+  const btn = document.getElementById('menu-analyse-btn');
+  const resultDiv = document.getElementById('menu-analyse-result');
+  const textEl = document.getElementById('menu-analyse-text');
+  if (!btn || !resultDiv || !textEl) return;
+
+  // Verzamel het weekmenu
+  const weekStart = getMenuWeekStart();
+  const published = weeklyMenu.filter(m => m.week_of === weekStart);
+  const all = weeklyMenu; // alle items van deze week
+
+  if (all.length === 0) {
+    alert('Voeg eerst gerechten toe aan het menu.');
+    return;
+  }
+
+  btn.textContent = 'AI analyseert...';
+  btn.disabled = true;
+
+  // Bouw menu overzicht
+  const DAYS = ['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+  const menuText = getWeekDates(weekStart).map((date, i) => {
+    const entries = weeklyMenu.filter(m => m.day_date === date);
+    if (entries.length === 0) return DAYS[i] + ': niet ingevuld';
+    return entries.map(e => {
+      const forWho = e.for_profile_ids ? (() => {
+        try {
+          const ids = JSON.parse(e.for_profile_ids);
+          return ' (voor: ' + getFamilyMembers().filter(m=>ids.includes(m.id)).map(m=>m.name).join(', ') + ')';
+        } catch(e2) { return ''; }
+      })() : '';
+      return DAYS[i] + ': ' + e.meal_name + forWho;
+    }).join(' + ');
+  }).join('\n');
+
+  const familySize = getFamilyMembers().length;
+  const prompt = 'Analyseer dit weekmenu voor een gezin van ' + familySize + ' personen:\n\n'
+    + menuText + '\n\n'
+    + 'Geef een korte, praktische analyse van:\n'
+    + '1. Voedingswaarde en gezondheid (vitamines, groenten, eiwitten, koolhydraten)\n'
+    + '2. Afwisseling en variatie\n'
+    + '3. Concrete suggesties voor verbetering\n'
+    + 'Wees specifiek en gebruik de gerechtnamen. Max 200 woorden. Gebruik emoji voor leesbaarheid.';
+
+  try {
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    if (!response || !response.ok) throw new Error('API fout');
+    const apiData = await response.json();
+    const txt = (apiData.content?.[0]?.text || '').trim();
+    textEl.textContent = txt;
+    resultDiv.style.display = '';
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch(e) {
+    console.error('Menu analyse fout:', e);
+    alert('Analyse mislukt: ' + e.message);
+  } finally {
+    btn.textContent = '\u2728 AI: Is dit menu gezond en evenwichtig?';
+    btn.disabled = false;
+  }
 }
 
 async function publishMenu() {
