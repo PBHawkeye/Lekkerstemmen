@@ -6696,7 +6696,9 @@ async function renderMenuScreen() {
     const daysList = document.getElementById('menu-days-list');
     daysList.innerHTML='';
     dates.forEach((dateStr,i)=>{
-      const existing = weeklyMenu.find(m=>m.day_date===dateStr);
+      const dayEntries = weeklyMenu.filter(m=>m.day_date===dateStr);
+      const existing = dayEntries.find(m=>!m.published) || dayEntries[0] || null;
+      const existing2 = dayEntries.length > 1 ? dayEntries[1] : null;
       const d = new Date(dateStr+'T12:00:00');
       const dayNum = d.getDate();
       const monthName = d.toLocaleDateString('nl-NL',{month:'short'});
@@ -7670,11 +7672,9 @@ boot();
     <!-- Naam wijzigen -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Naam</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="profile-name-input" maxlength="20"
-          style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:16px;outline:none" />
-        <button onclick="saveProfileName()" class="btn btn-primary" style="padding:12px 16px;white-space:nowrap">Opslaan</button>
-      </div>
+      <input type="text" id="profile-name-input" maxlength="20"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:16px;outline:none;box-sizing:border-box;-webkit-appearance:none;display:block;margin-bottom:8px" />
+      <button onclick="saveProfileName()" class="btn btn-primary" style="width:100%;padding:12px 16px">Opslaan</button>
     </div>
 
     <!-- Emoji kiezen -->
