@@ -4805,7 +4805,9 @@ function renderForWhoChips(existing) {
   }
 
   // Gebruik event delegation op de container
+  console.log('[ForWho] members:', members.length, 'selected:', JSON.stringify(forWhoSelected));
   container.onclick = function(e) {
+    console.log('[ForWho] click on:', e.target.tagName, e.target.getAttribute && e.target.getAttribute('data-mid'));
     var btn = e.target.closest('button[data-mid]');
     if (!btn) return;
     var mid = btn.getAttribute('data-mid');
