@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEwMCIgZmlsbD0iIzFEOUU3NSIvPgogIDxsaW5lIHgxPSIxMjIiIHkxPSIyNjUiIHgyPSIxODYiIHkyPSI0MzUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik05MyAxNjYgUTEwMCAyMjAgMTIyIDI2NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTQ1IDMwIFE0MyA5MyA5MyAxNjYiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik04MyAyMCBRODUgOCAxMDAgMTIgUTE0NSAyNCAxNDggODAgUTE1MiAxMzYgMTMwIDE5MiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyMCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTE0OCA4MCBRMjMwIDUwIDI4MCAxMjAgUTMzMCAxOTAgMzAwIDI4MCBRMjcwIDM3MCAxODYgNDM1IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgcng9IjQwIiBmaWxsPSJ3aGl0ZSIvPjx0ZXh0IHg9IjEwMCIgeT0iMTMwIiBmb250LXNpemU9IjEyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+Nve+4jzwvdGV4dD48cGF0aCBkPSJNMTAwIDEyNCBDMTAwIDEyNCA2OCAxMDQgNjggODIgQzY4IDY4IDc4IDU4IDkxIDU4IEM5NiA1OCAxMDAgNjIgMTAwIDYyIEMxMDAgNjIgMTA0IDU4IDEwOSA1OCBDMTIyIDU4IDEzMiA2OCAxMzIgODIgQzEzMiAxMDQgMTAwIDEyNCAxMDAgMTI0WiIgZmlsbD0iIzFEOUU3NSIvPjwvc3ZnPg==">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Lekkerstemmen">
@@ -10,7 +10,11 @@
   <meta name="theme-color" content="#1D9E75">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
+  <link rel="apple-touch-icon" href="data:image/png;base64,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">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIyIiBmaWxsPSIjMUQ5RTc1Ii8+CiAgPHBhdGggZD0iTTUwIDg4IEM1MCA4OCAzMiA3NCAzMiA2MyBDMzIgNTYgMzcgNTEgNDQgNTMgQzQ3IDU0IDUwIDU3IDUwIDU3IEM1MCA1NyA1MyA1NCA1NiA1MyBDNjMgNTEgNjggNTYgNjggNjMgQzY4IDc0IDUwIDg4IDUwIDg4IFoiIGZpbGw9IndoaXRlIi8+CiAgPGxpbmUgeDE9IjI4IiB5MT0iNTgiIHgyPSIzOCIgeTI9IjgyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTTIyIDE2IFEyMSAzMiAyOCA0OCBRMzAgNTQgMjggNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzIiIHkxPSI1OCIgeDI9IjYyIiB5Mj0iODIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNNzIgNTggUTc0IDU0IDc2IDQ4IEw3NiAxMiBRNzYgOCA4MCA4IFE5MCA4IDkyIDIyIFE5NCAzNiA4NCA0NCBRNzggNDggNzIgNTIiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Lekkerstemmen">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Lekkerstemmen v18:05</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,400&display=swap" rel="stylesheet" />
@@ -348,16 +352,9 @@
   <div class="auth-wrap">
     <span class="auth-emoji">&#x1F37D;</span>
     <div style="text-align:center;margin-bottom:16px">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 210" width="56" height="74">
-        <line x1="38" y1="108" x2="58" y2="178" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
-        <path d="M29 68 Q32 90 38 108" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round"/>
-        <path d="M14 12 Q13 38 29 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
-        <path d="M26 8 Q27 36 33 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
-        <path d="M38 8 Q40 36 38 68" fill="none" stroke="#1D9E75" stroke-width="3.5" stroke-linecap="round"/>
-        <line x1="122" y1="108" x2="102" y2="178" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
-        <path d="M131 68 Q128 90 122 108" fill="none" stroke="#085041" stroke-width="5" stroke-linecap="round"/>
-        <path d="M131 68 L131 16 Q131 8 138 8 Q158 8 162 28 Q166 48 148 60 Q140 64 131 68 Z" fill="#085041"/>
-        <path d="M80 200 C80 200 58 183 58 170 C58 162 64 156 72 158 C76 159 80 163 80 163 C80 163 84 159 88 158 C96 156 102 162 102 170 C102 183 80 200 80 200 Z" fill="#1D9E75"/>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="44" height="44">
+        <text x="100" y="130" font-size="120" text-anchor="middle">🍽️</text>
+        <path d="M100 124 C100 124 68 104 68 82 C68 68 78 58 91 58 C96 58 100 62 100 62 C100 62 104 58 109 58 C122 58 132 68 132 82 C132 104 100 124 100 124Z" fill="#1D9E75"/>
       </svg>
     </div>
     <h1 class="auth-title">Lekker<span>stemmen</span></h1>
@@ -1936,14 +1933,13 @@ async function addSuggestedMeal(btn) {
   const { error } = await sb.from('custom_meals').insert({ family_id: currentProfile.family_id, name: naam, emoji: emoji });
   if (!error) {
     await loadData();
-    renderMealsScreen(); // ververs gerechtenlijst
+    renderMealsScreen();
     btn.textContent = '\u2713 Toegevoegd';
     btn.style.background = 'var(--green)'; btn.style.color = 'white';
     btn.style.border = '1.5px solid var(--green)';
   } else {
     console.error('Toevoegen mislukt:', error);
-    btn.textContent = 'Fout: ' + (error.message||'onbekend');
-    btn.disabled = false;
+    btn.textContent = 'Fout: ' + (error.message||'onbekend'); btn.disabled = false;
   }
 }
 
