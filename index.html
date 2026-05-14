@@ -4807,9 +4807,10 @@ function renderForWhoChips(existing) {
   members.forEach(m => {
     const isSelected = forWhoSelected.includes(m.id);
     const btn = document.createElement('button');
-    btn.style.cssText = 'padding:6px 12px;border-radius:99px;border:1.5px solid ' + (isSelected?'var(--green)':'var(--border)') + ';background:' + (isSelected?'var(--green-bg)':'white') + ';color:' + (isSelected?'var(--green)':'var(--text)') + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit';
+    btn.type = 'button';
+    btn.style.cssText = 'padding:6px 12px;border-radius:99px;border:1.5px solid ' + (isSelected?'var(--green)':'var(--border)') + ';background:' + (isSelected?'var(--green-bg)':'white') + ';color:' + (isSelected?'var(--green)':'var(--text)') + ';font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;-webkit-appearance:none';
     btn.textContent = (m.emoji||'') + ' ' + m.name;
-    btn.onclick = () => {
+    btn.onclick = (evt) => { evt.preventDefault(); evt.stopPropagation();
       if (forWhoSelected.includes(m.id)) {
         if (forWhoSelected.length > 1) forWhoSelected = forWhoSelected.filter(id=>id!==m.id);
       } else {
