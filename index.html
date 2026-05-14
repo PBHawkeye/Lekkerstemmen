@@ -4795,17 +4795,21 @@ function renderForWhoChips(existing) {
   var members = getFamilyMembers();
   if (!members.length) return;
 
-  if (window._secondDishForIds) {
-    forWhoSelected = window._secondDishForIds.slice();
-  } else if (existing && existing.for_profile_ids) {
-    try { forWhoSelected = JSON.parse(existing.for_profile_ids); }
-    catch(e2) { forWhoSelected = members.map(function(x){return x.id;}); }
-  } else {
-    forWhoSelected = members.map(function(x){return x.id;});
+  // Alleen initialiseren als existing meegegeven wordt (eerste keer)
+  // Bij null (herender na klik) forWhoSelected NIET overschrijven
+  if (existing !== undefined && existing !== 'keep') {
+    if (window._secondDishForIds) {
+      forWhoSelected = window._secondDishForIds.slice();
+    } else if (existing && existing.for_profile_ids) {
+      try { forWhoSelected = JSON.parse(existing.for_profile_ids); }
+      catch(e2) { forWhoSelected = members.map(function(x){return x.id;}); }
+    } else {
+      forWhoSelected = members.map(function(x){return x.id;});
+    }
   }
 
-  // Gebruik event delegation op de container
   console.log('[ForWho] members:', members.length, 'selected:', JSON.stringify(forWhoSelected));
+
   container.onclick = function(e) {
     console.log('[ForWho] click on:', e.target.tagName, e.target.getAttribute && e.target.getAttribute('data-mid'));
     var btn = e.target.closest('button[data-mid]');
@@ -4817,7 +4821,7 @@ function renderForWhoChips(existing) {
     } else {
       forWhoSelected.push(mid);
     }
-    renderForWhoChips(null);
+    renderForWhoChips('keep'); // herender zonder reset
   };
 
   container.innerHTML = members.map(function(m) {
