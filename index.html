@@ -712,7 +712,19 @@
       <div class="label" style="margin-bottom:6px">Bericht aan het gezin <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(optioneel)</span></div>
       <textarea id="meal-picker-message" placeholder="bijv. dit keer minder zout, of: jullie mogen kiezen tussen ketchup of mayo" maxlength="120" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:64px"></textarea>
     </div>
-    <button class="btn btn-primary" style="margin-top:16px" onclick="confirmMealPick()">Opslaan ✓</button>
+    <!-- Voor wie? -->
+    <div id="meal-picker-forwho-section" style="margin:12px 0 8px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Voor wie?</div>
+      <div id="meal-picker-forwho-chips" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+    <!-- Tweede gerecht optie -->
+    <div id="meal-picker-second-section" style="margin-bottom:8px;display:none">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="meal-picker-add-second" style="width:16px;height:16px;accent-color:var(--green)">
+        <span>Tweede gerecht toevoegen voor rest gezin</span>
+      </label>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="confirmMealPick()">Opslaan ✓</button>
   </div>
 </div>
 
