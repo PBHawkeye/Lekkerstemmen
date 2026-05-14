@@ -503,6 +503,23 @@
       <button class="btn btn-primary" onclick="goScreen('vote')">Stem nu →</button>
     </div>
   </div>
+  <div id="insight-block" class="hidden">
+    <div class="section-title">Inzicht</div>
+    <div class="insight" id="insight-personal-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Jouw observatie</div>
+        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-text"></div>
+    </div>
+    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Gezinsweetje</div>
+        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-family-text">Laden...</div>
+    </div>
+  </div>
 
 </div>
 
@@ -8173,20 +8190,4 @@ boot();
 </div>
 </body>
 </html>
-  <div id="insight-block" class="hidden">
-    <div class="section-title">Inzicht</div>
-    <div class="insight" id="insight-personal-wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="insight-badge">Jouw observatie</div>
-        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
-      </div>
-      <div class="insight-text" id="insight-text"></div>
-    </div>
-    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="insight-badge">Gezinsweetje</div>
-        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
-      </div>
-      <div class="insight-text" id="insight-family-text">Laden...</div>
-    </div>
-  </div>
+
