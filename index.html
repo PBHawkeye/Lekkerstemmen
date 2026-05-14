@@ -4795,12 +4795,14 @@ function renderForWhoChips(existing) {
   const members = getFamilyMembers();
   if (!members.length) return;
 
-  // Bepaal initiEle selectie
+  // Altijd opnieuw initialiseren bij elke render
   if (window._secondDishForIds) {
-    forWhoSelected = window._secondDishForIds;
+    forWhoSelected = [...window._secondDishForIds];
   } else if (existing && existing.for_profile_ids) {
-    try { forWhoSelected = JSON.parse(existing.for_profile_ids); } catch(e) { forWhoSelected = members.map(m=>m.id); }
-  } else if (!forWhoSelected || forWhoSelected.length === 0) {
+    try { forWhoSelected = JSON.parse(existing.for_profile_ids); }
+    catch(e) { forWhoSelected = members.map(m=>m.id); }
+  } else {
+    // Geen bestaande selectie of null for_profile_ids = iedereen
     forWhoSelected = members.map(m=>m.id);
   }
 
@@ -7078,6 +7080,7 @@ async function openMealPicker(dateStr, dayIndex, existing) {
   });
 
   renderMealGrid(allPickerMeals, existing?.meal_id);
+  forWhoSelected = []; // reset zodat renderForWhoChips altijd vers begint
   renderForWhoChips(existing);
   show('meal-picker');
 }
