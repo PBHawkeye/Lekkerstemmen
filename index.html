@@ -635,14 +635,13 @@
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:8px">Stemmen kinderen</div>
         <div id="vote-summary-list" style="font-size:13px;color:var(--text)"></div>
       </div>
-    </div><div id="menu-days-list" style="padding:0 16px 20px"></div>
-    
-    <div style="padding:0 16px 100px;display:flex;flex-direction:column;gap:8px">
-      <div style="padding:0 16px 8px">
-      <button class="btn" style="background:var(--green-bg);color:var(--green);margin-bottom:8px" onclick="goScreen('vote-setup')">&#9881; Kieslijst instellen →</button>
-      <button class="btn" style="background:#E0FAF4;color:#0F6E56;margin-bottom:8px" onclick="showAIProposal()">&#10024; AI menuvoorstel →</button>
+    </div><div <div style="padding:0 16px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+      <button class="btn" style="background:var(--green-bg);color:var(--green)" onclick="goScreen('vote-setup')">&#9881; Kieslijst instellen →</button>
+      <button class="btn" style="background:#E0FAF4;color:#0F6E56" onclick="showAIProposal()">&#10024; AI menuvoorstel →</button>
     </div>
     <div id="ai-proposal-container" style="margin:0 16px 12px;display:none"></div>
+    id="menu-days-list" style="padding:0 16px 20px"></div>
+    
     <!-- AI analyse knop -->
     <button class="btn" id="menu-analyse-btn" onclick="analyseWeekMenu()" style="width:100%;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green);margin-bottom:8px">✨ AI: Is dit menu gezond en evenwichtig?</button>
     <div id="menu-analyse-result" style="display:none;background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
@@ -1086,20 +1085,6 @@
 </div>
 
 <script>
-const APP_VERSION = "v2007b-menu-fixed";
-console.log("[APP] Versie:", APP_VERSION);
-
-// Controleer menu volgorde bij laden
-document.addEventListener("DOMContentLoaded", function() {
-  var days = document.getElementById("menu-days-list");
-  var kies = document.querySelector("button[onclick*='vote-setup']");
-  if (days && kies) {
-    var daysPos = days.compareDocumentPosition(kies);
-    // 4 = kies komt NA days (correct)
-    console.log("[MENU ORDER] days-list vs kieslijst:", daysPos === 4 ? "CORRECT (days eerst)" : "FOUT (kieslijst eerst)");
-  }
-});
-
 const sb = supabase.createClient(
   'https://wzdxkyclnwpopbfembpp.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZHhreWNsbndwb3BiZmVtYnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjM0NzUsImV4cCI6MjA5MzM5OTQ3NX0.9cDCZmN4QzHkIcCmaQB8R4bm2wGIPSLqU2pSJ8V5POI'
