@@ -7076,9 +7076,9 @@ async function openMealPicker(dateStr, dayIndex, existing) {
   });
 
   renderMealGrid(allPickerMeals, existing?.meal_id);
-  forWhoSelected = []; // reset zodat renderForWhoChips altijd vers begint
+  forWhoSelected = []; // reset
+  show('meal-picker'); // eerst tonen, dan chips renderen (iOS vereiste)
   renderForWhoChips(existing);
-  show('meal-picker');
 }
 
 async function confirmMealPick() {
