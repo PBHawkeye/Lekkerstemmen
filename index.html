@@ -2568,7 +2568,7 @@ async function loadData() {
   familySettings = newSettings;
   // Laad credits uit aparte tabel + initialiseer als nieuw gezin
   await initCreditsIfNew();
-  await loadCredits();
+  await loadCredits(familyId);
 
   // Check-ins laden
   let cis = cisRes.data||[];
@@ -6513,6 +6513,11 @@ const AI_CREDIT_COST = 1;       // credits per aanroep (aanpasbaar)
 const AI_CREDITS_START = 200;   // startwaarde voor nieuwe gezinnen
 
 let cachedCredits = null;        // lokale cache om DB-calls te minimaliseren
+const AI_CREDITS_DEFAULT = 60;   // default voor Pro gebruikers
+
+function getAICredits() {
+  return cachedCredits !== null ? cachedCredits : AI_CREDITS_DEFAULT;
+}
 
 
 function renderCreditsDisplay() {
@@ -6527,6 +6532,8 @@ function renderCreditsDisplay() {
 }
 
 async function loadCredits(familyId) {
+  familyId = familyId || currentProfile?.family_id;
+  if (!familyId) { cachedCredits = AI_CREDITS_DEFAULT; renderCreditsDisplay(); return; }
   try {
     // Probeer subscriptions tabel
     const { data: sub, error: subErr } = await sb.from('subscriptions')
