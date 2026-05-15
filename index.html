@@ -501,7 +501,7 @@
 
 <div id="s-home" class="screen">
 
-  <div class="greeting">
+  <div class="greeting" id="home-avatar">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <h1 style="margin:0">Hey <span id="home-name">daar</span> &#x1F44B;</h1>
       <div id="credits-badge" style="display:none;align-items:center;gap:5px;background:var(--green-bg);border:1.5px solid var(--border);border-radius:99px;padding:4px 12px;cursor:pointer" onclick="goScreen('profile')" title="AI credits - klik voor meer info">
@@ -614,6 +614,24 @@
     <div class="card" style="margin:0 16px">
       <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5" id="stemdag-sub">Kies welke gerechten je volgende week wilt eten.</p>
       <button class="btn btn-primary" onclick="goScreen('vote')">Stem nu →</button>
+    </div>
+  </div>
+
+  <div id="insight-block" class="hidden">
+    <div class="section-title">Inzicht</div>
+    <div class="insight" id="insight-personal-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Jouw observatie</div>
+        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-text"></div>
+    </div>
+    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Gezinsweetje</div>
+        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-family-text">Laden...</div>
     </div>
   </div>
 
@@ -877,7 +895,7 @@
     </div>
   </div>
 </div>
-<div id="s-status" class="screen">
+<div id="s-status" class="screen"><div id="status-week-sub" style="display:none"></div>
   <div class="topbar">
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Statistieken</div>
     <div style="width:38px"></div>
@@ -8812,16 +8830,18 @@ async function boot() {
 
   // Productie: via Supabase auth sessie
   const {data:{session}} = await sb.auth.getSession();
-  if (session) {
+  if (session && !testModeActive) {
     currentUser = session.user;
     await loadProfile();
     if (currentProfile) { refreshHome(); show('home'); }
-  } else {
+  } else if (!testModeActive) {
     show('auth');
-    sb.auth.onAuthStateChange(async(event,session)=>{
-      if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); refreshHome(); show('home'); }
-      else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
-    });
+    if (!testModeActive) {
+      sb.auth.onAuthStateChange(async(event,session)=>{
+        if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); if (currentProfile) { refreshHome(); show('home'); } }
+        else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
+      });
+    }
   }
 }
 
@@ -9277,5 +9297,6 @@ boot();
     </div>
   </div>
 </div>
+  <div id="credit-toast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.15)"></div>
 </body>
 </html>
