@@ -2928,7 +2928,6 @@ function refreshHome() {
   const p = currentProfile;
   const homeNameEl = document.getElementById('home-name');
   if (homeNameEl) homeNameEl.textContent = p.name;
-  const avatarEl = document.getElementById('home-avatar'); if (avatarEl) avatarEl.textContent = p.emoji || '😊';
   // Credits badge: toon voor ouder
   const creditsBadge = document.getElementById('credits-badge');
   if (creditsBadge) creditsBadge.style.display = p.role === 'parent' ? 'flex' : 'none';
@@ -6103,6 +6102,7 @@ function openFeedbackScreen() {
   if (errEl) errEl.style.display = 'none';
   if (sucEl) sucEl.style.display = 'none';
   if (btn) { btn.style.display = ''; btn.textContent = 'Versturen →'; }
+  show('feedback');
 }
 
 async function submitFeedback() {
@@ -6272,9 +6272,6 @@ async function saveProfileName() {
   const _hn = document.getElementById('home-name'); if (_hn) _hn.textContent = name;
   const fpn = familyProfiles.find(p => p.id === currentProfile.id);
   if (fpn) fpn.name = name;
-  // Update avatar initiaal
-  const avatar = document.getElementById('home-avatar');
-  if (avatar) avatar.textContent = currentProfile?.emoji || name;
   showProfileSaveMsg();
 }
 
