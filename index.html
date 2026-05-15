@@ -2491,14 +2491,19 @@ async function doSetup() {
       });
       if (profErr) throw profErr;
     }
-    await loadProfile();
+    // Laad het zojuist aangemaakte profiel direct (zonder navigatie)
+    const {data: newProf} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+    if (!newProf) throw new Error('Profiel kon niet geladen worden.');
+    currentProfile = newProf;
+    if (newProf.family_id) localStorage.setItem('lk_family_id', newProf.family_id);
+    await loadData();
     // Check of onboarding nodig is
     const {data: meals} = await sb.from('custom_meals')
       .select('id').eq('family_id', currentProfile.family_id).limit(1);
     if (!meals || meals.length === 0) {
       show('onboarding');
     } else {
-      await loadData(); show('home'); refreshHome();
+      refreshHome(); show('home');
     }
   } catch(e) {
     if (errEl) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
@@ -9063,25 +9068,10 @@ async function boot() {
     renderLangPicker();
     sb.auth.onAuthStateChange(async(event,session)=>{
       if (event==='SIGNED_IN' && session) {
-        currentUser = session.user;
-        await loadProfile();
-        if (currentProfile && currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
-          // Alleen init als doAuth() het nog niet gedaan heeft (balk bestaat nog niet)
-          if (!document.getElementById('test-bar')) {
-            testModeActive = true;
-            TEST_MODE = true;
-            const { data: testMembers } = await sb.from('profiles')
-              .select('id,family_id,name,role,emoji,sports,language')
-              .eq('family_id', currentProfile.family_id);
-            familyProfiles = testMembers || [];
-            const paulProf = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
-            if (paulProf) {
-              currentProfile = {...paulProf, sports: currentProfile.sports || []};
-            }
-            initTestBar();
-            refreshHome();
-            show('home');
-          }
+        // Alleen handelen als loadProfile nog niet liep (doAuth/doSetup doen het zelf)
+        if (!currentProfile && !TEST_MODE) {
+          currentUser = session.user;
+          await loadProfile();
         }
       } else if (event==='SIGNED_OUT') {
         currentUser = null; currentProfile = null;
