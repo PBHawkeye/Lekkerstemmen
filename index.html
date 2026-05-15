@@ -1778,9 +1778,10 @@ function initTestBar() {
     const bar = document.createElement('div');
     bar.id = 'test-bar';
     bar.className = 'test-bar';
+    bar.style.display = 'block';
     bar.innerHTML =
       '<div class="test-bar-top">' +
-        '<div class="test-bar-title">\u{1F9EA} Testmodus</div>' +
+        '<div class="test-bar-title">\uD83E\uDDEA Testmodus</div>' +
         '<div style="display:flex;align-items:center;gap:8px">' +
           '<div class="test-day-display" id="test-day-display">vandaag</div>' +
           '<button class="test-toggle" id="test-toggle-btn" onclick="toggleTestMode()">Aan</button>' +
@@ -2611,8 +2612,11 @@ async function loadProfile() {
   show('home');
 }
 
+let dataLoaded = false;
+
 async function loadData() {
   if (!currentProfile) return;
+  dataLoaded = false;
   const familyId = currentProfile.family_id;
   const profileId = currentProfile.id;
   console.log('[loadData] familyId:', familyId, 'profileId:', profileId);
@@ -2731,6 +2735,7 @@ async function loadData() {
   availableMeals = avail.length > 0
     ? avail.map(a=>getAllMeals().find(m=>m.id===a.meal_id)||{id:a.meal_id,emoji:'\uD83C\uDF7D',label:a.meal_id})
     : getAllMeals().slice(0,8);
+  dataLoaded = true;
 }
 
 // ── HOME ───────────────────────────────────────────────────────
@@ -3037,8 +3042,8 @@ function isAfter16() {
 
 function refreshHome() {
   if (!currentProfile) return;
-  // Ouder zonder gerechten → stuur terug naar onboarding (niet in testmodus)
-  if (!TEST_MODE && currentProfile.role === 'parent' && customMeals.length === 0) {
+  // Ouder zonder gerechten → stuur terug naar onboarding (niet in testmodus, alleen als data geladen)
+  if (!TEST_MODE && dataLoaded && currentProfile.role === 'parent' && customMeals.length === 0) {
     show('onboarding');
     return;
   }
@@ -9090,23 +9095,24 @@ async function boot() {
     sb.auth.onAuthStateChange(async(event,session)=>{
       if (event==='SIGNED_IN' && session) {
         currentUser = session.user;
-        // Activeer testmodus voor beheerder
         await loadProfile();
-        // loadProfile doet al refreshHome + show('home')
         if (currentProfile && currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
-          testModeActive = true;
-          TEST_MODE = true;
-          const { data: testMembers } = await sb.from('profiles')
-            .select('id,family_id,name,role,emoji,sports,language')
-            .eq('family_id', currentProfile.family_id);
-          familyProfiles = testMembers || [];
-          const paulProf = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
-          if (paulProf) {
-            currentProfile = {...paulProf, sports: currentProfile.sports || []};
+          // Alleen init als doAuth() het nog niet gedaan heeft (balk bestaat nog niet)
+          if (!document.getElementById('test-bar')) {
+            testModeActive = true;
+            TEST_MODE = true;
+            const { data: testMembers } = await sb.from('profiles')
+              .select('id,family_id,name,role,emoji,sports,language')
+              .eq('family_id', currentProfile.family_id);
+            familyProfiles = testMembers || [];
+            const paulProf = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
+            if (paulProf) {
+              currentProfile = {...paulProf, sports: currentProfile.sports || []};
+            }
+            initTestBar();
+            refreshHome();
+            show('home');
           }
-          initTestBar();
-          refreshHome();
-          show('home');
         }
       } else if (event==='SIGNED_OUT') {
         currentUser = null; currentProfile = null;
