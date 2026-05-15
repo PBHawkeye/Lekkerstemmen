@@ -348,6 +348,12 @@
 
 <div id="s-auth" class="screen">
   <div class="auth-wrap">
+    <div style="position:absolute;top:16px;right:16px;display:flex;gap:4px;z-index:10">
+      <button type="button" onclick="setLang('nl')" data-lang="nl" class="lang-btn" style="padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:white;font-size:11px;cursor:pointer;font-family:inherit">NL</button>
+      <button type="button" onclick="setLang('en')" data-lang="en" class="lang-btn" style="padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:white;font-size:11px;cursor:pointer;font-family:inherit">EN</button>
+      <button type="button" onclick="setLang('fr')" data-lang="fr" class="lang-btn" style="padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:white;font-size:11px;cursor:pointer;font-family:inherit">FR</button>
+      <button type="button" onclick="setLang('es')" data-lang="es" class="lang-btn" style="padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:white;font-size:11px;cursor:pointer;font-family:inherit">ES</button>
+    </div>
     <div style="text-align:center;margin-bottom:16px">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="80" height="80">
   <text x="100" y="130" font-size="120" text-anchor="middle">🍽️</text>
@@ -375,11 +381,23 @@
     <h2 class="page-title">Welkom! &#x1F44B;</h2>
     <p class="page-sub">Vertel ons even wie je bent.</p>
     <div class="field"><label class="label">Jouw naam</label><input type="text" id="setup-name" placeholder="bijv. Paul, Luca, ..." /></div>
-    <div class="field"><label class="label">Gezinsnaam (optioneel)</label><input type="text" id="setup-family" placeholder="bijv. Familie Brentjens" /></div>
-    <div class="label" style="margin-bottom:12px">Ik ben...</div>
+    <!-- Huistype keuze -->
+    <div class="label" style="margin-bottom:8px">Type huishouden</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button type="button" onclick="selectHouseType('family')" id="type-family" class="house-type-btn"
+        style="flex:1;padding:12px;border-radius:var(--r);border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;text-align:center">
+        🏠 Gezin
+      </button>
+      <button type="button" onclick="selectHouseType('house')" id="type-house" class="house-type-btn"
+        style="flex:1;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);background:white;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;text-align:center">
+        🏡 Studentenhuis
+      </button>
+    </div>
+    <div class="field"><label class="label" id="setup-group-label">Gezinsnaam (optioneel)</label><input type="text" id="setup-family" placeholder="bijv. Familie Brentjens" id="setup-family-input" /></div>
+    <div class="label" style="margin-bottom:12px" id="setup-role-label">Ik ben...</div>
     <div class="role-grid">
-      <div class="role-card" id="role-parent" onclick="selectRole('parent')"><span class="role-emoji">&#x1F468;&#x1F469;&#x1F467;</span><div class="role-name">Ouder</div><div class="role-sub">Ik log de gerechten</div></div>
-      <div class="role-card" id="role-child" onclick="selectRole('child')"><span class="role-emoji">&#x1F9D2;</span><div class="role-name">Kind</div><div class="role-sub">Ik stem en check in</div></div>
+      <div class="role-card" id="role-parent" onclick="selectRole('parent')"><span class="role-emoji" id="role-admin-emoji">&#x1F468;&#x1F469;&#x1F467;</span><div class="role-name" id="role-admin-name">Ouder</div><div class="role-sub" id="role-admin-sub">Ik stel het menu vast</div></div>
+      <div class="role-card" id="role-child" onclick="selectRole('child')"><span class="role-emoji" id="role-member-emoji">&#x1F9D2;</span><div class="role-name" id="role-member-name">Kind</div><div class="role-sub" id="role-member-sub">Ik stem en check in</div></div>
     </div>
     <div id="setup-error" class="msg-error hidden"></div>
     <button class="btn btn-primary" onclick="doSetup()" id="setup-btn">Starten →</button>
@@ -501,23 +519,6 @@
     <div class="card" style="margin:0 16px">
       <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5" id="stemdag-sub">Kies welke gerechten je volgende week wilt eten.</p>
       <button class="btn btn-primary" onclick="goScreen('vote')">Stem nu →</button>
-    </div>
-  </div>
-  <div id="insight-block" class="hidden">
-    <div class="section-title">Inzicht</div>
-    <div class="insight" id="insight-personal-wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="insight-badge">Jouw observatie</div>
-        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
-      </div>
-      <div class="insight-text" id="insight-text"></div>
-    </div>
-    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div class="insight-badge">Gezinsweetje</div>
-        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
-      </div>
-      <div class="insight-text" id="insight-family-text">Laden...</div>
     </div>
   </div>
 
@@ -1102,6 +1103,365 @@
 </div>
 
 <script>
+
+// i18n
+let currentLang = localStorage.getItem('lang') || 'en';
+
+const TRANSLATIONS = {
+  nl: {
+    auth_tagline: 'Samen kiezen wat er op tafel komt.',
+    btn_login: 'Inloggen', btn_register: 'Registreren', btn_join: 'Gezin joinen',
+    lbl_email: 'E-mailadres', lbl_password: 'Wachtwoord', lbl_name: 'Naam',
+    lbl_family_name: 'Gezinsnaam', lbl_invite_code: 'Uitnodigingscode', lbl_language: 'Taal',
+    nav_home: 'Home', nav_shopping: 'Inkopen', nav_status: 'Status',
+    nav_menu: 'Menu', nav_sport: 'Sport', nav_more: 'Meer',
+    home_tonight: 'Vanavond', home_this_week: 'Deze week',
+    home_full_menu: 'Heel menu bekijken', home_no_menu: 'Menu voor komende dagen nog niet bepaald.',
+    home_streak: 'dagen op rij!', home_insight: 'Inzicht',
+    home_personal_obs: 'Jouw observatie', home_family_fact: 'Gezinsweetje',
+    home_vote_week: 'Stem voor volgende week',
+    home_vote_sub: 'Kies welke gerechten je volgende week wilt eten.',
+    home_log_meal: 'Log gerecht', home_how_was_it: 'Hoe lekker was het?',
+    btn_new: 'Nieuw', btn_vote_now: 'Stem nu \u2192', btn_change_vote: 'Stem wijzigen \u2192',
+    btn_view_vote: 'Jouw stem bekijken', btn_full_menu: 'Heel menu bekijken \u2192',
+    checkin_title: 'Hoe lekker was het?', checkin_tonight: 'Vanavond',
+    checkin_drink: 'Wat dronk je erbij?', checkin_drink_opt: 'optioneel',
+    checkin_comment: 'Wil je nog iets zeggen?', checkin_comment_parent: 'Opmerking',
+    checkin_skip: 'Overslaan', checkin_save: 'Opslaan \u2713',
+    checkin_switch: '\ud83d\udd04 Wissel naar: ',
+    drink_water: 'Water', drink_milk: 'Melk', drink_juice: 'Sap', drink_soda: 'Frisdrank',
+    score_good: '\ud83d\ude0b Lekker!', score_ok: '\ud83d\ude10 Ging wel', score_bad: '\ud83d\ude15 Niet zo lekker',
+    success_good: 'Geweldig!', success_good_sub: 'Fijn dat het smaakte!',
+    success_ok: 'Oké!', success_ok_sub: 'Bedankt voor je stem.',
+    success_bad: 'Jammer!', success_bad_sub: 'Hopelijk morgen beter.',
+    btn_home: 'Terug naar home', btn_auto_home: 'Ga je automatisch naartoe...',
+    menu_title: 'Menu', menu_not_chosen: 'Nog niet gekozen', menu_published: '\u2713 gepubliceerd',
+    menu_publish: 'Menu publiceren voor kinderen \u2192', menu_update: 'Menu bijwerken \u2713',
+    menu_cancel: 'Annuleren', menu_add_second: '+ 2e gerecht toevoegen voor rest gezin',
+    menu_kieslijst: '\u2699 Kieslijst instellen \u2192', menu_ai_proposal: '\u2728 AI menuvoorstel \u2192',
+    menu_ai_analyse: '\u2728 AI: Is dit menu gezond en evenwichtig?',
+    menu_analysing: 'AI analyseert...', menu_week_next: 'volgende week',
+    menu_week_current: 'huidige week', menu_week_in: 'over {n} weken', menu_week_prev: 'vorige week',
+    picker_for_who: 'Voor wie?', picker_save: 'Opslaan \u2713',
+    picker_note: 'Notitie (optioneel)', picker_message: 'Bericht aan het gezin',
+    picker_who_cooks: 'Wie kookt?',
+    cook_title: 'Vanavond koken', cook_ingredients: 'Ingredienten',
+    cook_instructions: 'Bereidingswijze', cook_history: 'Eerder gegeten',
+    cook_ai_recipe: '\u2728 AI recept genereren', cook_save_recipe: '\ud83d\udcbe Opslaan bij gerecht',
+    cook_saved: '\u2713 Opgeslagen!', cook_change: '\ud83d\udd04 Toch iets anders?',
+    cook_for: 'Voor:', lbl_side_dish: 'Bijgerecht',
+    meals_title: 'Gerechten', meals_our_list: 'Onze Gerechtenlijst',
+    btn_add: '+ Toevoegen', btn_ai_suggest: '\u2728 AI voorstellen',
+    btn_save: 'Opslaan', btn_delete: 'Verwijderen', btn_cancel: 'Annuleren',
+    vote_title: 'Jouw stem', vote_choose: 'Kies {n} gerechten',
+    vote_sub: 'Je ouder beslist het definitieve menu.',
+    vote_suggestion: 'Suggestie aan de kok (optioneel)',
+    btn_vote_save: 'Stem opslaan', vote_next_week: 'volgende week',
+    vote_readonly: 'Menu is al vastgesteld. Je kunt je stem nog bekijken.',
+    status_title: 'Status', status_week: 'Week van', status_progress: 'Weekvoortgang',
+    status_not_checked: 'nog niet ingecheckt', status_no_forgotten: 'Geen vergeten check-ins!',
+    shopping_title: 'Boodschappen', shopping_for_which: 'Voor welke dagen doe je boodschappen?',
+    shopping_persons: 'Aantal personen:', shopping_generate: '\u2728 Boodschappenlijst genereren',
+    shopping_all: 'Alles', shopping_generating: 'AI stelt lijst samen...',
+    sport_title: 'Sport', sport_had: 'Jij had Sport vandaag!',
+    sport_ate_with: 'Heb je mee gegeten?', sport_ate_yes: 'Ja, gewoon mee',
+    sport_ate_warmed: 'Ja, opgewarmd', sport_ate_apart: 'Nee, apart gegeten',
+    sport_ate_after: 'Erna thuis gegeten', sport_before: 'Voor het sporten gegeten/gedronken?',
+    sport_after: 'Na het sporten?', sport_banana: 'Banaan', sport_sandwich: 'Boterham',
+    sport_bar: 'Reep', sport_fruit: 'Fruit', sport_sports_drink: 'Sportdrank',
+    sport_nothing: 'Niets', sport_other: 'Anders',
+    profile_title: 'Mijn profiel', profile_name: 'Naam', profile_emoji: 'Emoji',
+    profile_emoji_change: '\u270f\ufe0f Wijzigen', profile_emoji_close: '\u2715 Sluiten',
+    profile_language: 'Taal', profile_role_parent: 'ouder', profile_role_child: 'kind',
+    btn_save_name: 'Opslaan', profile_pin: 'Pincode wijzigen',
+    profile_api_key: 'Anthropic API Key', profile_credits: 'AI Credits',
+    more_title: 'Meer', more_profile: 'Mijn profiel', more_invite: 'Uitnodigen',
+    more_stats: 'Statistieken', more_logout: 'Uitloggen',
+    role_parent: 'ouder', role_child: 'kind',
+    role_admin: 'beheerder', role_member: 'bewoner',
+    house_family: 'Gezin', house_student: 'Studentenhuis',
+    lbl_optional: 'optioneel', lbl_today: 'vandaag', lbl_loading: 'Laden...',
+    lbl_save: 'Opslaan', lbl_cook: 'kookt',
+    days: ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'],
+    days_short: ['Zo','Ma','Di','Wo','Do','Vr','Za'],
+    months: ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'],
+  },
+  en: {
+    auth_tagline: 'Choose together what\'s for dinner.',
+    btn_login: 'Log in', btn_register: 'Register', btn_join: 'Join family',
+    lbl_email: 'Email', lbl_password: 'Password', lbl_name: 'Name',
+    lbl_family_name: 'Family name', lbl_invite_code: 'Invite code', lbl_language: 'Language',
+    nav_home: 'Home', nav_shopping: 'Shopping', nav_status: 'Status',
+    nav_menu: 'Menu', nav_sport: 'Sport', nav_more: 'More',
+    home_tonight: 'Tonight', home_this_week: 'This week',
+    home_full_menu: 'View full menu', home_no_menu: 'No menu planned for upcoming days.',
+    home_streak: 'days in a row!', home_insight: 'Insights',
+    home_personal_obs: 'Your observation', home_family_fact: 'Family fact',
+    home_vote_week: 'Vote for next week',
+    home_vote_sub: 'Choose which dishes you want next week.',
+    home_log_meal: 'Rate meal', home_how_was_it: 'How was it?',
+    btn_new: 'New', btn_vote_now: 'Vote now \u2192', btn_change_vote: 'Change vote \u2192',
+    btn_view_vote: 'View your vote', btn_full_menu: 'View full menu \u2192',
+    checkin_title: 'How was it?', checkin_tonight: 'Tonight',
+    checkin_drink: 'What did you drink?', checkin_drink_opt: 'optional',
+    checkin_comment: 'Want to add a comment?', checkin_comment_parent: 'Note',
+    checkin_skip: 'Skip', checkin_save: 'Save \u2713',
+    checkin_switch: '\ud83d\udd04 Switch to: ',
+    drink_water: 'Water', drink_milk: 'Milk', drink_juice: 'Juice', drink_soda: 'Soda',
+    score_good: '\ud83d\ude0b Delicious!', score_ok: '\ud83d\ude10 It was okay', score_bad: '\ud83d\ude15 Not great',
+    success_good: 'Amazing!', success_good_sub: 'Glad it was tasty!',
+    success_ok: 'Okay!', success_ok_sub: 'Thanks for your rating.',
+    success_bad: 'Too bad!', success_bad_sub: 'Hopefully better tomorrow.',
+    btn_home: 'Back to home', btn_auto_home: 'Taking you there automatically...',
+    menu_title: 'Menu', menu_not_chosen: 'Not chosen yet', menu_published: '\u2713 published',
+    menu_publish: 'Publish menu for family \u2192', menu_update: 'Update menu \u2713',
+    menu_cancel: 'Cancel', menu_add_second: '+ Add 2nd dish for rest of family',
+    menu_kieslijst: '\u2699 Set up vote list \u2192', menu_ai_proposal: '\u2728 AI menu proposal \u2192',
+    menu_ai_analyse: '\u2728 AI: Is this menu healthy and balanced?',
+    menu_analysing: 'AI is analysing...', menu_week_next: 'next week',
+    menu_week_current: 'current week', menu_week_in: '{n} weeks from now', menu_week_prev: 'previous week',
+    picker_for_who: 'For whom?', picker_save: 'Save \u2713',
+    picker_note: 'Note (optional)', picker_message: 'Message to the family',
+    picker_who_cooks: 'Who cooks?',
+    cook_title: 'Cooking tonight', cook_ingredients: 'Ingredients',
+    cook_instructions: 'Instructions', cook_history: 'Made before',
+    cook_ai_recipe: '\u2728 Generate AI recipe', cook_save_recipe: '\ud83d\udcbe Save recipe',
+    cook_saved: '\u2713 Saved!', cook_change: '\ud83d\udd04 Change dish?',
+    cook_for: 'For:', lbl_side_dish: 'Side dish',
+    meals_title: 'Dishes', meals_our_list: 'Our Dish List',
+    btn_add: '+ Add', btn_ai_suggest: '\u2728 AI suggestions',
+    btn_save: 'Save', btn_delete: 'Delete', btn_cancel: 'Cancel',
+    vote_title: 'Your vote', vote_choose: 'Choose {n} dishes',
+    vote_sub: 'Your parent decides the final menu.',
+    vote_suggestion: 'Suggestion to the cook (optional)',
+    btn_vote_save: 'Save vote', vote_next_week: 'next week',
+    vote_readonly: 'Menu is already set. You can still view your vote.',
+    status_title: 'Status', status_week: 'Week of', status_progress: 'Week progress',
+    status_not_checked: 'not checked in yet', status_no_forgotten: 'No forgotten check-ins!',
+    shopping_title: 'Shopping', shopping_for_which: 'Which days are you shopping for?',
+    shopping_persons: 'Number of people:', shopping_generate: '\u2728 Generate shopping list',
+    shopping_all: 'All', shopping_generating: 'AI is creating list...',
+    sport_title: 'Sport', sport_had: 'You had sport today!',
+    sport_ate_with: 'Did you eat with the family?', sport_ate_yes: 'Yes, with everyone',
+    sport_ate_warmed: 'Yes, reheated', sport_ate_apart: 'No, ate separately',
+    sport_ate_after: 'Ate at home afterwards', sport_before: 'Eaten/drunk before sport?',
+    sport_after: 'After sport?', sport_banana: 'Banana', sport_sandwich: 'Sandwich',
+    sport_bar: 'Bar', sport_fruit: 'Fruit', sport_sports_drink: 'Sports drink',
+    sport_nothing: 'Nothing', sport_other: 'Other',
+    profile_title: 'My profile', profile_name: 'Name', profile_emoji: 'Emoji',
+    profile_emoji_change: '\u270f\ufe0f Change', profile_emoji_close: '\u2715 Close',
+    profile_language: 'Language', profile_role_parent: 'parent', profile_role_child: 'child',
+    btn_save_name: 'Save', profile_pin: 'Change PIN',
+    profile_api_key: 'Anthropic API Key', profile_credits: 'AI Credits',
+    more_title: 'More', more_profile: 'My profile', more_invite: 'Invite member',
+    more_stats: 'Statistics', more_logout: 'Log out',
+    role_parent: 'parent', role_child: 'child',
+    role_admin: 'admin', role_member: 'housemate',
+    house_family: 'Family', house_student: 'Student house',
+    lbl_optional: 'optional', lbl_today: 'today', lbl_loading: 'Loading...',
+    lbl_save: 'Save', lbl_cook: 'cooks',
+    days: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+    days_short: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  },
+  fr: {
+    auth_tagline: 'Choisissez ensemble ce qui sera au menu.',
+    btn_login: 'Se connecter', btn_register: "S'inscrire", btn_join: 'Rejoindre',
+    lbl_email: 'Adresse e-mail', lbl_password: 'Mot de passe', lbl_name: 'Nom',
+    lbl_family_name: 'Nom de famille', lbl_invite_code: "Code d'invitation", lbl_language: 'Langue',
+    nav_home: 'Accueil', nav_shopping: 'Courses', nav_status: 'Statut',
+    nav_menu: 'Menu', nav_sport: 'Sport', nav_more: 'Plus',
+    home_tonight: 'Ce soir', home_this_week: 'Cette semaine',
+    home_full_menu: 'Voir le menu complet', home_no_menu: 'Aucun menu prevu.',
+    home_streak: "jours d'afilee!", home_insight: 'Apercu',
+    home_personal_obs: 'Ton observation', home_family_fact: 'Fun fact famille',
+    home_vote_week: 'Voter pour la prochaine semaine',
+    home_vote_sub: 'Choisis les plats pour la semaine prochaine.',
+    home_log_meal: 'Evaluer', home_how_was_it: "C'etait comment?",
+    btn_new: 'Nouveau', btn_vote_now: 'Voter \u2192', btn_change_vote: 'Modifier \u2192',
+    btn_view_vote: 'Voir ton vote', btn_full_menu: 'Voir le menu \u2192',
+    checkin_title: "C'etait comment?", checkin_tonight: 'Ce soir',
+    checkin_drink: "Qu'as-tu bu?", checkin_drink_opt: 'optionnel',
+    checkin_comment: 'Un commentaire?', checkin_comment_parent: 'Remarque',
+    checkin_skip: 'Ignorer', checkin_save: 'Sauvegarder \u2713',
+    checkin_switch: '\ud83d\udd04 Passer a: ',
+    drink_water: 'Eau', drink_milk: 'Lait', drink_juice: 'Jus', drink_soda: 'Soda',
+    score_good: '\ud83d\ude0b Delicieux!', score_ok: '\ud83d\ude10 Pas mal', score_bad: '\ud83d\ude15 Pas terrible',
+    success_good: 'Super!', success_good_sub: 'Content que ce soit bon!',
+    success_ok: 'Ok!', success_ok_sub: 'Merci pour ton avis.',
+    success_bad: 'Dommage!', success_bad_sub: 'Esperons mieux demain.',
+    btn_home: "Retour a l'accueil", btn_auto_home: 'Redirection automatique...',
+    menu_title: 'Menu', menu_not_chosen: 'Pas encore choisi', menu_published: '\u2713 publie',
+    menu_publish: 'Publier le menu \u2192', menu_update: 'Mettre a jour \u2713',
+    menu_cancel: 'Annuler', menu_add_second: '+ Ajouter 2e plat',
+    menu_kieslijst: '\u2699 Configurer le vote \u2192', menu_ai_proposal: '\u2728 Proposition IA \u2192',
+    menu_ai_analyse: '\u2728 IA: Ce menu est-il sain?',
+    menu_analysing: "L'IA analyse...", menu_week_next: 'semaine prochaine',
+    menu_week_current: 'semaine actuelle', menu_week_in: 'dans {n} semaines', menu_week_prev: 'semaine precedente',
+    picker_for_who: 'Pour qui?', picker_save: 'Sauvegarder \u2713',
+    picker_note: 'Note (optionnel)', picker_message: 'Message a la famille',
+    picker_who_cooks: 'Qui cuisine?',
+    cook_title: 'Cuisiner ce soir', cook_ingredients: 'Ingredients',
+    cook_instructions: 'Instructions', cook_history: 'Deja cuisine',
+    cook_ai_recipe: '\u2728 Recette IA', cook_save_recipe: '\ud83d\udcbe Sauvegarder',
+    cook_saved: '\u2713 Sauvegarde!', cook_change: '\ud83d\udd04 Changer?',
+    cook_for: 'Pour:', lbl_side_dish: 'Accompagnement',
+    meals_title: 'Plats', meals_our_list: 'Notre liste de plats',
+    btn_add: '+ Ajouter', btn_ai_suggest: '\u2728 Suggestions IA',
+    btn_save: 'Sauvegarder', btn_delete: 'Supprimer', btn_cancel: 'Annuler',
+    vote_title: 'Ton vote', vote_choose: 'Choisis {n} plats',
+    vote_sub: 'Tes parents decident du menu definitif.',
+    vote_suggestion: 'Suggestion au cuisinier (optionnel)',
+    btn_vote_save: 'Sauvegarder le vote', vote_next_week: 'semaine prochaine',
+    vote_readonly: 'Le menu est fixe.',
+    status_title: 'Statut', status_week: 'Semaine du', status_progress: 'Progression',
+    status_not_checked: 'pas encore evalue', status_no_forgotten: 'Aucun vote oublie!',
+    shopping_title: 'Courses', shopping_for_which: 'Pour quels jours?',
+    shopping_persons: 'Nombre de personnes:', shopping_generate: '\u2728 Generer la liste',
+    shopping_all: 'Tout', shopping_generating: "L'IA prepare la liste...",
+    sport_title: 'Sport', sport_had: 'Tu as fait du sport!',
+    sport_ate_with: 'Tu as mange avec la famille?', sport_ate_yes: 'Oui, avec tous',
+    sport_ate_warmed: 'Oui, rechauffe', sport_ate_apart: 'Non, separe',
+    sport_ate_after: 'A la maison apres', sport_before: 'Mange avant le sport?',
+    sport_after: 'Apres le sport?', sport_banana: 'Banane', sport_sandwich: 'Sandwich',
+    sport_bar: 'Barre', sport_fruit: 'Fruit', sport_sports_drink: 'Boisson sportive',
+    sport_nothing: 'Rien', sport_other: 'Autre',
+    profile_title: 'Mon profil', profile_name: 'Nom', profile_emoji: 'Emoji',
+    profile_emoji_change: '\u270f\ufe0f Modifier', profile_emoji_close: '\u2715 Fermer',
+    profile_language: 'Langue', profile_role_parent: 'parent', profile_role_child: 'enfant',
+    btn_save_name: 'Sauvegarder', profile_pin: 'Changer le PIN',
+    profile_api_key: 'Cle API Anthropic', profile_credits: 'Credits IA',
+    more_title: 'Plus', more_profile: 'Mon profil', more_invite: 'Inviter',
+    more_stats: 'Statistiques', more_logout: 'Se deconnecter',
+    role_parent: 'parent', role_child: 'enfant',
+    role_admin: 'gestionnaire', role_member: 'colocataire',
+    house_family: 'Famille', house_student: 'Colocation',
+    lbl_optional: 'optionnel', lbl_today: "aujourd'hui", lbl_loading: 'Chargement...',
+    lbl_save: 'Sauvegarder', lbl_cook: 'cuisine',
+    days: ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'],
+    days_short: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+    months: ['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'],
+  },
+  es: {
+    auth_tagline: 'Elegid juntos lo que hay para cenar.',
+    btn_login: 'Iniciar sesion', btn_register: 'Registrarse', btn_join: 'Unirse',
+    lbl_email: 'Correo', lbl_password: 'Contrasena', lbl_name: 'Nombre',
+    lbl_family_name: 'Nombre familiar', lbl_invite_code: 'Codigo', lbl_language: 'Idioma',
+    nav_home: 'Inicio', nav_shopping: 'Compras', nav_status: 'Estado',
+    nav_menu: 'Menu', nav_sport: 'Deporte', nav_more: 'Mas',
+    home_tonight: 'Esta noche', home_this_week: 'Esta semana',
+    home_full_menu: 'Ver menu completo', home_no_menu: 'No hay menu planificado.',
+    home_streak: 'dias seguidos!', home_insight: 'Informacion',
+    home_personal_obs: 'Tu observacion', home_family_fact: 'Dato familiar',
+    home_vote_week: 'Votar para la proxima semana',
+    home_vote_sub: 'Elige los platos que quieres la proxima semana.',
+    home_log_meal: 'Puntuar', home_how_was_it: 'Como estuvo?',
+    btn_new: 'Nuevo', btn_vote_now: 'Votar \u2192', btn_change_vote: 'Cambiar voto \u2192',
+    btn_view_vote: 'Ver tu voto', btn_full_menu: 'Ver menu \u2192',
+    checkin_title: 'Como estuvo?', checkin_tonight: 'Esta noche',
+    checkin_drink: 'Que bebiste?', checkin_drink_opt: 'opcional',
+    checkin_comment: 'Quieres anadir algo?', checkin_comment_parent: 'Nota',
+    checkin_skip: 'Omitir', checkin_save: 'Guardar \u2713',
+    checkin_switch: '\ud83d\udd04 Cambiar a: ',
+    drink_water: 'Agua', drink_milk: 'Leche', drink_juice: 'Zumo', drink_soda: 'Refresco',
+    score_good: '\ud83d\ude0b Delicioso!', score_ok: '\ud83d\ude10 Estuvo bien', score_bad: '\ud83d\ude15 No muy bueno',
+    success_good: 'Genial!', success_good_sub: 'Me alegra que estuviera rico!',
+    success_ok: 'Ok!', success_ok_sub: 'Gracias por tu puntuacion.',
+    success_bad: 'Una lastima!', success_bad_sub: 'Esperamos que manana sea mejor.',
+    btn_home: 'Volver al inicio', btn_auto_home: 'Redirigiendo...',
+    menu_title: 'Menu', menu_not_chosen: 'Sin elegir', menu_published: '\u2713 publicado',
+    menu_publish: 'Publicar menu \u2192', menu_update: 'Actualizar \u2713',
+    menu_cancel: 'Cancelar', menu_add_second: '+ Anadir 2o plato',
+    menu_kieslijst: '\u2699 Configurar votacion \u2192', menu_ai_proposal: '\u2728 Propuesta IA \u2192',
+    menu_ai_analyse: '\u2728 IA: Es este menu saludable?',
+    menu_analysing: 'La IA analiza...', menu_week_next: 'proxima semana',
+    menu_week_current: 'semana actual', menu_week_in: 'en {n} semanas', menu_week_prev: 'semana anterior',
+    picker_for_who: 'Para quien?', picker_save: 'Guardar \u2713',
+    picker_note: 'Nota (opcional)', picker_message: 'Mensaje a la familia',
+    picker_who_cooks: 'Quien cocina?',
+    cook_title: 'Cocinando esta noche', cook_ingredients: 'Ingredientes',
+    cook_instructions: 'Instrucciones', cook_history: 'Cocinado antes',
+    cook_ai_recipe: '\u2728 Receta IA', cook_save_recipe: '\ud83d\udcbe Guardar receta',
+    cook_saved: '\u2713 Guardado!', cook_change: '\ud83d\udd04 Cambiar plato?',
+    cook_for: 'Para:', lbl_side_dish: 'Acompanamiento',
+    meals_title: 'Platos', meals_our_list: 'Nuestra lista',
+    btn_add: '+ Anadir', btn_ai_suggest: '\u2728 Sugerencias IA',
+    btn_save: 'Guardar', btn_delete: 'Eliminar', btn_cancel: 'Cancelar',
+    vote_title: 'Tu voto', vote_choose: 'Elige {n} platos',
+    vote_sub: 'Tus padres deciden el menu definitivo.',
+    vote_suggestion: 'Sugerencia al cocinero (opcional)',
+    btn_vote_save: 'Guardar voto', vote_next_week: 'proxima semana',
+    vote_readonly: 'El menu ya esta fijado.',
+    status_title: 'Estado', status_week: 'Semana del', status_progress: 'Progreso',
+    status_not_checked: 'sin evaluar', status_no_forgotten: 'Sin votos olvidados!',
+    shopping_title: 'Compras', shopping_for_which: 'Para que dias?',
+    shopping_persons: 'Personas:', shopping_generate: '\u2728 Generar lista',
+    shopping_all: 'Todo', shopping_generating: 'La IA prepara la lista...',
+    sport_title: 'Deporte', sport_had: 'Hiciste deporte hoy!',
+    sport_ate_with: 'Comiste con la familia?', sport_ate_yes: 'Si, con todos',
+    sport_ate_warmed: 'Si, recalentado', sport_ate_apart: 'No, por separado',
+    sport_ate_after: 'Comi en casa despues', sport_before: 'Comido antes del deporte?',
+    sport_after: 'Despues del deporte?', sport_banana: 'Platano', sport_sandwich: 'Sandwich',
+    sport_bar: 'Barrita', sport_fruit: 'Fruta', sport_sports_drink: 'Bebida deportiva',
+    sport_nothing: 'Nada', sport_other: 'Otro',
+    profile_title: 'Mi perfil', profile_name: 'Nombre', profile_emoji: 'Emoji',
+    profile_emoji_change: '\u270f\ufe0f Cambiar', profile_emoji_close: '\u2715 Cerrar',
+    profile_language: 'Idioma', profile_role_parent: 'padre/madre', profile_role_child: 'hijo/a',
+    btn_save_name: 'Guardar', profile_pin: 'Cambiar PIN',
+    profile_api_key: 'Clave API Anthropic', profile_credits: 'Creditos IA',
+    more_title: 'Mas', more_profile: 'Mi perfil', more_invite: 'Invitar',
+    more_stats: 'Estadisticas', more_logout: 'Cerrar sesion',
+    role_parent: 'padre/madre', role_child: 'hijo/a',
+    role_admin: 'administrador', role_member: 'residente',
+    house_family: 'Familia', house_student: 'Piso compartido',
+    lbl_optional: 'opcional', lbl_today: 'hoy', lbl_loading: 'Cargando...',
+    lbl_save: 'Guardar', lbl_cook: 'cocina',
+    days: ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'],
+    days_short: ['Dom','Lun','Mar','Mie','Jue','Vie','Sab'],
+    months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+  },
+};
+
+function t(key, vars) {
+  const lang = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+  let str = lang[key] !== undefined ? lang[key] : (TRANSLATIONS.en[key] !== undefined ? TRANSLATIONS.en[key] : key);
+  if (vars) Object.entries(vars).forEach(([k,v]) => { str = str.replace('{'+k+'}', v); });
+  return str;
+}
+
+function setLang(lang) {
+  if (!TRANSLATIONS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  if (currentProfile && currentProfile.id) {
+    sb.from('profiles').update({ language: lang }).eq('id', currentProfile.id).then(() => {});
+  }
+  applyTranslations();
+  renderLangPicker();
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const attr = el.getAttribute('data-i18n-attr');
+    if (attr) el.setAttribute(attr, t(key));
+    else el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-ph'));
+  });
+}
+
+function renderLangPicker() {
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    const isActive = btn.getAttribute('data-lang') === currentLang;
+    btn.style.borderColor = isActive ? 'var(--green)' : 'var(--border)';
+    btn.style.background = isActive ? 'var(--green-bg)' : 'white';
+    btn.style.color = isActive ? 'var(--green)' : 'var(--text)';
+    btn.style.fontWeight = isActive ? '700' : '600';
+  });
+}
+
 const sb = supabase.createClient(
   'https://wzdxkyclnwpopbfembpp.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6ZHhreWNsbndwb3BiZmVtYnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MjM0NzUsImV4cCI6MjA5MzM5OTQ3NX0.9cDCZmN4QzHkIcCmaQB8R4bm2wGIPSLqU2pSJ8V5POI'
@@ -1521,6 +1881,39 @@ async function doSignOut() {
 }
 
 // ── SETUP ──────────────────────────────────────────────────────
+// Huistype: 'family' of 'house'
+let currentHouseType = localStorage.getItem('house_type') || 'family';
+
+function selectHouseType(type) {
+  currentHouseType = type;
+  localStorage.setItem('house_type', type);
+  // Update knoppen
+  document.querySelectorAll('.house-type-btn').forEach(btn => {
+    const isActive = btn.id === 'type-' + type;
+    btn.style.borderColor = isActive ? 'var(--green)' : 'var(--border)';
+    btn.style.background = isActive ? 'var(--green-bg)' : 'white';
+    btn.style.color = isActive ? 'var(--green)' : 'var(--text)';
+  });
+  // Update labels
+  const isHouse = type === 'house';
+  const groupLabel = document.getElementById('setup-group-label');
+  const ph = document.getElementById('setup-family');
+  const adminEmoji = document.getElementById('role-admin-emoji');
+  const adminName = document.getElementById('role-admin-name');
+  const adminSub = document.getElementById('role-admin-sub');
+  const memberEmoji = document.getElementById('role-member-emoji');
+  const memberName = document.getElementById('role-member-name');
+  const memberSub = document.getElementById('role-member-sub');
+  if (groupLabel) groupLabel.textContent = isHouse ? 'Huisnaam (optioneel)' : 'Gezinsnaam (optioneel)';
+  if (ph) ph.placeholder = isHouse ? 'bijv. Huize De Keet' : 'bijv. Familie Brentjens';
+  if (adminEmoji) adminEmoji.textContent = isHouse ? '\ud83d\udd11' : '\ud83d\udc68\ud83d\udc69\ud83d\udc67';
+  if (adminName) adminName.textContent = isHouse ? 'Beheerder' : 'Ouder';
+  if (adminSub) adminSub.textContent = isHouse ? 'Ik stel het menu vast' : 'Ik stel het menu vast';
+  if (memberEmoji) memberEmoji.textContent = isHouse ? '\ud83e\uddd1\u200d\ud83c\udf93' : '\ud83e\uddd2';
+  if (memberName) memberName.textContent = isHouse ? 'Bewoner' : 'Kind';
+  if (memberSub) memberSub.textContent = isHouse ? 'Ik stem en check in' : 'Ik stem en check in';
+}
+
 function selectRole(r) {
   selectedRole = r;
   document.getElementById('role-parent').classList.toggle('selected', r==='parent');
@@ -1550,6 +1943,13 @@ async function bootTestMode() {
     .select('id,family_id,name,role,emoji,sports')
     .eq('family_id', TEST_FAMILY_ID);
   familyProfiles = members || [];
+  // Laad huistype uit family tabel
+  const { data: familyData } = await sb.from('families')
+    .select('house_type').eq('id', TEST_FAMILY_ID).maybeSingle();
+  if (familyData && familyData.house_type) {
+    currentHouseType = familyData.house_type;
+    localStorage.setItem('house_type', currentHouseType);
+  }
 
   // Stap 2: zet currentProfile op echte persoon (met echt UUID)
   await setTestProfile(testPersonId);
@@ -1577,6 +1977,8 @@ async function setTestProfile(nameOrId) {
   try { sports = src.sports ? (typeof src.sports === 'string' ? JSON.parse(src.sports) : src.sports) : []; } catch(e) {}
   currentProfile = { ...src, sports, family_id: src.family_id || TEST_FAMILY_ID };
   console.log('[setTestProfile] currentProfile:', currentProfile.name, 'family_id:', currentProfile.family_id);
+  if (currentProfile.language) { currentLang = currentProfile.language; localStorage.setItem('lang', currentLang); }
+  applyTranslations();
   return true;
 }
 
@@ -3349,6 +3751,17 @@ async function renderStats() {
     }
     aiEl.textContent = statsInsights[0] || 'Verzamel meer data voor een persoonlijke analyse van jullie gezin.';
   }
+}
+
+function getHouseType() {
+  // Lees uit family data of localStorage
+  return localStorage.getItem('house_type') || 'family';
+}
+
+function getRoleLabel(role) {
+  const isHouse = getHouseType() === 'house';
+  if (role === 'parent') return isHouse ? t('role_admin') : t('role_parent');
+  return isHouse ? t('role_member') : t('role_child');
 }
 
 function getFamilyMembers() {
@@ -5146,7 +5559,7 @@ function openProfileScreen() {
   // Vul velden
   document.getElementById('profile-name-input').value = p.name || '';
   document.getElementById('profile-name-display').textContent = p.name || '';
-  document.getElementById('profile-role-display').textContent = p.role === 'parent' ? 'ouder' : 'kind';
+  document.getElementById('profile-role-display').textContent = getRoleLabel(p.role);
 
   // Emoji
   profileSelectedEmoji = p.emoji || '\uD83D\uDE0A';
@@ -5154,6 +5567,7 @@ function openProfileScreen() {
   // Toon gekozen emoji in compact display
   const chosenEl = document.getElementById('profile-emoji-chosen');
   if (chosenEl) chosenEl.textContent = profileSelectedEmoji || currentProfile.emoji || '\ud83d\ude0a';
+  renderLangPicker();
   renderProfileEmojiPicker();
 
   // Pincode sectie alleen voor kinderen
@@ -7177,6 +7591,15 @@ async function searchMealsAI() {
 }
 
 async function openMealPicker(dateStr, dayIndex, existing) {
+  // Blokkeer bewoners om gepubliceerd menu te wijzigen
+  if (currentProfile.role !== 'parent' && existing && existing.published) {
+    const isHouse = getHouseType() === 'house';
+    alert(isHouse
+      ? 'Het menu is al vastgesteld door de beheerder. Je kunt het niet wijzigen.'
+      : 'Het menu is al gepubliceerd. Vraag een ouder om het aan te passen.');
+    return;
+  }
+
   console.log('[Picker] openMealPicker:', dateStr, dayIndex);
   currentPickDay = {dateStr, dayIndex, existing};
   const d = new Date(dateStr+'T12:00:00');
@@ -7784,6 +8207,7 @@ function selectJoinEmoji(emoji) { joinSelectedEmoji=emoji; renderJoinEmojiPicker
 async function boot() {
   show('loading');
   initTestBar();
+  applyTranslations();
 
   if (testModeActive) {
     // Testmodus: direct opstarten via TEST_FAMILY_ID, geen auth vereist
@@ -7947,6 +8371,16 @@ boot();
       </div>
       <!-- Volledige picker, standaard verborgen -->
       <div id="profile-emoji-picker" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
+    </div>
+
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px" data-i18n="profile_language">Language</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="lang-picker">
+        <button type="button" onclick="setLang('nl')" data-lang="nl" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇳🇱 Nederlands</button>
+        <button type="button" onclick="setLang('en')" data-lang="en" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇬🇧 English</button>
+        <button type="button" onclick="setLang('fr')" data-lang="fr" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇫🇷 Français</button>
+        <button type="button" onclick="setLang('es')" data-lang="es" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇪🇸 Español</button>
+      </div>
     </div>
 
     <!-- Pincode wijzigen (als kind) -->
@@ -8190,4 +8624,20 @@ boot();
 </div>
 </body>
 </html>
-
+  <div id="insight-block" class="hidden">
+    <div class="section-title">Inzicht</div>
+    <div class="insight" id="insight-personal-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Jouw observatie</div>
+        <button id="insight-personal-btn" onclick="refreshInsightPersonal()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-text"></div>
+    </div>
+    <div class="insight" id="insight-family-wrap" style="margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="insight-badge">Gezinsweetje</div>
+        <button id="insight-family-btn" onclick="refreshInsightFamily()" style="padding:3px 10px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-weight:700;cursor:pointer">↻ Nieuw</button>
+      </div>
+      <div class="insight-text" id="insight-family-text">Laden...</div>
+    </div>
+  </div>
