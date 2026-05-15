@@ -355,8 +355,16 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="auth-error" class="msg-error hidden"></div>
     <div id="auth-success" class="msg-success hidden"></div>
     <div class="field"><label class="label"><span data-i18n="lbl_email">E-mailadres</span></label><input type="email" id="auth-email" placeholder="jouw@email.nl" /></div>
-    <div class="field"><label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
-    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn"><span data-i18n="btn_login">Inloggen</span> →</button>
+    <div class="field" id="auth-password-field"><label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
+    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn"><span data-i18n="btn_login">Inloggen</span> &#x2192;</button>
+    <div id="auth-forgot-wrap" style="text-align:center;margin-top:10px">
+      <button type="button" onclick="doForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit">Wachtwoord vergeten?</button>
+    </div>
+    <div id="auth-resend-wrap" style="display:none;text-align:center;margin-top:10px">
+      <span style="font-size:13px;color:var(--muted)">Geen mail ontvangen? </span>
+      <button type="button" onclick="doResendEmail()" style="background:none;border:none;color:var(--green);font-size:13px;cursor:pointer;font-weight:700;font-family:inherit;text-decoration:underline">Opnieuw sturen</button>
+    </div>
+    <div id="auth-reset-success" style="display:none;background:var(--green-bg);color:var(--green);border-radius:var(--r);padding:12px 14px;font-size:13px;font-weight:600;text-align:center;margin-top:10px"></div>
   </div>
 </div>
 
@@ -2087,6 +2095,14 @@ function authTab(tab) {
   const sucEl = document.getElementById('auth-success');
   if (errEl) errEl.classList.add('hidden');
   if (sucEl) sucEl.classList.add('hidden');
+
+  // Toon/verberg hulplinks per tab
+  const forgotWrap = document.getElementById('auth-forgot-wrap');
+  const resendWrap = document.getElementById('auth-resend-wrap');
+  const resetSucc = document.getElementById('auth-reset-success');
+  if (forgotWrap) forgotWrap.style.display = isLogin ? '' : 'none';
+  if (resendWrap) resendWrap.style.display = 'none'; // alleen na succesvolle registratie
+  if (resetSucc) resetSucc.style.display = 'none';
 }
 
 async function doAuth() {
@@ -2105,15 +2121,84 @@ async function doAuth() {
       // loadProfile handelt admin via bootTestMode af, gewone gebruikers normaal
       await loadProfile();
     } else {
-      const {error} = await sb.auth.signUp({email,password});
-      if (error) throw error;
-      unhide(sucEl); sucEl.textContent = 'Check je e-mail voor een bevestigingslink!';
-      const _el_auth_btn = document.getElementById('auth-btn'); if (_el_auth_btn) _el_auth_btn.textContent = 'Aanmelden';
+      const {data: signupData, error: signupErr} = await sb.auth.signUp({email,password});
+      if (signupErr) {
+        // "User already registered" → stuur naar login tab met uitleg
+        if (signupErr.message && signupErr.message.toLowerCase().includes('already')) {
+          authTab('login');
+          unhide(errEl);
+          errEl.textContent = 'Dit e-mailadres is al geregistreerd. Log in of gebruik "Wachtwoord vergeten".';
+          const _el_auth_btn = document.getElementById('auth-btn'); if (_el_auth_btn) _el_auth_btn.textContent = 'Inloggen \u2192';
+          return;
+        }
+        throw signupErr;
+      }
+      // Supabase stuurt soms een session terug als email-bevestiging uitstaat
+      if (signupData?.session) {
+        currentUser = signupData.session.user;
+        await loadProfile();
+      } else {
+        unhide(sucEl);
+        sucEl.textContent = '\u2709\ufe0f Check je e-mail voor een bevestigingslink!';
+        const resendWrap = document.getElementById('auth-resend-wrap');
+        if (resendWrap) resendWrap.style.display = '';
+        // Sla email op voor resend
+        window._lastSignupEmail = email;
+      }
+      const _el_auth_btn = document.getElementById('auth-btn'); if (_el_auth_btn) _el_auth_btn.textContent = 'Aanmelden \u2192';
     }
   } catch(e) {
     unhide(errEl);
     errEl.textContent = e.message||'Er ging iets mis.';
     const _el_auth_btn = document.getElementById('auth-btn'); if (_el_auth_btn) _el_auth_btn.textContent = 'Aanmelden';
+  }
+}
+
+async function doForgotPassword() {
+  const email = (document.getElementById('auth-email')?.value || '').trim();
+  const resetSucc = document.getElementById('auth-reset-success');
+  const errEl = document.getElementById('auth-error');
+  if (errEl) errEl.classList.add('hidden');
+  if (!email) {
+    if (errEl) { errEl.textContent = 'Vul eerst je e-mailadres in.'; errEl.classList.remove('hidden'); }
+    return;
+  }
+  const btn = document.querySelector('#auth-forgot-wrap button');
+  if (btn) btn.textContent = 'Bezig...';
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/?reset=1',
+  });
+  if (btn) btn.textContent = 'Wachtwoord vergeten?';
+  if (error) {
+    if (errEl) { errEl.textContent = 'Kon reset-mail niet sturen: ' + error.message; errEl.classList.remove('hidden'); }
+    return;
+  }
+  if (resetSucc) {
+    resetSucc.textContent = '\u2709\ufe0f Reset-link verstuurd naar ' + email + '. Check ook je spamfolder.';
+    resetSucc.style.display = '';
+  }
+}
+
+async function doResendEmail() {
+  const email = window._lastSignupEmail || (document.getElementById('auth-email')?.value || '').trim();
+  const resetSucc = document.getElementById('auth-reset-success');
+  const errEl = document.getElementById('auth-error');
+  if (errEl) errEl.classList.add('hidden');
+  if (!email) {
+    if (errEl) { errEl.textContent = 'Vul je e-mailadres in.'; errEl.classList.remove('hidden'); }
+    return;
+  }
+  const btn = document.querySelector('#auth-resend-wrap button');
+  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+  const { error } = await sb.auth.resend({ type: 'signup', email });
+  if (btn) { btn.textContent = 'Opnieuw sturen'; btn.disabled = false; }
+  if (error) {
+    if (errEl) { errEl.textContent = 'Kon mail niet opnieuw sturen: ' + error.message; errEl.classList.remove('hidden'); }
+    return;
+  }
+  if (resetSucc) {
+    resetSucc.textContent = '\u2709\ufe0f Bevestigingsmail opnieuw verstuurd naar ' + email + '. Check ook je spamfolder.';
+    resetSucc.style.display = '';
   }
 }
 
@@ -9041,6 +9126,33 @@ function selectJoinEmoji(emoji) { joinSelectedEmoji=emoji; renderJoinEmojiPicker
 async function boot() {
   show('loading');
   applyTranslations();
+
+  // Wachtwoord-reset flow: Supabase stuurt de gebruiker terug met een sessie na klikken reset-link
+  sb.auth.onAuthStateChange(async(event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      // Toon inline wachtwoord-reset
+      show('auth');
+      renderLangPicker();
+      const errEl = document.getElementById('auth-error');
+      const sucEl = document.getElementById('auth-success');
+      const pwField = document.getElementById('auth-password-field');
+      const authBtn = document.getElementById('auth-btn');
+      const forgotWrap = document.getElementById('auth-forgot-wrap');
+      const tabs = document.querySelector('.tabs');
+      if (tabs) tabs.style.display = 'none';
+      if (forgotWrap) forgotWrap.style.display = 'none';
+      if (sucEl) { sucEl.classList.remove('hidden'); sucEl.textContent = 'Kies een nieuw wachtwoord en klik op Opslaan.'; }
+      if (authBtn) { authBtn.textContent = 'Nieuw wachtwoord opslaan →'; authBtn.onclick = async () => {
+        const pw = document.getElementById('auth-password')?.value;
+        if (!pw || pw.length < 6) { if (errEl) { errEl.textContent = 'Wachtwoord moet minimaal 6 tekens zijn.'; errEl.classList.remove('hidden'); } return; }
+        authBtn.textContent = 'Bezig...';
+        const { error } = await sb.auth.updateUser({ password: pw });
+        if (error) { if (errEl) { errEl.textContent = error.message; errEl.classList.remove('hidden'); } authBtn.textContent = 'Opslaan →'; return; }
+        if (sucEl) sucEl.textContent = '✓ Wachtwoord opgeslagen! Je wordt ingelogd...';
+        setTimeout(() => { currentUser = session.user; loadProfile(); }, 1500);
+      }; }
+    }
+  });
 
   // Testmodus: alleen voor beheerder (Paul)
   const ADMIN_USER_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
