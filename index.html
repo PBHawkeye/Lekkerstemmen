@@ -1667,7 +1667,7 @@ let selectedCook = null;
 let selectedCorvee = [];
 
 // ── TEST MODE ──────────────────────────────────────────────────
-const TEST_MODE = false;
+let TEST_MODE = false;
 let testDayOffset = 0;
 const TEST_FAMILY_ID = 'a0164d7e-bcf5-4258-92b0-7296cce776f5';
 
@@ -2348,11 +2348,18 @@ async function doSetup() {
 
 async function bootTestMode() {
   TEST_MODE = true; // sync met testModeActive
-  // Stap 1: laad gezinsleden direct (zonder loadData, want profileId is nog onbekend)
-  const {data: members} = await sb.from('profiles')
-    .select('id,family_id,name,role,emoji,sports')
-    .eq('family_id', TEST_FAMILY_ID);
-  familyProfiles = members || [];
+  // Stap 1: laad gezinsleden direct
+  try {
+    const result = await sb.from('profiles')
+      .select('id,family_id,name,role,emoji,sports,language')
+      .eq('family_id', TEST_FAMILY_ID);
+    console.log('[bootTestMode] profiles result:', result);
+    familyProfiles = result.data || [];
+    console.log('[bootTestMode] familyProfiles:', familyProfiles.map(p=>p.name));
+  } catch(e) {
+    console.error('[bootTestMode] profiles fetch error:', e);
+    familyProfiles = [];
+  }
   // Laad huistype uit family tabel
   const { data: familyData } = await sb.from('families')
     .select('house_type').eq('id', TEST_FAMILY_ID).maybeSingle();
