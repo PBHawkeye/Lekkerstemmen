@@ -2088,8 +2088,13 @@ async function doAuth() {
     if (currentAuthTab==='login') {
       const {data, error} = await sb.auth.signInWithPassword({email,password});
       if (error) throw error;
-      // Direct doorgaan na succesvolle login
       currentUser = data.user;
+      if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+        testModeActive = true;
+        document.getElementById('auth-btn').textContent = t('btn_login') + ' →';
+        await bootTestMode();
+        return;
+      }
       await loadProfile();
     } else {
       const {error} = await sb.auth.signUp({email,password});
@@ -2400,6 +2405,7 @@ async function doSetup() {
 
 async function bootTestMode() {
   TEST_MODE = true; // sync met testModeActive
+  initTestBar();
   // Stap 1: laad gezinsleden direct
   try {
     const result = await sb.from('profiles')
@@ -6508,22 +6514,45 @@ const AI_CREDITS_START = 200;   // startwaarde voor nieuwe gezinnen
 
 let cachedCredits = null;        // lokale cache om DB-calls te minimaliseren
 
+
+function renderCreditsDisplay() {
+  const credits = getAICredits();
+  document.querySelectorAll('.ai-credits-display').forEach(el => {
+    el.textContent = credits;
+    el.style.color = credits <= 5 ? 'var(--coral)' : credits <= 20 ? '#C47F00' : 'var(--green)';
+  });
+  // Update testbalk
+  const inp = document.getElementById('test-credits-input');
+  if (inp) inp.value = credits;
+}
+
 async function loadCredits(familyId) {
-  // Laad credits uit subscriptions tabel
-  const { data: sub } = await sb.from('subscriptions')
-    .select('credits_remaining, plan_id')
-    .eq('family_id', familyId)
-    .maybeSingle();
-  if (sub) {
-    cachedCredits = sub.credits_remaining ?? AI_CREDITS_START;
-    currentPlan = sub.plan_id || 'free';
-  } else {
-    // Fallback: tel credits transacties op
-    const { data } = await sb.from('credits')
+  try {
+    // Probeer subscriptions tabel
+    const { data: sub, error: subErr } = await sb.from('subscriptions')
+      .select('credits_remaining, plan_id')
+      .eq('family_id', familyId)
+      .maybeSingle();
+    if (!subErr && sub) {
+      cachedCredits = sub.credits_remaining ?? AI_CREDITS_START;
+      currentPlan = sub.plan_id || 'free';
+      renderCreditsDisplay();
+      return;
+    }
+  } catch(e) {}
+  try {
+    // Fallback: credits tabel
+    const { data, error } = await sb.from('credits')
       .select('amount').eq('family_id', familyId);
-    cachedCredits = data ? Math.max(0, data.reduce((s,r) => s + (r.amount||0), 0)) : AI_CREDITS_START;
-    currentPlan = 'free';
+    if (!error && data) {
+      cachedCredits = Math.max(0, data.reduce((s,r) => s + (r.amount||0), 0));
+    } else {
+      cachedCredits = AI_CREDITS_START;
+    }
+  } catch(e) {
+    cachedCredits = AI_CREDITS_START;
   }
+  currentPlan = 'free';
   renderCreditsDisplay();
 }
 
@@ -8862,7 +8891,6 @@ async function boot() {
     // Activeer testmodus voor beheerder
     if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
       testModeActive = true;
-      initTestBar();
     }
     if (testModeActive) {
       await bootTestMode();
@@ -8879,7 +8907,6 @@ async function boot() {
         // Activeer testmodus voor beheerder
         if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
           testModeActive = true;
-          initTestBar();
           await bootTestMode();
         } else {
           await loadProfile();
