@@ -314,6 +314,13 @@
 
   
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.2)} }
+
+/* Verberg bottom nav op auth en setup schermen */
+#s-auth.active ~ * .bottom-nav,
+#s-setup.active ~ * .bottom-nav,
+body:has(#s-auth.active) .bottom-nav,
+body:has(#s-setup.active) .bottom-nav,
+body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 </style>
 </head>
 <body>
@@ -2042,6 +2049,26 @@ async function simulateWeek() {
     'Schakel tussen personen om alle perspectieven te zien.');
 }
 
+
+function authTab(tab) {
+  currentAuthTab = tab;
+  const isSignup = tab === 'signup';
+  const isLogin = tab === 'login';
+
+  const tabLogin = document.getElementById('tab-login');
+  const tabSignup = document.getElementById('tab-signup');
+  if (tabLogin) tabLogin.className = 'tab' + (isLogin ? ' active' : '');
+  if (tabSignup) tabSignup.className = 'tab' + (isSignup ? ' active' : '');
+
+  const authBtn = document.getElementById('auth-btn');
+  if (authBtn) authBtn.textContent = isSignup ? 'Account aanmaken \u2192' : 'Inloggen \u2192';
+
+  const errEl = document.getElementById('auth-error');
+  const sucEl = document.getElementById('auth-success');
+  if (errEl) errEl.classList.add('hidden');
+  if (sucEl) sucEl.classList.add('hidden');
+}
+
 async function doAuth() {
   const email = document.getElementById('auth-email').value;
   const password = document.getElementById('auth-password').value;
@@ -2194,7 +2221,7 @@ async function generateOnboardingMeals() {
     'Mix keukens. Geef terug als JSON array zonder uitleg: ' +
     '[{"naam":"...","emoji":"...","categorie":"..."}]';
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/ai', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:1000,
@@ -5993,7 +6020,7 @@ async function sendPromptModal() {
 async function checkPromptIsAboutFood(prompt) {
   // Snelle Claude-check: gaat de prompt over een gerecht/recept/koken?
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/ai', {
       method: 'POST',
       headers: getAnthropicHeaders(),
       body: JSON.stringify({
@@ -6460,7 +6487,8 @@ function fileToBase64(file) {
 }
 
 function getApiKey() {
-  return localStorage.getItem('lk_api_key') || '';
+  // API key wordt nu server-side beheerd via Vercel proxy
+  return 'proxy';
 }
 
 // ── AI CREDITS ────────────────────────────────────────────────
@@ -6549,12 +6577,6 @@ async function anthropicFetch(body, cost, reason) {
   // Kinderen worden nooit geblokkeerd — alleen ouder ziet de melding
   const isParent = currentProfile?.role === 'parent';
 
-  // API key check centraal
-  if (!getApiKey()) {
-    showApiKeyWarning();
-    return null;
-  }
-
   if (isParent) {
     const ok = await deductCredit(cost || AI_CREDIT_COST, reason);
     if (!ok) {
@@ -6566,9 +6588,9 @@ async function anthropicFetch(body, cost, reason) {
     deductCredit(cost || AI_CREDIT_COST, reason).catch(() => {});
   }
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/ai', {
     method: 'POST',
-    headers: getAnthropicHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   return res;
@@ -6618,14 +6640,8 @@ function showCreditWarning() {
 }
 
 function getAnthropicHeaders() {
-  const h = {
-    'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-    'anthropic-dangerous-direct-browser-access': 'true'
-  };
-  const key = getApiKey();
-  if (key) h['x-api-key'] = key;
-  return h;
+  // Headers voor directe calls (niet via proxy) - legacy
+  return { 'Content-Type': 'application/json' };
 }
 
 // ── BOODSCHAPPEN ────────────────────────────────────────────────
