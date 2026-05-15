@@ -2090,14 +2090,19 @@ async function doAuth() {
       if (error) throw error;
       currentUser = data.user;
       await loadProfile();
-      if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+      if (currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
         testModeActive = true;
         TEST_MODE = true;
         const { data: testMembers } = await sb.from('profiles')
           .select('id,family_id,name,role,emoji,sports,language')
           .eq('family_id', currentProfile.family_id);
         familyProfiles = testMembers || [];
+        const paulP = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
+        if (paulP) {
+          currentProfile = {...paulP, sports: currentProfile.sports || []};
+        }
         initTestBar();
+        refreshHome();
       }
     } else {
       const {error} = await sb.auth.signUp({email,password});
@@ -3004,6 +3009,9 @@ function refreshHome() {
         unhide(document.getElementById('today-child-wait'));
       }
       // Op andere dagen: niets tonen (geen menu = niets te doen)
+    } else if (hasCheckedIn) {
+      // Al gecheckt: toon done kaart
+      unhide(document.getElementById('today-child-done'));
     } else if (!todayMeal && todayMenuEntry) {
       // Menu beschikbaar maar nog niet gecheckt
       if (after16 || !isToday) {
@@ -3013,7 +3021,6 @@ function refreshHome() {
         unhide(document.getElementById('today-child-wait'));
       }
     }
-    else if (hasCheckedIn) unhide(document.getElementById('today-child-done'));
       // Vul done card met check-in info
       const myCI = checkins.find(c => (c.eaten_at === todayDateStr || c.meal_id === todayMeal?.id) && c.profile_id === currentProfile.id);
       const doneNameEl = document.getElementById('done-meal-name');
@@ -8911,7 +8918,13 @@ async function boot() {
         .select('id,family_id,name,role,emoji,sports,language')
         .eq('family_id', currentProfile.family_id);
       familyProfiles = fm || [];
+      // Zet Paul als actief profiel in testbalk
+      const paulProfile = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
+      if (paulProfile) {
+        currentProfile = {...paulProfile, sports: currentProfile.sports || []};
+      }
       initTestBar();
+      refreshHome();
     }
   } else {
     show('auth');
@@ -8929,7 +8942,12 @@ async function boot() {
             .select('id,family_id,name,role,emoji,sports,language')
             .eq('family_id', currentProfile.family_id);
           familyProfiles = testMembers || [];
+          const paulProf = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
+          if (paulProf) {
+            currentProfile = {...paulProf, sports: currentProfile.sports || []};
+          }
           initTestBar();
+          refreshHome();
         }
       } else if (event==='SIGNED_OUT') {
         currentUser = null; currentProfile = null;
@@ -10631,7 +10649,7 @@ let testDayOffset = 0;
 const TEST_FAMILY_ID = 'a0164d7e-bcf5-4258-92b0-7296cce776f5';
 
 const TEST_UUIDS = {
-  paul:   '5bce07bd-bb9b-49dc-a202-88a9ec249ac9',
+  paul:   '0b34e680-45a6-437b-9dac-d1377dab2fef',
   dorres: 'b48d4bb8-bf67-4bf4-b2b7-93628c3a19da',
   tjeerd: '311762ce-c83d-4e18-8f8d-897d85f35fe5',
   faas:   'a87f1532-ab06-46e6-b9dd-4afa92fd3ad6',
@@ -11017,7 +11035,7 @@ async function doAuth() {
       if (error) throw error;
       currentUser = data.user;
       await loadProfile();
-      if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+      if (currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
         testModeActive = true;
         TEST_MODE = true;
         const { data: testMembers } = await sb.from('profiles')
@@ -17814,7 +17832,7 @@ async function boot() {
   applyTranslations();
 
   // Testmodus: alleen voor beheerder (Paul)
-  const ADMIN_USER_ID = '5bce07bd-bb9b-49dc-a202-88a9ec249ac9';
+  const ADMIN_USER_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
 
   if (testModeActive) {
     // Testmodus: direct opstarten via TEST_FAMILY_ID, geen auth vereist
@@ -17827,15 +17845,9 @@ async function boot() {
   if (session) {
     currentUser = session.user;
     // Activeer testmodus voor beheerder
-    if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
-      testModeActive = true;
-    }
-    if (testModeActive) {
-      await bootTestMode();
-    } else {
-      await loadProfile();
-      if (currentProfile) { refreshHome(); show('home'); }
-    }
+    // Altijd via loadProfile - testbalk activering in loadProfile
+    await loadProfile();
+    if (currentProfile) { refreshHome(); show('home'); }
   } else {
     show('auth');
     renderLangPicker();
@@ -17845,7 +17857,7 @@ async function boot() {
         // Activeer testmodus voor beheerder
         await loadProfile();
         if (currentProfile) {
-          if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+          if (currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
             testModeActive = true;
             TEST_MODE = true;
             const { data: testMembers } = await sb.from('profiles')
