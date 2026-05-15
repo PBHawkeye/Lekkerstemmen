@@ -2917,7 +2917,8 @@ function isAfter16() {
 function refreshHome() {
   if (!currentProfile) return;
   const p = currentProfile;
-  document.getElementById('home-name').textContent = p.name;
+  const homeNameEl = document.getElementById('home-name');
+  if (homeNameEl) homeNameEl.textContent = p.name;
   const avatarEl = document.getElementById('home-avatar'); if (avatarEl) avatarEl.textContent = initials(p.name);
   // Credits badge: toon voor ouder
   const creditsBadge = document.getElementById('credits-badge');
@@ -3006,7 +3007,7 @@ function refreshHome() {
     } else if (!todayMeal && todayMenuEntry) {
       // Menu beschikbaar maar nog niet gecheckt
       if (after16 || !isToday) {
-        document.getElementById('today-child-q').textContent = todayMenuEntry.meal_emoji + ' ' + todayMenuEntry.meal_name + ' — hoe was het?';
+        { const _el = document.getElementById('today-child-q'); if(_el) _el.textContent = todayMenuEntry.meal_emoji + ' ' + todayMenuEntry.meal_name + ' — hoe was het?'; }
         unhide(document.getElementById('today-child'));
       } else if (p.role === 'child') {
         unhide(document.getElementById('today-child-wait'));
@@ -3025,7 +3026,7 @@ function refreshHome() {
     else {
       const displayName = todayMeal ? getMealDisplay(todayMeal.meal_type) :
     (todayMenuEntry ? todayMenuEntry.meal_emoji+' '+todayMenuEntry.meal_name : 'het eten');
-  document.getElementById('today-child-q').textContent = 'Hoe was '+displayName+' vanavond?';
+  { const _el = document.getElementById('today-child-q'); if(_el) _el.textContent = 'Hoe was '+displayName+' vanavond?'; }
       unhide(document.getElementById('today-child'));
     }
   } else {
@@ -3047,9 +3048,9 @@ function refreshHome() {
       hide(document.getElementById('today-parent-checkin'));
     } else {
       // Gelogd maar nog niet beoordeeld
-      document.getElementById('today-parent-meal').textContent = '\u2713 '+getMealDisplay(todayMeal.meal_type)+' gelogd';
+      { const _el2 = document.getElementById('today-parent-meal'); if(_el2) _el2.textContent = '\u2713 '+getMealDisplay(todayMeal.meal_type)+' gelogd'; }
       unhide(document.getElementById('today-parent-done'));
-      document.getElementById('today-parent-checkin-q').textContent = 'En hoe vond jij '+getMealDisplay(todayMeal.meal_type)+'?';
+      { const _el3 = document.getElementById('today-parent-checkin-q'); if(_el3) _el3.textContent = 'En hoe vond jij '+getMealDisplay(todayMeal.meal_type)+'?'; }
       unhide(document.getElementById('today-parent-checkin'));
     }
   }
@@ -3312,7 +3313,7 @@ function refreshHome() {
 
     // Toon persoonlijk inzicht (lokaal gegenereerd)
     const txt = insights[Math.floor(Math.random() * insights.length)] || '';
-    document.getElementById('insight-text').textContent = txt;
+    const itEl = document.getElementById('insight-text'); if (itEl) itEl.textContent = txt;
     unhide(document.getElementById('insight-block'));
 
     // Laad gezinsweetje: alleen automatisch 1x per week (op zaterdag)
@@ -6257,7 +6258,7 @@ async function saveProfileName() {
   await sb.from('profiles').update({name}).eq('id', currentProfile.id);
   currentProfile.name = name;
   document.getElementById('profile-name-display').textContent = name;
-  document.getElementById('home-name').textContent = name;
+  const _hn = document.getElementById('home-name'); if (_hn) _hn.textContent = name;
   const fpn = familyProfiles.find(p => p.id === currentProfile.id);
   if (fpn) fpn.name = name;
   // Update avatar initiaal
