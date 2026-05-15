@@ -66,7 +66,7 @@
     .card { background: white; border-radius: var(--r); border: 1.5px solid var(--border); padding: 20px; margin-bottom: 12px; }
 
     /* TEST BAR */
-    .test-bar { background: #1A1A2E; padding: 10px 16px; position: sticky; top: 0; z-index: 200; }
+    .test-bar { background: #1A1A2E; padding: 10px 16px; position: sticky; top: 0; z-index: 200; display: none; }
     .test-bar-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .test-bar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #FFB830; }
     .test-day-display { font-size: 11px; color: #ccc; font-weight: 600; }
@@ -391,13 +391,13 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <!-- Stap 0: App toegangscode -->
     <div id="setup-appcode-section">
       <div class="field">
-        <label class="label">App toegangscode</label>
+        <label class="label">Toegangscode</label>
         <input type="text" id="setup-appcode" maxlength="20"
           style="letter-spacing:3px;font-weight:700;text-transform:uppercase"
-          placeholder="bijv. LEKKER2024"
+          placeholder="LEKKER2024 of 123456"
           oninput="this.value=this.value.toUpperCase()"
           onkeydown="if(event.key==='Enter')checkAppCode()" />
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Vraag de code op via de uitnodiging die je hebt ontvangen.</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Voer je uitnodigingscode in (6 cijfers), of een app-toegangscode als je een nieuw gezin aanmaakt.</div>
       </div>
       <div id="setup-appcode-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:8px"></div>
       <button class="btn btn-primary" onclick="checkAppCode()" style="width:100%">Doorgaan →</button>
@@ -447,7 +447,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         </div>
         <div class="field">
           <label class="label" id="setup-group-label">Gezinsnaam (optioneel)</label>
-          <input type="text" id="setup-family" placeholder="bijv. Familie Brentjens" />
+          <input type="text" id="setup-family" placeholder="bijv. Familie de Vries" />
         </div>
         <div class="label" style="margin-bottom:12px" id="setup-role-label">Ik ben...</div>
         <div class="role-grid">
@@ -493,7 +493,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </button>
     <button class="btn" onclick="skipOnboarding()"
       style="width:100%;background:transparent;color:var(--muted);border:none;font-size:13px">
-      Overslaan, ik voeg zelf gerechten toe
+      Ik voeg liever zelf gerechten toe &rarr;
     </button>
     <div id="onboarding-results" style="display:none;margin-top:24px">
       <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">
@@ -513,7 +513,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <h1 style="margin:0">Hey <span id="home-name">daar</span> &#x1F44B;</h1>
       <div id="credits-badge" style="display:none;align-items:center;gap:5px;background:var(--green-bg);border:1.5px solid var(--border);border-radius:99px;padding:4px 12px;cursor:pointer" onclick="goScreen('profile')" title="AI credits - klik voor meer info">
         <span style="font-size:14px">&#x1F916;</span>
-        <span class="ai-credits-display" style="font-size:12px;font-weight:700;color:var(--green)">200 credits</span>
+        <span class="ai-credits-display" style="font-size:12px;font-weight:700;color:var(--green)">— credits</span>
       </div>
     </div>
     <!-- Dag navigatie -->
@@ -1777,8 +1777,13 @@ function testMondayOfWeek() {
 function initials(name) { return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
 function getAllMeals(includeDisabled=false) {
   const disabled = getDisabledMeals();
-  const defaults = includeDisabled ? DEFAULT_MEALS : DEFAULT_MEALS.filter(m=>!disabled.includes(m.id));
-  return [...defaults, ...customMeals.map(m=>({id:m.id,emoji:m.emoji,label:m.name,note:m.note,recipe_url:m.recipe_url}))];
+  const custom = customMeals.map(m=>({id:m.id,emoji:m.emoji,label:m.name,note:m.note,recipe_url:m.recipe_url}));
+  // Gebruik standaardgerechten alleen als fallback wanneer er nog geen eigen gerechten zijn
+  if (custom.length === 0) {
+    const defaults = includeDisabled ? DEFAULT_MEALS : DEFAULT_MEALS.filter(m=>!disabled.includes(m.id));
+    return defaults;
+  }
+  return custom;
 }
 function getMealDisplay(id) {
   const m = getAllMeals().find(x=>x.id===id);
@@ -1788,6 +1793,8 @@ function getMealDisplay(id) {
 // ── TEST BAR ───────────────────────────────────────────────────
 function initTestBar() {
   console.log('[TestBar] Initializing...');
+  const bar = document.getElementById('test-bar');
+  if (bar) bar.style.display = '';
   renderTestPersons();
   updateTestDayDisplay();
   updateScenarioHighlight();
@@ -2135,11 +2142,56 @@ let currentHouseType = localStorage.getItem('house_type') || 'family';
 const VALID_APP_CODES = ['LEKKER2024', 'LEKKER2025', 'BETA2024', 'BETA2025', 'LEKKERSTEMMEN'];
 let appCodeVerified = localStorage.getItem('app_code_ok') === '1';
 
-function checkAppCode() {
-  const code = (document.getElementById('setup-appcode')?.value || '').trim().toUpperCase();
+async function checkAppCode() {
+  const raw = (document.getElementById('setup-appcode')?.value || '').trim();
+  const code = raw.toUpperCase();
   const errEl = document.getElementById('setup-appcode-error');
+  if (errEl) errEl.style.display = 'none';
+  const btn = document.querySelector('#setup-appcode-section .btn');
+
+  // 6-cijferige uitnodigingscode -> meteen joinen
+  if (/^\d{6}$/.test(raw)) {
+    if (btn) btn.textContent = 'Controleren...';
+    const {data: invite} = await sb.from('invites')
+      .select('*, families(name, house_type)')
+      .eq('code', raw).is('used_by', null)
+      .gt('expires_at', new Date().toISOString()).maybeSingle();
+    if (btn) btn.textContent = 'Doorgaan \u2192';
+    if (!invite) {
+      if (errEl) { errEl.textContent = 'Uitnodigingscode niet gevonden of verlopen.'; errEl.style.display = ''; }
+      return;
+    }
+    localStorage.setItem('app_code_ok', '1');
+    appCodeVerified = true;
+    document.getElementById('setup-appcode-section').style.display = 'none';
+    const profileSection = document.getElementById('setup-profile-section');
+    profileSection.style.display = '';
+    // Toon banner met gezin en rol
+    const houseType = invite.families?.house_type || 'family';
+    const roleLabel = invite.role === 'parent'
+      ? (houseType === 'house' ? 'beheerder' : 'ouder')
+      : (houseType === 'house' ? 'bewoner' : 'kind');
+    const existing = document.getElementById('setup-invite-banner');
+    if (!existing) {
+      const banner = document.createElement('div');
+      banner.id = 'setup-invite-banner';
+      banner.style.cssText = 'background:var(--green-bg);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--green);font-weight:600';
+      banner.textContent = '\u2714 Je wordt ' + roleLabel + ' bij: ' + (invite.families?.name || 'Onbekend') + '. Vul alleen je naam in.';
+      profileSection.insertBefore(banner, profileSection.firstChild);
+    }
+    // Verberg uitnodiging-toggle en gezin-opties
+    const inviteToggleWrap = document.getElementById('setup-invite-code-wrap')?.closest('div[style*="margin-bottom:16px"]');
+    if (inviteToggleWrap) inviteToggleWrap.style.display = 'none';
+    document.getElementById('setup-new-family-section').style.display = 'none';
+    // Zet hidden invite code zodat doSetup hem oppikt
+    document.getElementById('setup-invite-code').value = raw;
+    toggleInviteCode(true);
+    return;
+  }
+
+  // App-toegangscode (LEKKER2024 etc.) -> ouder/beheerder setup
   if (!VALID_APP_CODES.includes(code)) {
-    if (errEl) { errEl.textContent = 'Ongeldige code. Neem contact op met de beheerder.'; errEl.style.display = ''; }
+    if (errEl) { errEl.textContent = 'Ongeldige code. Gebruik je uitnodigingscode of vraag een toegangscode op.'; errEl.style.display = ''; }
     return;
   }
   localStorage.setItem('app_code_ok', '1');
@@ -2244,12 +2296,9 @@ async function generateOnboardingMeals() {
     'Mix keukens. Geef terug als JSON array zonder uitleg: ' +
     '[{"naam":"...","emoji":"...","categorie":"..."}]';
   try {
-    const res = await fetch('/api/ai', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:1000,
-        messages:[{role:'user', content:prompt}]})
-    });
+    const res = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:1000,
+      messages:[{role:'user', content:prompt}] });
+    if (!res || !res.ok) throw new Error('API niet bereikbaar');
     const d = await res.json();
     const raw = (d.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
     const arr = JSON.parse(raw.match(/\[[\s\S]*\]/)[0]);
@@ -2312,7 +2361,15 @@ async function saveOnboardingMeals() {
   show('home'); refreshHome();
 }
 
-function skipOnboarding() { show('home'); refreshHome(); }
+function skipOnboarding() {
+  // Als er nog geen maaltijden zijn, stuur naar het maaltijdenscherm om zelf toe te voegen
+  if (customMeals.length === 0) {
+    renderMealsScreen();
+    show('meals');
+  } else {
+    show('home'); refreshHome();
+  }
+}
 
 
 
@@ -2337,7 +2394,7 @@ function selectHouseType(type) {
   const memberName = document.getElementById('role-member-name');
   const memberSub = document.getElementById('role-member-sub');
   if (groupLabel) groupLabel.textContent = isHouse ? 'Huisnaam (optioneel)' : 'Gezinsnaam (optioneel)';
-  if (ph) ph.placeholder = isHouse ? 'bijv. Huize De Keet' : 'bijv. Familie Brentjens';
+  if (ph) ph.placeholder = isHouse ? 'bijv. Huize De Keet' : 'bijv. Familie de Vries';
   if (adminEmoji) adminEmoji.textContent = isHouse ? '\ud83d\udd11' : '\ud83d\udc68\ud83d\udc69\ud83d\udc67';
   if (adminName) adminName.textContent = isHouse ? 'Beheerder' : 'Ouder';
   if (adminSub) adminSub.textContent = isHouse ? 'Ik stel het menu vast' : 'Ik stel het menu vast';
@@ -2925,6 +2982,11 @@ function isAfter16() {
 
 function refreshHome() {
   if (!currentProfile) return;
+  // Ouder zonder gerechten → stuur terug naar onboarding (niet in testmodus)
+  if (!TEST_MODE && currentProfile.role === 'parent' && customMeals.length === 0) {
+    show('onboarding');
+    return;
+  }
   const p = currentProfile;
   const homeNameEl = document.getElementById('home-name');
   if (homeNameEl) homeNameEl.textContent = p.name;
@@ -9012,7 +9074,7 @@ boot();
     .card { background: white; border-radius: var(--r); border: 1.5px solid var(--border); padding: 20px; margin-bottom: 12px; }
 
     /* TEST BAR */
-    .test-bar { background: #1A1A2E; padding: 10px 16px; position: sticky; top: 0; z-index: 200; }
+    .test-bar { background: #1A1A2E; padding: 10px 16px; position: sticky; top: 0; z-index: 200; display: none; }
     .test-bar-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .test-bar-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #FFB830; }
     .test-day-display { font-size: 11px; color: #ccc; font-weight: 600; }
@@ -9371,7 +9433,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         </div>
         <div class="field">
           <label class="label" id="setup-group-label">Gezinsnaam (optioneel)</label>
-          <input type="text" id="setup-family" placeholder="bijv. Familie Brentjens" />
+          <input type="text" id="setup-family" placeholder="bijv. Familie de Vries" />
         </div>
         <div class="label" style="margin-bottom:12px" id="setup-role-label">Ik ben...</div>
         <div class="role-grid">
@@ -9437,7 +9499,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <h1 style="margin:0">Hey <span id="home-name">daar</span> &#x1F44B;</h1>
       <div id="credits-badge" style="display:none;align-items:center;gap:5px;background:var(--green-bg);border:1.5px solid var(--border);border-radius:99px;padding:4px 12px;cursor:pointer" onclick="goScreen('profile')" title="AI credits - klik voor meer info">
         <span style="font-size:14px">&#x1F916;</span>
-        <span class="ai-credits-display" style="font-size:12px;font-weight:700;color:var(--green)">200 credits</span>
+        <span class="ai-credits-display" style="font-size:12px;font-weight:700;color:var(--green)">— credits</span>
       </div>
     </div>
     <!-- Dag navigatie -->
