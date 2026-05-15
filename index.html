@@ -1116,8 +1116,8 @@ const TRANSLATIONS = {
     nav_home: 'Home', nav_shopping: 'Inkopen', nav_status: 'Status',
     nav_menu: 'Menu', nav_sport: 'Sport', nav_more: 'Meer',
     home_tonight: 'Vanavond', home_this_week: 'Deze week',
-    home_full_menu: 'Heel menu bekijken', home_no_menu: 'Menu voor komende dagen nog niet bepaald.',
-    home_streak: 'dagen op rij!', home_insight: 'Inzicht',
+    home_full_menu: 'Heel menu bekijken', home_no_menu: t('home_no_menu'),
+    home_streak: 'dagen op rij!', home_insight: t('home_insight'),
     home_personal_obs: 'Jouw observatie', home_family_fact: 'Gezinsweetje',
     home_vote_week: 'Stem voor volgende week',
     home_vote_sub: 'Kies welke gerechten je volgende week wilt eten.',
@@ -1126,7 +1126,7 @@ const TRANSLATIONS = {
     btn_view_vote: 'Jouw stem bekijken', btn_full_menu: 'Heel menu bekijken \u2192',
     checkin_title: 'Hoe lekker was het?', checkin_tonight: 'Vanavond',
     checkin_drink: 'Wat dronk je erbij?', checkin_drink_opt: 'optioneel',
-    checkin_comment: 'Wil je nog iets zeggen?', checkin_comment_parent: 'Opmerking',
+    checkin_comment: t('checkin_comment'), checkin_comment_parent: t('checkin_comment_parent'),
     checkin_skip: 'Overslaan', checkin_save: 'Opslaan \u2713',
     checkin_switch: '\ud83d\udd04 Wissel naar: ',
     drink_water: 'Water', drink_milk: 'Melk', drink_juice: 'Sap', drink_soda: 'Frisdrank',
@@ -1157,12 +1157,12 @@ const TRANSLATIONS = {
     vote_sub: 'Je ouder beslist het definitieve menu.',
     vote_suggestion: 'Suggestie aan de kok (optioneel)',
     btn_vote_save: 'Stem opslaan', vote_next_week: 'volgende week',
-    vote_readonly: 'Menu is al vastgesteld. Je kunt je stem nog bekijken.',
+    vote_readonly: t('vote_readonly'),
     status_title: 'Status', status_week: 'Week van', status_progress: 'Weekvoortgang',
-    status_not_checked: 'nog niet ingecheckt', status_no_forgotten: 'Geen vergeten check-ins!',
+    status_not_checked: t('status_not_checked'), status_no_forgotten: 'Geen vergeten check-ins!',
     shopping_title: 'Boodschappen', shopping_for_which: 'Voor welke dagen doe je boodschappen?',
     shopping_persons: 'Aantal personen:', shopping_generate: '\u2728 Boodschappenlijst genereren',
-    shopping_all: 'Alles', shopping_generating: 'AI stelt lijst samen...',
+    shopping_all: 'Alles', shopping_generating: t('shopping_generating'),
     sport_title: 'Sport', sport_had: 'Jij had Sport vandaag!',
     sport_ate_with: 'Heb je mee gegeten?', sport_ate_yes: 'Ja, gewoon mee',
     sport_ate_warmed: 'Ja, opgewarmd', sport_ate_apart: 'Nee, apart gegeten',
@@ -1449,7 +1449,6 @@ function applyTranslations() {
   try {
     const langData = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
     if (langData.days && langData.days.length === 7) {
-      // days array is Zo=0..Za=6, app wil Ma..Zo
       const d = langData.days;
       WEEK_DAYS = [d[1],d[2],d[3],d[4],d[5],d[6],d[0]];
       if (langData.days_short) {
@@ -1458,6 +1457,8 @@ function applyTranslations() {
       }
     }
   } catch(e2) {}
+
+  // Update data-i18n elementen
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     const attr = el.getAttribute('data-i18n-attr');
@@ -1466,6 +1467,72 @@ function applyTranslations() {
   });
   document.querySelectorAll('[data-i18n-ph]').forEach(el => {
     el.placeholder = t(el.getAttribute('data-i18n-ph'));
+  });
+
+  // Update bekende statische teksten via tekstinhoud zoeken
+  // Dit werkt voor simpele tekst-nodes in de DOM
+  const textMap = {
+    // Checkin
+    'Hoe lekker was het?': t('checkin_title'),
+    'Overslaan': t('checkin_skip'),
+    // Menu
+    'Nog niet gekozen': t('menu_not_chosen'),
+    'Menu voor komende dagen nog niet bepaald.': t('home_no_menu'),
+    // Buttons
+    'Terug naar home': t('btn_home'),
+    'Ga je automatisch naartoe...': t('btn_auto_home'),
+    'Menu publiceren voor kinderen \u2192': t('menu_publish'),
+    'Menu bijwerken \u2713': t('menu_update'),
+    'Annuleren': t('btn_cancel'),
+    // Cook
+    'Vanavond koken': t('cook_title'),
+    'Eerder gegeten': t('cook_history'),
+    // Shopping
+    'Voor welke dagen doe je boodschappen?': t('shopping_for_which'),
+    'Alles': t('shopping_all'),
+    // Home
+    'Inzicht': t('home_insight'),
+    'Deze week': t('home_this_week'),
+    // Status
+    'Weekvoortgang': t('status_progress'),
+    // Profile
+    'Mijn profiel': t('profile_title'),
+    // Vote
+    'Jouw stem': t('vote_title'),
+    // Meals
+    'Gerechten': t('meals_title'),
+    'Onze Gerechtenlijst': t('meals_our_list'),
+    // More
+    'Uitnodigen': t('more_invite'),
+    'Statistieken': t('more_stats'),
+  };
+
+  // Loop door alle tekst-nodes en vervang
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+  const nodes = [];
+  let node;
+  while (node = walker.nextNode()) {
+    const trimmed = node.textContent.trim();
+    if (textMap[trimmed] && textMap[trimmed] !== trimmed) {
+      nodes.push([node, textMap[trimmed]]);
+    }
+  }
+  nodes.forEach(([n, val]) => { n.textContent = val; });
+
+  // Update "kookt" teksten (dynamisch gegenereerd)
+  document.querySelectorAll('.detail-pill.cook').forEach(el => {
+    el.textContent = el.textContent.replace(' kookt', ' ' + t('lbl_cook'))
+      .replace(' cooks', ' ' + t('lbl_cook'))
+      .replace(' cuisine', ' ' + t('lbl_cook'))
+      .replace(' cocina', ' ' + t('lbl_cook'));
+  });
+
+  // Update vandaag badge
+  document.querySelectorAll('.today-badge-day, [class*="badge"]').forEach(el => {
+    if (el.textContent.trim() === 'vandaag') el.textContent = t('lbl_today');
+    if (el.textContent.trim() === 'today') el.textContent = t('lbl_today');
+    if (el.textContent.trim() === 'aujourd\'hui') el.textContent = t('lbl_today');
+    if (el.textContent.trim() === 'hoy') el.textContent = t('lbl_today');
   });
 }
 
@@ -2435,6 +2502,12 @@ async function refreshInsightFamily(silent) {
   }
 }
 
+function isAfter16() {
+  var now = new Date();
+  now.setDate(now.getDate() + (testDayOffset||0));
+  return now.getHours() >= 16;
+}
+
 function refreshHome() {
   if (!currentProfile) return;
   const p = currentProfile;
@@ -2494,6 +2567,8 @@ function refreshHome() {
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
     .forEach(id => hide(document.getElementById(id)));
+  var after16 = isAfter16();
+  var isToday = (homeDayOffset === 0);
 
   // Check of er vandaag een check-in is (op datum of meal_id)
   const todayDateStr = todayStr();
@@ -2501,10 +2576,20 @@ function refreshHome() {
     c.meal_id===todayMeal?.id ||
     c.eaten_at===todayDateStr
   );
+  // Blok pas tonen na 16:00 en alleen als er een menu is
+  if (isToday && !after16 && !hasCheckedIn) {
+    // Voor 16:00: geen check-in prompt tonen
+    // Wel de wacht-card voor kinderen als er geen menu is
+    if (p.role === 'child') {
+      var te = weeklyMenu.find(function(m){ return m.day_date === todayDateStr && m.published; });
+      if (!todayMeal && !te) unhide(document.getElementById('today-child-wait'));
+    }
+    // Ga door naar ouder-koken logica maar skip check-in prompt
+  }
 
-  if (p.role==='child') {
+  if (p.role === 'child' || (p.role === 'parent' && (after16 || !isToday))) {
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
-    
+
     if (!todayMeal && !todayMenuEntry) {
       // Geen menu voor vandaag/geselecteerde dag
       if (homeDayOffset === 0) {
@@ -2513,9 +2598,13 @@ function refreshHome() {
       }
       // Op andere dagen: niets tonen (geen menu = niets te doen)
     } else if (!todayMeal && todayMenuEntry) {
-      // Menu beschikbaar maar nog niet ingecheckt
-      document.getElementById('today-child-q').textContent = 'Hoe was '+todayMenuEntry.meal_emoji+' '+todayMenuEntry.meal_name+' vanavond?';
-      unhide(document.getElementById('today-child'));
+      // Menu beschikbaar maar nog niet gecheckt
+      if (after16 || !isToday) {
+        document.getElementById('today-child-q').textContent = todayMenuEntry.meal_emoji + ' ' + todayMenuEntry.meal_name + ' — hoe was het?';
+        unhide(document.getElementById('today-child'));
+      } else if (p.role === 'child') {
+        unhide(document.getElementById('today-child-wait'));
+      }
     }
     else if (hasCheckedIn) unhide(document.getElementById('today-child-done'));
       // Vul done card met check-in info
@@ -2687,7 +2776,7 @@ function refreshHome() {
     bubble.innerHTML = content_html;
 
     if (menuEntry) {
-      bubble.title = menuEntry.meal_name + (score ? ' · '+(score===3?'Lekker':score===2?'Ging wel':'Niet lekker') : '');
+      bubble.title = menuEntry.meal_name + (score ? ' · '+(score===3?t('score_good').replace(/[^\w\s]/g,'').trim():score===2?t('score_ok').replace(/[^\w\s]/g,'').trim():t('score_bad').replace(/[^\w\s]/g,'').trim()) : '');
     }
 
     // Click handler: altijd naar check-in voor die dag
@@ -2845,7 +2934,7 @@ function refreshHome() {
         const voteBtn = document.querySelector('#friday-block .btn-primary, #friday-block button');
         if (voteBtn) {
           if (myVote && menuPublished) {
-            voteBtn.textContent = 'Jouw stem bekijken';
+            voteBtn.textContent = t('btn_view_vote');
             voteBtn.style.background = 'var(--green)';
             voteBtn.style.color = 'white';
             voteBtn.onclick = () => goScreen('vote');
@@ -6351,7 +6440,7 @@ function getShoppingListText() {
   }).join(', ');
 
   let text = '\uD83D\uDED2 Boodschappen Lekkerstemmen\n';
-  text += 'Voor: '+days+'\n\n';
+  text += t('cook_for') + ' '+days+'\n\n';
   shoppingListData.categorieen.forEach(cat => {
     text += '*'+cat.naam+'*\n';
     cat.items.forEach(item => {
@@ -7004,7 +7093,7 @@ function renderTonightCard(profile) {
       cookNameEl.style.color = 'var(--green)';
     } else {
       cookEmojiEl.textContent = '\uD83D\uDC68\uD83C\uDF73';
-      cookNameEl.textContent = menuEntry.cook_name + ' kookt';
+      cookNameEl.textContent = menuEntry.cook_name + ' ' + t('lbl_cook');
       cookNameEl.style.color = 'var(--text)';
       cookSubEl.textContent = '';
     }
@@ -7083,7 +7172,7 @@ function renderTomorrowCard(profile) {
   let meta = '';
   if (tomorrowEntry.cook_name === 'Afhaal') meta = '\uD83D\uDEF5 Afhaal';
   else if (tomorrowEntry.cook_name === 'Uit eten') meta = '\uD83C\uDF7D️ Uit eten';
-  else if (tomorrowEntry.cook_name) meta = '\uD83D\uDC68‍\uD83C\uDF73 ' + tomorrowEntry.cook_name + ' kookt';
+  else if (tomorrowEntry.cook_name) meta = '\uD83D\uDC68‍\uD83C\uDF73 ' + tomorrowEntry.cook_name + ' ' + t('lbl_cook');
 
   // Corvee voor dit kind
   if (tomorrowEntry.corvee_ids && profile.role === 'child') {
