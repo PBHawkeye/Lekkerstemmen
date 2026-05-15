@@ -2102,26 +2102,8 @@ async function doAuth() {
       const {data, error} = await sb.auth.signInWithPassword({email,password});
       if (error) throw error;
       currentUser = data.user;
+      // loadProfile handelt admin via bootTestMode af, gewone gebruikers normaal
       await loadProfile();
-      if (currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
-        testModeActive = true;
-        TEST_MODE = true;
-        if (!currentProfile) {
-          console.warn('[doAuth] testmode: currentProfile is null na loadProfile, skip testbar init');
-        } else {
-        const { data: testMembers } = await sb.from('profiles')
-          .select('id,family_id,name,role,emoji,sports,language')
-          .eq('family_id', currentProfile.family_id);
-        familyProfiles = testMembers || [];
-        const paulP = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
-        if (paulP) {
-          currentProfile = {...paulP, sports: currentProfile.sports || []};
-        }
-        initTestBar();
-        refreshHome();
-        show('home');
-        } // end else (currentProfile not null)
-      }
     } else {
       const {error} = await sb.auth.signUp({email,password});
       if (error) throw error;
@@ -2580,15 +2562,24 @@ async function setTestProfile(nameOrId) {
 }
 
 async function loadProfile() {
-  if (TEST_MODE) {
-    if (currentProfile) { await loadData(); return; }
-    // TEST_MODE maar geen profiel: laat doorgaan
+  const ADMIN_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
+
+  // Admin: laad altijd via bootTestMode — nooit via profiles.id lookup
+  if (currentUser && currentUser.id === ADMIN_ID) {
+    testModeActive = true;
+    TEST_MODE = true;
+    await bootTestMode();
     return;
   }
+
+  if (TEST_MODE) {
+    if (currentProfile) { await loadData(); return; }
+    return;
+  }
+
   const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (error) { console.error('loadProfile error:', error); return; }
   if (!data) {
-    // Geen profiel gevonden - toon setup scherm
     console.warn('Geen profiel voor user:', currentUser.id);
     const ac = document.getElementById('setup-appcode-section');
     const ps = document.getElementById('setup-profile-section');
@@ -2605,9 +2596,6 @@ async function loadProfile() {
   currentProfile = data;
   if (data.family_id) localStorage.setItem('lk_family_id', data.family_id);
   await loadData();
-  // Admin: niet zelf tonen — doAuth() of boot() doet dat na initTestBar()
-  const ADMIN_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
-  if (currentUser && currentUser.id === ADMIN_ID) return;
   refreshHome();
   show('home');
 }
@@ -9068,27 +9056,8 @@ async function boot() {
   const {data:{session}} = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
-    // Activeer testmodus voor beheerder
-    // Altijd normaal laden - testbalk wordt erna toegevoegd
+    // loadProfile handelt admin (bootTestMode) en gewone gebruikers af
     await loadProfile();
-    // loadProfile doet zelf al refreshHome + show('home')
-    // Hier alleen testbalk activeren als beheerder
-    if (currentProfile && currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
-      testModeActive = true;
-      TEST_MODE = true;
-      const { data: fm } = await sb.from('profiles')
-        .select('id,family_id,name,role,emoji,sports,language')
-        .eq('family_id', currentProfile.family_id);
-      familyProfiles = fm || [];
-      // Zet Paul als actief profiel in testbalk
-      const paulProfile = familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef');
-      if (paulProfile) {
-        currentProfile = {...paulProfile, sports: currentProfile.sports || []};
-      }
-      initTestBar();
-      refreshHome();
-      show('home');
-    }
   } else {
     show('auth');
     renderLangPicker();
