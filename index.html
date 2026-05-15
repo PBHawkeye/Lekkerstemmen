@@ -6263,7 +6263,7 @@ async function saveProfileName() {
   if (fpn) fpn.name = name;
   // Update avatar initiaal
   const avatar = document.getElementById('home-avatar');
-  if (avatar) avatar.textContent = initials(name);
+  if (avatar) avatar.textContent = currentProfile?.emoji || name;
   showProfileSaveMsg();
 }
 
@@ -8900,14 +8900,18 @@ async function boot() {
   if (session) {
     currentUser = session.user;
     // Activeer testmodus voor beheerder
-    if (currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
+    // Altijd normaal laden - testbalk wordt erna toegevoegd
+    await loadProfile();
+    // loadProfile doet zelf al refreshHome + show('home')
+    // Hier alleen testbalk activeren als beheerder
+    if (currentProfile && currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
       testModeActive = true;
-    }
-    if (testModeActive) {
-      await bootTestMode();
-    } else {
-      await loadProfile();
-      if (currentProfile) { refreshHome(); show('home'); }
+      TEST_MODE = true;
+      const { data: fm } = await sb.from('profiles')
+        .select('id,family_id,name,role,emoji,sports,language')
+        .eq('family_id', currentProfile.family_id);
+      familyProfiles = fm || [];
+      initTestBar();
     }
   } else {
     show('auth');
@@ -8917,18 +8921,15 @@ async function boot() {
         currentUser = session.user;
         // Activeer testmodus voor beheerder
         await loadProfile();
-        if (currentProfile) {
-          if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
-            testModeActive = true;
-            TEST_MODE = true;
-            const { data: testMembers } = await sb.from('profiles')
-              .select('id,family_id,name,role,emoji,sports,language')
-              .eq('family_id', currentProfile.family_id);
-            familyProfiles = testMembers || [];
-            initTestBar();
-          }
-          refreshHome();
-          show('home');
+        // loadProfile doet al refreshHome + show('home')
+        if (currentProfile && currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
+          testModeActive = true;
+          TEST_MODE = true;
+          const { data: testMembers } = await sb.from('profiles')
+            .select('id,family_id,name,role,emoji,sports,language')
+            .eq('family_id', currentProfile.family_id);
+          familyProfiles = testMembers || [];
+          initTestBar();
         }
       } else if (event==='SIGNED_OUT') {
         currentUser = null; currentProfile = null;
