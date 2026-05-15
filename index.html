@@ -2093,6 +2093,9 @@ async function doAuth() {
       if (currentUser.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') {
         testModeActive = true;
         TEST_MODE = true;
+        if (!currentProfile) {
+          console.warn('[doAuth] testmode: currentProfile is null na loadProfile, skip testbar init');
+        } else {
         const { data: testMembers } = await sb.from('profiles')
           .select('id,family_id,name,role,emoji,sports,language')
           .eq('family_id', currentProfile.family_id);
@@ -2103,6 +2106,7 @@ async function doAuth() {
         }
         initTestBar();
         refreshHome();
+        } // end else (currentProfile not null)
       }
     } else {
       const {error} = await sb.auth.signUp({email,password});
