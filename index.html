@@ -2089,13 +2089,16 @@ async function doAuth() {
       const {data, error} = await sb.auth.signInWithPassword({email,password});
       if (error) throw error;
       currentUser = data.user;
+      await loadProfile();
       if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
         testModeActive = true;
-        document.getElementById('auth-btn').textContent = t('btn_login') + ' →';
-        await bootTestMode();
-        return;
+        TEST_MODE = true;
+        const { data: testMembers } = await sb.from('profiles')
+          .select('id,family_id,name,role,emoji,sports,language')
+          .eq('family_id', TEST_FAMILY_ID);
+        familyProfiles = testMembers || [];
+        initTestBar();
       }
-      await loadProfile();
     } else {
       const {error} = await sb.auth.signUp({email,password});
       if (error) throw error;
@@ -8912,12 +8915,19 @@ async function boot() {
       if (event==='SIGNED_IN' && session) {
         currentUser = session.user;
         // Activeer testmodus voor beheerder
-        if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
-          testModeActive = true;
-          await bootTestMode();
-        } else {
-          await loadProfile();
-          if (currentProfile) { refreshHome(); show('home'); }
+        await loadProfile();
+        if (currentProfile) {
+          if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+            testModeActive = true;
+            TEST_MODE = true;
+            const { data: testMembers } = await sb.from('profiles')
+              .select('id,family_id,name,role,emoji,sports,language')
+              .eq('family_id', TEST_FAMILY_ID);
+            familyProfiles = testMembers || [];
+            initTestBar();
+          }
+          refreshHome();
+          show('home');
         }
       } else if (event==='SIGNED_OUT') {
         currentUser = null; currentProfile = null;
