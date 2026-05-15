@@ -325,29 +325,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 </head>
 <body>
 
-<div id="test-bar" class="test-bar">
-  <div class="test-bar-top">
-    <div class="test-bar-title">&#x1F9EA; Testmodus</div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="test-day-display" id="test-day-display">vandaag</div>
-      <button class="test-toggle" id="test-toggle-btn" onclick="toggleTestMode()">Aan</button>
-    </div>
-  </div>
-  <div id="test-controls">
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-    <div class="test-persons" id="test-persons" style="display:contents"></div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-      <input type="number" id="test-credits-input" min="0" max="9999" value="200"
-        style="width:56px;padding:2px 6px;border-radius:6px;border:1px solid #444;background:#111;color:#FFB830;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif"
-        onkeydown="if(event.key==='Enter')setTestCredits()" />
-      <button onclick="setTestCredits()" style="padding:2px 8px;border-radius:99px;border:1px solid #FFB830;background:transparent;color:#FFB830;font-weight:700;font-size:11px;cursor:pointer">credits</button>
-      <span id="test-credits-display" style="font-size:11px;color:#aaa"></span>
-    </div>
-  </div>
-    
-
-  </div>
-</div>
+<!-- test-bar wordt dynamisch ingevoegd door initTestBar() -->
 
 <div id="s-loading" class="screen active">
   <div class="loading-wrap"><div class="spinner"></div><div class="loading-text">Laden...</div></div>
@@ -1793,8 +1771,33 @@ function getMealDisplay(id) {
 // ── TEST BAR ───────────────────────────────────────────────────
 function initTestBar() {
   console.log('[TestBar] Initializing...');
-  const bar = document.getElementById('test-bar');
-  if (bar) bar.style.display = '';
+  // Injecteer de testbalk in de DOM als die er nog niet is
+  if (!document.getElementById('test-bar')) {
+    const bar = document.createElement('div');
+    bar.id = 'test-bar';
+    bar.className = 'test-bar';
+    bar.innerHTML =
+      '<div class="test-bar-top">' +
+        '<div class="test-bar-title">\u{1F9EA} Testmodus</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div class="test-day-display" id="test-day-display">vandaag</div>' +
+          '<button class="test-toggle" id="test-toggle-btn" onclick="toggleTestMode()">Aan</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="test-controls">' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+          '<div class="test-persons" id="test-persons" style="display:contents"></div>' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">' +
+            '<input type="number" id="test-credits-input" min="0" max="9999" value="200"' +
+              ' style="width:56px;padding:2px 6px;border-radius:6px;border:1px solid #444;background:#111;color:#FFB830;font-size:11px;font-weight:700;font-family:\'DM Sans\',sans-serif"' +
+              ' onkeydown="if(event.key===\'Enter\')setTestCredits()" />' +
+            '<button onclick="setTestCredits()" style="padding:2px 8px;border-radius:99px;border:1px solid #FFB830;background:transparent;color:#FFB830;font-weight:700;font-size:11px;cursor:pointer">credits</button>' +
+            '<span id="test-credits-display" style="font-size:11px;color:#aaa"></span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
   renderTestPersons();
   updateTestDayDisplay();
   updateScenarioHighlight();
@@ -8553,6 +8556,12 @@ let testModeActive = false;
 let currentPlan = 'free'; // free, advanced, pro
 
 function toggleTestMode() {
+  // Alleen admin mag testmodus aan/uitzetten
+  const ADMIN_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
+  if (!currentUser || currentUser.id !== ADMIN_ID) {
+    console.warn('[toggleTestMode] geblokkeerd: geen admin');
+    return;
+  }
   testModeActive = !testModeActive;
   const btn = document.getElementById('test-toggle-btn');
   const controls = document.getElementById('test-controls');
@@ -8960,9 +8969,15 @@ async function boot() {
   const ADMIN_USER_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
 
   if (testModeActive) {
-    // Testmodus: direct opstarten via TEST_FAMILY_ID, geen auth vereist
-    await bootTestMode();
-    return;
+    // Testmodus: controleer altijd of het echt de admin-sessie is
+    const {data:{session:adminSession}} = await sb.auth.getSession();
+    if (adminSession && adminSession.user.id === ADMIN_USER_ID) {
+      await bootTestMode();
+      return;
+    }
+    // Niet de admin: testmodus reset en gewoon doorgaan
+    testModeActive = false;
+    TEST_MODE = false;
   }
 
   // Productie: via Supabase auth sessie
