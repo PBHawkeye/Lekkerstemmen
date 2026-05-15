@@ -1722,7 +1722,7 @@ const TEST_PERSONS = [
   { id:'faas',   name:'Faas',   role:'child',  emoji:'\uD83E\uDD73' },
   { id:'biek',   name:'Biek',   role:'child',  emoji:'\uD83E\uDD73' },
 ];
-let testPersonId = 'paul';
+let testPersonId = '0b34e680-45a6-437b-9dac-d1377dab2fef';
 
 const EMOJI_OPTIONS = ['\uD83C\uDF5D','\uD83C\uDF5A','\uD83E\uDD54','\uD83C\uDF72','\uD83C\uDF55','\uD83C\uDF5B','\uD83E\uDD6A','\uD83E\uDD69','\uD83C\uDF2E','\uD83E\uDD58','\uD83C\uDF5C','\uD83E\uDED5','\uD83E\uDD57','\uD83C\uDF57','\uD83D\uDC1F','\uD83C\uDF73','\uD83E\uDED4','\uD83E\uDDC7','\uD83E\uDD5E','\uD83C\uDF7D'];
 const DAYS = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
@@ -2118,7 +2118,6 @@ async function doAuth() {
 }
 
 async function doSignOut() {
-  if (TEST_MODE) return;
   await sb.auth.signOut();
   currentProfile = null; currentUser = null;
   show('auth');
@@ -2452,9 +2451,10 @@ async function bootTestMode() {
 }
 
 async function setTestProfile(nameOrId) {
-  const target = familyProfiles.find(p => p.name.toLowerCase() === nameOrId.toLowerCase())
-    || familyProfiles.find(p => p.name.toLowerCase().startsWith(nameOrId));
-  const src = target || familyProfiles[0];
+  const target = familyProfiles.find(p => p.id === nameOrId)
+    || familyProfiles.find(p => p.name.toLowerCase() === nameOrId.toLowerCase())
+    || familyProfiles.find(p => p.name.toLowerCase().startsWith(nameOrId.toLowerCase()));
+  const src = target || familyProfiles.find(p => p.id === '0b34e680-45a6-437b-9dac-d1377dab2fef') || familyProfiles[0];
   if (!src) return false;
   let sports = [];
   try { sports = src.sports ? (typeof src.sports === 'string' ? JSON.parse(src.sports) : src.sports) : []; } catch(e) {}
