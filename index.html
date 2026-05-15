@@ -592,6 +592,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="today-parent-checkin-q" class="today-q">En hoe vond jij het?</div>
     <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
+  <div id="no-members-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x1F468;&#x200D;&#x1F467;</span> <strong>Je bent nog alleen in het gezin.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('invite');return false" style="color:var(--green);font-weight:700">Gezin uitnodigen</a> om gezinsleden toe te voegen.</span></div>
   <div id="no-menu-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x26A0;&#xFE0F;</span> <strong>Nog geen weekmenu vastgesteld.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('menu');return false" style="color:var(--green);font-weight:700">Menu</a> om het weekmenu in te stellen en te publiceren.</span></div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
@@ -2117,6 +2118,7 @@ async function doAuth() {
         }
         initTestBar();
         refreshHome();
+        show('home');
         } // end else (currentProfile not null)
       }
     } else {
@@ -2602,6 +2604,9 @@ async function loadProfile() {
   currentProfile = data;
   if (data.family_id) localStorage.setItem('lk_family_id', data.family_id);
   await loadData();
+  // Admin: niet zelf tonen — doAuth() of boot() doet dat na initTestBar()
+  const ADMIN_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
+  if (currentUser && currentUser.id === ADMIN_ID) return;
   refreshHome();
   show('home');
 }
@@ -3191,6 +3196,16 @@ function refreshHome() {
       }
     } else {
       noMenuBanner.classList.add('hidden');
+    }
+  }
+
+  // ── No-members banner (alleen voor ouders) ───────────────────
+  const noMembersBanner = document.getElementById('no-members-banner');
+  if (noMembersBanner) {
+    if (p.role === 'parent' && familyProfiles.length <= 1) {
+      noMembersBanner.classList.remove('hidden');
+    } else {
+      noMembersBanner.classList.add('hidden');
     }
   }
 
@@ -9067,6 +9082,7 @@ async function boot() {
       }
       initTestBar();
       refreshHome();
+      show('home');
     }
   } else {
     show('auth');
@@ -9090,6 +9106,7 @@ async function boot() {
           }
           initTestBar();
           refreshHome();
+          show('home');
         }
       } else if (event==='SIGNED_OUT') {
         currentUser = null; currentProfile = null;
@@ -9679,6 +9696,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="today-parent-checkin-q" class="today-q">En hoe vond jij het?</div>
     <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
+  <div id="no-members-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x1F468;&#x200D;&#x1F467;</span> <strong>Je bent nog alleen in het gezin.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('invite');return false" style="color:var(--green);font-weight:700">Gezin uitnodigen</a> om gezinsleden toe te voegen.</span></div>
   <div id="no-menu-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x26A0;&#xFE0F;</span> <strong>Nog geen weekmenu vastgesteld.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('menu');return false" style="color:var(--green);font-weight:700">Menu</a> om het weekmenu in te stellen en te publiceren.</span></div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
