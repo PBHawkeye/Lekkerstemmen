@@ -592,6 +592,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="today-parent-checkin-q" class="today-q">En hoe vond jij het?</div>
     <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
+  <div id="no-menu-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x26A0;&#xFE0F;</span> <strong>Nog geen weekmenu vastgesteld.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('menu');return false" style="color:var(--green);font-weight:700">Menu</a> om het weekmenu in te stellen en te publiceren.</span></div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
   <div id="friday-block" class="hidden">
@@ -2296,10 +2297,10 @@ async function generateOnboardingMeals() {
   const houseCtx = getHouseType() === 'house' ? 'een studentenhuis' : 'een gezin met kinderen';
   const prompt = 'Stel precies 20 avondgerechten voor voor ' + houseCtx + '. ' +
     'Deze vinden ze sowieso lekker: ' + liked + '. Neem die op. Vul aan met gangbare varianten. ' +
-    'Mix keukens. Geef terug als JSON array zonder uitleg: ' +
+    'Mix keukens. Geef terug als JSON array, alleen JSON, geen uitleg: ' +
     '[{"naam":"...","emoji":"...","categorie":"..."}]';
   try {
-    const res = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:1000,
+    const res = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:1200,
       messages:[{role:'user', content:prompt}] });
     if (!res || !res.ok) throw new Error('API niet bereikbaar');
     const d = await res.json();
@@ -2352,14 +2353,60 @@ function toggleOnboardingSuggestion(idx) {
 
 async function saveOnboardingMeals() {
   const btn = document.getElementById('onboarding-save-btn');
-  if (btn) { btn.textContent = 'Opslaan...'; btn.disabled = true; }
+  if (btn) { btn.textContent = 'Recepten ophalen...'; btn.disabled = true; }
   const suggestions = window._onboardingSuggestions || [];
   const toSave = [];
   onboardingSelected.forEach(i => { if (suggestions[i]) toSave.push(suggestions[i]); });
   if (toSave.length === 0) { skipOnboarding(); return; }
-  await sb.from('custom_meals').insert(
-    toSave.map(s => ({family_id: currentProfile.family_id, name: s.naam, emoji: s.emoji || '\uD83C\uDF7D'}))
-  );
+
+  // Genereer ingrediënten + bereidingswijze voor alle geselecteerde gerechten in één AI-call
+  const houseCtx = getHouseType() === 'house' ? 'studenten' : 'een gezin met kinderen (4 personen)';
+  const gerechtenLijst = toSave.map((s, i) => (i+1) + '. ' + s.naam).join('\n');
+  const recipePrompt =
+    'Genereer voor elk van deze ' + toSave.length + ' avondgerechten een beknopt recept voor ' + houseCtx + '.\n' +
+    gerechtenLijst + '\n\n' +
+    'Geef terug als JSON array, alleen JSON geen uitleg:\n' +
+    '[{"naam":"...","ingredients":"...","instructions":"..."}]\n' +
+    'ingredients: kommalijst van ingrediënten met hoeveelheden (voor 4 personen).\n' +
+    'instructions: bereidingswijze als genummerde stappen, gescheiden door \\n.\n' +
+    'Houd het praktisch en bondig. Dezelfde volgorde als de invoer.';
+
+  let recipeMap = {};
+  try {
+    const res = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:4000,
+      messages:[{role:'user', content:recipePrompt}] });
+    if (res && res.ok) {
+      const d = await res.json();
+      const raw = (d.content?.[0]?.text || '').replace(/```json|```/g,'').trim();
+      const match = raw.match(/\[\s\S*\]/);
+      if (match) {
+        const arr = JSON.parse(match[0]);
+        arr.forEach(r => { if (r.naam) recipeMap[r.naam.toLowerCase()] = r; });
+      }
+    }
+  } catch(e) {
+    console.warn('Recepten ophalen mislukt, gerechten worden zonder recept opgeslagen:', e.message);
+  }
+
+  if (btn) btn.textContent = 'Opslaan...';
+  const rows = toSave.map(s => {
+    const recipe = recipeMap[s.naam.toLowerCase()] || {};
+    return {
+      family_id: currentProfile.family_id,
+      name: s.naam,
+      emoji: s.emoji || '\uD83C\uDF7D',
+      ingredients: recipe.ingredients || null,
+      instructions: recipe.instructions || null,
+    };
+  });
+
+  const { error } = await sb.from('custom_meals').insert(rows);
+  if (error) {
+    const errEl = document.getElementById('onboarding-error');
+    if (errEl) { errEl.textContent = 'Opslaan mislukt: ' + error.message; errEl.style.display = ''; }
+    if (btn) { btn.textContent = '\u2713 Opslaan en starten'; btn.disabled = false; }
+    return;
+  }
   await loadData();
   show('home'); refreshHome();
 }
@@ -3127,6 +3174,23 @@ function refreshHome() {
       unhide(document.getElementById('today-parent-done'));
       { const _el3 = document.getElementById('today-parent-checkin-q'); if(_el3) _el3.textContent = 'En hoe vond jij '+getMealDisplay(todayMeal.meal_type)+'?'; }
       unhide(document.getElementById('today-parent-checkin'));
+    }
+  }
+
+  // ── No-menu banner (alleen voor ouders) ──────────────────────
+  const noMenuBanner = document.getElementById('no-menu-banner');
+  if (noMenuBanner) {
+    // Toon banner als ouder én er geen enkel gepubliceerd item is voor de huidige of komende week
+    if (p.role === 'parent') {
+      const today = todayStr();
+      const hasPublished = weeklyMenu.some(m => m.published && m.day_date >= today);
+      if (hasPublished) {
+        noMenuBanner.classList.add('hidden');
+      } else {
+        noMenuBanner.classList.remove('hidden');
+      }
+    } else {
+      noMenuBanner.classList.add('hidden');
     }
   }
 
@@ -9615,6 +9679,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="today-parent-checkin-q" class="today-q">En hoe vond jij het?</div>
     <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
+  <div id="no-menu-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x26A0;&#xFE0F;</span> <strong>Nog geen weekmenu vastgesteld.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('menu');return false" style="color:var(--green);font-weight:700">Menu</a> om het weekmenu in te stellen en te publiceren.</span></div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
   <div id="friday-block" class="hidden">
