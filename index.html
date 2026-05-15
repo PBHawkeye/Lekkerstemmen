@@ -368,17 +368,17 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 </svg>
     </div>
     <h1 class="auth-title">Lekker<span>stemmen</span></h1>
-    <p style="font-size:11px;font-weight:500;letter-spacing:4px;text-transform:uppercase;color:var(--green);text-align:center;margin-bottom:8px">Samen kiezen</p>
-    <p class="auth-sub">Jij kiest wat er vanavond op tafel komt.</p>
+    <p style="font-size:11px;font-weight:500;letter-spacing:4px;text-transform:uppercase;color:var(--green);text-align:center;margin-bottom:8px"><span data-i18n="auth_tagline_short">Samen kiezen</span></p>
+    <p class="auth-sub"><span data-i18n="auth_tagline">Jij kiest wat er vanavond op tafel komt.</span></p>
     <div class="tabs">
-      <button class="tab active" onclick="authTab('login')" id="tab-login">Inloggen</button>
-      <button class="tab" onclick="authTab('signup')" id="tab-signup">Aanmelden</button>
+      <button class="tab active" onclick="authTab('login')" id="tab-login"><span data-i18n="btn_login">Inloggen</span></button>
+      <button class="tab" onclick="authTab('signup')" id="tab-signup"><span data-i18n="btn_register">Aanmelden</span></button>
     </div>
     <div id="auth-error" class="msg-error hidden"></div>
     <div id="auth-success" class="msg-success hidden"></div>
-    <div class="field"><label class="label">E-mailadres</label><input type="email" id="auth-email" placeholder="jouw@email.nl" /></div>
-    <div class="field"><label class="label">Wachtwoord</label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
-    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn">Inloggen →</button>
+    <div class="field"><label class="label"><span data-i18n="lbl_email">E-mailadres</span></label><input type="email" id="auth-email" placeholder="jouw@email.nl" /></div>
+    <div class="field"><label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
+    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn"><span data-i18n="btn_login">Inloggen</span> →</button>
   </div>
 </div>
 
@@ -1230,6 +1230,7 @@ let currentLang = localStorage.getItem('lang') || 'en';
 const TRANSLATIONS = {
   nl: {
     auth_tagline: 'Samen kiezen wat er op tafel komt.',
+    auth_tagline_short: 'SAMEN KIEZEN',
     btn_login: 'Inloggen', btn_register: 'Registreren', btn_join: 'Gezin joinen',
     lbl_email: 'E-mailadres', lbl_password: 'Wachtwoord', lbl_name: 'Naam',
     lbl_family_name: 'Gezinsnaam', lbl_invite_code: 'Uitnodigingscode', lbl_language: 'Taal',
@@ -1309,6 +1310,7 @@ const TRANSLATIONS = {
   },
   en: {
     auth_tagline: 'Choose together what\'s for dinner.',
+    auth_tagline_short: 'CHOOSE TOGETHER',
     btn_login: 'Log in', btn_register: 'Register', btn_join: 'Join family',
     lbl_email: 'Email', lbl_password: 'Password', lbl_name: 'Name',
     lbl_family_name: 'Family name', lbl_invite_code: 'Invite code', lbl_language: 'Language',
@@ -1388,6 +1390,7 @@ const TRANSLATIONS = {
   },
   fr: {
     auth_tagline: 'Choisissez ensemble ce qui sera au menu.',
+    auth_tagline_short: 'CHOISIR ENSEMBLE',
     btn_login: 'Se connecter', btn_register: "S'inscrire", btn_join: 'Rejoindre',
     lbl_email: 'Adresse e-mail', lbl_password: 'Mot de passe', lbl_name: 'Nom',
     lbl_family_name: 'Nom de famille', lbl_invite_code: "Code d'invitation", lbl_language: 'Langue',
@@ -1467,6 +1470,7 @@ const TRANSLATIONS = {
   },
   es: {
     auth_tagline: 'Elegid juntos lo que hay para cenar.',
+    auth_tagline_short: 'ELEGIR JUNTOS',
     btn_login: 'Iniciar sesion', btn_register: 'Registrarse', btn_join: 'Unirse',
     lbl_email: 'Correo', lbl_password: 'Contrasena', lbl_name: 'Nombre',
     lbl_family_name: 'Nombre familiar', lbl_invite_code: 'Codigo', lbl_language: 'Idioma',
@@ -1562,6 +1566,9 @@ function setLang(lang) {
   }
   applyTranslations();
   renderLangPicker();
+  // Update auth knop tekst
+  const authBtn = document.getElementById('auth-btn');
+  if (authBtn) authBtn.textContent = (currentAuthTab==='signup' ? t('btn_register') : t('btn_login')) + ' \u2192';
 }
 
 function applyTranslations() {
@@ -6501,30 +6508,23 @@ const AI_CREDITS_START = 200;   // startwaarde voor nieuwe gezinnen
 
 let cachedCredits = null;        // lokale cache om DB-calls te minimaliseren
 
-async function loadCredits() {
-  // Haal huidig saldo op: som van alle transacties voor dit gezin
-  const famId = currentProfile?.family_id || TEST_FAMILY_ID;
-  const { data, error } = await sb.from('credits')
-    .select('amount')
-    .eq('family_id', famId);
-  if (error) { console.error('Credits load error:', error); return AI_CREDITS_START; }
-  cachedCredits = (data || []).reduce((sum, r) => sum + r.amount, 0);
+async function loadCredits(familyId) {
+  // Laad credits uit subscriptions tabel
+  const { data: sub } = await sb.from('subscriptions')
+    .select('credits_remaining, plan_id')
+    .eq('family_id', familyId)
+    .maybeSingle();
+  if (sub) {
+    cachedCredits = sub.credits_remaining ?? AI_CREDITS_START;
+    currentPlan = sub.plan_id || 'free';
+  } else {
+    // Fallback: tel credits transacties op
+    const { data } = await sb.from('credits')
+      .select('amount').eq('family_id', familyId);
+    cachedCredits = data ? Math.max(0, data.reduce((s,r) => s + (r.amount||0), 0)) : AI_CREDITS_START;
+    currentPlan = 'free';
+  }
   renderCreditsDisplay();
-  syncTestCreditsInput();
-  return cachedCredits;
-}
-
-function getAICredits() {
-  return cachedCredits !== null ? cachedCredits : AI_CREDITS_START;
-}
-
-function renderCreditsDisplay() {
-  const credits = getAICredits();
-  document.querySelectorAll('.ai-credits-display').forEach(el => {
-    el.textContent = credits + ' credits';
-    el.style.color = credits <= 10 ? 'var(--coral)' : credits <= 50 ? '#C47F00' : 'var(--green)';
-    el.title = credits + ' AI credits resterend';
-  });
 }
 
 async function deductCredit(cost, reason) {
@@ -6550,6 +6550,14 @@ async function deductCredit(cost, reason) {
   cachedCredits = current + deduction;
   renderCreditsDisplay();
   syncTestCreditsInput(); // update ook testbalk
+  // Sync naar subscriptions tabel
+  const famId = currentProfile?.family_id;
+  if (famId) {
+    sb.from('subscriptions')
+      .update({ credits_remaining: Math.max(0, cachedCredits) })
+      .eq('family_id', famId)
+      .then(() => {});
+  }
   return true;
 }
 
@@ -8431,7 +8439,8 @@ function homeGetDate() {
 }
 
 // ── TEST TOGGLE ────────────────────────────────────────────────
-let testModeActive = true;
+let testModeActive = false;
+let currentPlan = 'free'; // free, advanced, pro
 
 function toggleTestMode() {
   testModeActive = !testModeActive;
@@ -8835,8 +8844,10 @@ function selectJoinEmoji(emoji) { joinSelectedEmoji=emoji; renderJoinEmojiPicker
 
 async function boot() {
   show('loading');
-  initTestBar();
   applyTranslations();
+
+  // Testmodus: alleen voor beheerder (Paul)
+  const ADMIN_USER_ID = '5bce07bd-bb9b-49dc-a202-88a9ec249ac9';
 
   if (testModeActive) {
     // Testmodus: direct opstarten via TEST_FAMILY_ID, geen auth vereist
@@ -8846,18 +8857,40 @@ async function boot() {
 
   // Productie: via Supabase auth sessie
   const {data:{session}} = await sb.auth.getSession();
-  if (session && !testModeActive) {
+  if (session) {
     currentUser = session.user;
-    await loadProfile();
-    if (currentProfile) { refreshHome(); show('home'); }
-  } else if (!testModeActive) {
-    show('auth');
-    if (!testModeActive) {
-      sb.auth.onAuthStateChange(async(event,session)=>{
-        if (event==='SIGNED_IN'&&session) { currentUser=session.user; await loadProfile(); if (currentProfile) { refreshHome(); show('home'); } }
-        else if (event==='SIGNED_OUT') { currentUser=null; currentProfile=null; show('auth'); }
-      });
+    // Activeer testmodus voor beheerder
+    if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+      testModeActive = true;
+      initTestBar();
     }
+    if (testModeActive) {
+      await bootTestMode();
+    } else {
+      await loadProfile();
+      if (currentProfile) { refreshHome(); show('home'); }
+    }
+  } else {
+    show('auth');
+    renderLangPicker();
+    sb.auth.onAuthStateChange(async(event,session)=>{
+      if (event==='SIGNED_IN' && session) {
+        currentUser = session.user;
+        // Activeer testmodus voor beheerder
+        if (currentUser.id === '5bce07bd-bb9b-49dc-a202-88a9ec249ac9') {
+          testModeActive = true;
+          initTestBar();
+          await bootTestMode();
+        } else {
+          await loadProfile();
+          if (currentProfile) { refreshHome(); show('home'); }
+        }
+      } else if (event==='SIGNED_OUT') {
+        currentUser = null; currentProfile = null;
+        testModeActive = false;
+        show('auth');
+      }
+    });
   }
 }
 
