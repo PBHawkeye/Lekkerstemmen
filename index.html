@@ -6960,6 +6960,27 @@ function renderCookHistory(history) {
   scoresEl.innerHTML = scoresHtml;
 }
 
+function getAteTogetherOptions() {
+  return [
+    { id: 'ja',        emoji: '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67', label: 'Samen gegeten' },
+    { id: 'opgewarmd', emoji: '\uD83C\uDF5C', label: 'Opgewarmd mee gegeten' },
+    { id: 'nee',       emoji: '\uD83C\uDF7D', label: 'Apart gegeten' },
+  ];
+}
+
+function renderCookPicker() {
+  // Render de kok-kiezer in het meal-picker scherm
+  renderPersonGrid('cook-person-grid', selectedCook, selectCookPerson);
+  renderCorveeGrid();
+  ['cook-afhaal','cook-uiteten'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('selected', selectedCook === id.replace('cook-',''));
+  });
+  const corveeSection = document.getElementById('corvee-section');
+  if (corveeSection) corveeSection.style.display =
+    (selectedCook==='afhaal' || selectedCook==='uiteten') ? 'none' : '';
+}
+
 async function openChangeMeal() {
   if (!currentCookEntry) return;
   const dateStr = currentCookEntry.day_date;
