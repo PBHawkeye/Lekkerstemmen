@@ -2783,8 +2783,12 @@ async function loadAdminDashboard() {
   const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
   const activeProfileIds = new Set(checkins.filter(c => c.created_at > cutoff7).map(c => c.profile_id));
   const activeFamilyIds  = new Set(profiles.filter(p => activeProfileIds.has(p.id)).map(p => p.family_id));
+  // Open = geen status, of status='open', of laatste reply was van gebruiker
+  // Afgehandeld = status='answered'/'closed'
   const openFeedback    = feedbacks.filter(f => !f.status || f.status === 'open');
   const handledFeedback = feedbacks.filter(f => f.status === 'answered' || f.status === 'closed');
+  // Fallback: als status kolom nog niet bestaat, tel op basis van replies
+  // (replies zijn al geladen via feedback_replies policy - zie fix_admin_rls.sql)
 
   // Gezinnen met minstens 1 koppeling
   const familiesWithFriends = new Set([
@@ -7655,6 +7659,10 @@ async function submitFeedbackReply() {
 
   if (btn) { btn.textContent = 'Versturen →'; btn.disabled = false; }
   if (error) { console.error('Reply error:', error); return; }
+
+  // Update feedback status: admin reply = 'answered', user reply = 'open' (wacht op antwoord)
+  const newStatus = authorType === 'admin' ? 'answered' : 'open';
+  await sb.from('feedback').update({ status: newStatus }).eq('id', currentFeedbackThreadId);
 
   if (input) input.value = '';
 
