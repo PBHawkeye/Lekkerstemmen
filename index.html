@@ -10848,32 +10848,212 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 </div>
 
 
-  <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label"><span data-i18n="nav_home">Home</span></span></button>
-    <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Stem</span></button>
-    <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
-    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Voorkeur</span></button>
-    <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
-    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label"><span data-i18n="nav_shopping">Inkopen</span></span></button>
-    <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
-    <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
-    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label"><span data-i18n="nav_status">Status</span></span></button>
-    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label"><span data-i18n="nav_menu">Menu</span></span></button>
-    <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
-    <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
-    <button class="nav-btn" id="nav-profile-child" onclick="goScreen('profile')" style="display:none"><span class="nav-icon">&#x1F464;</span><span class="nav-label">Profiel</span></button>
-    <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label"><span data-i18n="nav_more">Meer</span></span></button>
-  <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
-    <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
-      <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
-      <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
-      <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
-      <button class="nav-btn" onclick="goFriendsScreen();toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#x1F465;</span><span class="nav-label">Vrienden</span></button>
-      <button class="nav-btn" onclick="goScreen('feedback');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128172;</span><span class="nav-label">Feedback</span></button>
-      <button class="nav-btn" onclick="goScreen('profile');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128100;</span><span class="nav-label">Profiel</span></button>
+<div id="s-profile" class="screen">
+  <div class="topbar">
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">←</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px"><span data-i18n="profile_title">Mijn profiel</span></div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;padding:0 24px 100px">
+
+    <!-- Avatar groot -->
+    <div style="text-align:center;padding:24px 0 20px">
+      <div id="profile-emoji-display" style="font-size:56px;margin-bottom:8px">&#x1F60A;</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text)" id="profile-name-display">Naam</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px" id="profile-role-display">kind</div>
+    </div>
+
+    <!-- Naam wijzigen -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Naam</div>
+      <input type="text" id="profile-name-input" maxlength="20"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:16px;outline:none;box-sizing:border-box;-webkit-appearance:none;display:block;margin-bottom:8px" />
+      <button onclick="saveProfileName()" class="btn btn-primary" style="width:100%;padding:12px 16px"><span data-i18n="btn_save">Opslaan</span></button>
+    </div>
+
+    <!-- Emoji kiezen -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Emoji</div>
+      <!-- Compacte weergave: gekozen emoji + edit knop -->
+      <div id="profile-emoji-compact" style="display:flex;align-items:center;gap:12px">
+        <span id="profile-emoji-chosen" style="font-size:40px"></span>
+        <button type="button" onclick="toggleProfileEmojiPicker()" id="profile-emoji-edit-btn"
+          style="padding:6px 14px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:14px;cursor:pointer;font-family:inherit">
+          ✏️ Wijzigen
+        </button>
+      </div>
+      <!-- Volledige picker, standaard verborgen -->
+      <div id="profile-emoji-picker" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
+    </div>
+
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px" data-i18n="profile_language">Language</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="lang-picker">
+        <button type="button" onclick="setLang('nl')" data-lang="nl" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇳🇱 Nederlands</button>
+        <button type="button" onclick="setLang('en')" data-lang="en" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇬🇧 English</button>
+        <button type="button" onclick="setLang('fr')" data-lang="fr" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇫🇷 Français</button>
+        <button type="button" onclick="setLang('es')" data-lang="es" class="lang-btn" style="padding:7px 16px;border-radius:99px;border:1.5px solid var(--border);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🇪🇸 Español</button>
+      </div>
+    </div>
+
+    <!-- Pincode wijzigen (als kind) -->
+    <div id="profile-pin-section" style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px;display:none">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Pincode</div>
+      <button onclick="openSetPin({changeOnly:true})" style="padding:10px 16px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text)">&#x1F512; Pincode wijzigen</button>
+    </div>
+
+    <!-- Mijn sporten -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px" id="profile-sports-section">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Mijn sporten</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Voeg maximaal 2 sporten toe. Dit wordt gebruikt in het sportrooster.</p>
+      <div id="profile-sports-list" style="margin-bottom:12px"></div>
+      <button onclick="openAddSportModal()" id="profile-add-sport-btn" style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:var(--r);background:transparent;color:var(--green);font-size:13px;font-weight:700;cursor:pointer">+ Sport toevoegen</button>
+    </div>
+
+    <!-- API Key -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Anthropic API Key</div>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:8px;box-sizing:border-box" />
+      <button onclick="saveApiKey()" class="btn btn-primary" style="width:100%;margin-bottom:6px"><span data-i18n="btn_save">Opslaan</span></button>
+      <div style="font-size:11px;color:var(--muted)">Nodig voor AI functies (boodschappen, recepten, statistieken). Wordt lokaal opgeslagen op dit apparaat.</div>
+    </div>
+
+    <!-- AI Credits overzicht (alleen ouder) -->
+    <div id="profile-credits-section" style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">AI Credits</div>
+        <span class="ai-credits-display" style="font-size:18px;font-weight:900;color:var(--green)">— credits</span>
+      </div>
+      <div id="profile-credits-history" style="font-size:12px;color:var(--muted)">Laden...</div>
+      <div style="margin-top:10px;padding:10px 14px;background:var(--green-bg);border-radius:var(--r);border:1.5px dashed var(--border);text-align:center">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Meer credits nodig?</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green)">Binnenkort beschikbaar &#x1F6CD;</div>
+      </div>
+    </div>
+
+    <!-- Uitloggen / gezin -->
+    <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Account</div>
+      <button onclick="goScreen('invite')" style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--text);text-align:left;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">&#x1F468;‍&#x1F469;‍&#x1F467;</span><span>Gezin beheren</span>
+      </button>
+      <button onclick="doSignOut()" style="width:100%;padding:12px;border-radius:var(--r);border:1.5px solid #FFEEEE;background:#FFEEEE;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;color:var(--coral);text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">&#x1F6AA;</span><span>Uitloggen</span>
+      </button>
+    </div>
+
+    <div id="profile-save-msg" style="text-align:center;color:var(--green);font-weight:700;font-size:14px;display:none">✓ Opgeslagen!</div>
+  </div>
+</div>
+
+
+<div id="s-shopping" class="screen">
+  <div class="topbar">
+    <button class="avatar" onclick="goScreen('home')" style="font-size:18px">←</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px"><span data-i18n="shopping_title">Boodschappen</span></div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;padding:0 16px 100px">
+
+    <!-- Voor welke dagen? -->
+    <div style="background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--border);padding:16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px"><span data-i18n="shopping_for_which">Voor welke dagen doe je boodschappen?</span></div>
+      <div id="shopping-days-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Aantal personen: <span id="shopping-persons-count" style="font-weight:700;color:var(--green)">5</span></div>
+      <button onclick="generateShoppingList()" class="btn btn-primary" style="width:100%"><span data-i18n="shopping_generate">✨ Boodschappenlijst genereren</span></button>
+    </div>
+
+    <!-- Loading -->
+    <div id="shopping-loading" style="display:none;text-align:center;padding:24px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:8px">&#x1F6D2;</div>
+      <div style="font-weight:700">AI stelt lijst samen...</div>
+    </div>
+
+    <!-- Gegenereerde lijst -->
+    <div id="shopping-result" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Boodschappenlijst</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="shareShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:transparent;color:var(--green);font-weight:700;font-size:12px;cursor:pointer">&#x1F4F1; WhatsApp</button>
+          <button onclick="copyShoppingList()" style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">Kopieer</button>
+        </div>
+      </div>
+
+      <!-- Categorieën -->
+      <div id="shopping-categories"></div>
+
+      <div style="margin-top:12px;padding:12px;background:var(--green-bg);border-radius:var(--r);font-size:12px;color:var(--muted);line-height:1.5">
+        &#x1F4A1; Tik op een ingredient om het door te strepen als je het al in huis hebt.
+      </div>
     </div>
   </div>
-  </nav>
+</div>
+
+<div style="height:88px"></div>
+
+<div id="s-feedback" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goScreen('home')">&larr;</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">
+      Feedback
+      <span id="feedback-unread-badge" style="display:none;background:var(--coral);color:white;font-size:11px;font-weight:700;border-radius:99px;padding:2px 7px;margin-left:6px;vertical-align:middle"></span>
+    </div>
+    <button onclick="openNewFeedbackForm()" style="background:var(--green);color:white;border:none;border-radius:99px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ Nieuw</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:0 0 100px">
+    <div id="feedback-threads-list" style="padding:0 16px"></div>
+    <div id="feedback-empty" style="display:none;text-align:center;padding:48px 24px;color:var(--muted)">
+      <div style="font-size:40px;margin-bottom:12px">&#x1F4AC;</div>
+      <div style="font-weight:700;margin-bottom:6px">Nog geen berichten</div>
+      <div style="font-size:13px">Stuur een bericht via de + Nieuw knop.</div>
+    </div>
+    <div id="feedback-thread-detail" style="display:none;padding:0 16px">
+      <button onclick="closeFeedbackThread()" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--green);font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;padding:14px 0">&larr; Alle berichten</button>
+      <div id="feedback-thread-subject" style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:16px"></div>
+      <div id="feedback-thread-messages" style="margin-bottom:16px"></div>
+      <div style="background:white;border:1.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:16px">
+        <textarea id="feedback-reply-input" rows="3" placeholder="Schrijf een bericht..."
+          style="width:100%;border:none;font-size:14px;font-family:inherit;resize:none;outline:none;box-sizing:border-box"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button onclick="submitFeedbackReply()" id="feedback-reply-btn"
+            style="padding:8px 20px;border-radius:99px;border:none;background:var(--green);color:white;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Versturen &rarr;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="feedback-new-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:flex-end">
+    <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding:20px 16px 40px">
+      <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:4px">Nieuw bericht</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Stuur een vraag, idee of opmerking.</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Onderwerp</label>
+        <input type="text" id="feedback-new-subject" maxlength="80" placeholder="bijv. Bug bij het stemmen, Idee voor menu..."
+          style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none" />
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Hoe bevalt de app? (optioneel)</label>
+        <div style="display:flex;gap:8px" id="feedback-rating-btns">
+          <button type="button" onclick="setFeedbackRating(1)" data-rating="1" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F61E;</button>
+          <button type="button" onclick="setFeedbackRating(2)" data-rating="2" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F610;</button>
+          <button type="button" onclick="setFeedbackRating(3)" data-rating="3" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F642;</button>
+          <button type="button" onclick="setFeedbackRating(4)" data-rating="4" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F604;</button>
+          <button type="button" onclick="setFeedbackRating(5)" data-rating="5" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F929;</button>
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Bericht</label>
+        <textarea id="feedback-new-message" rows="5" placeholder="Beschrijf je vraag, idee of opmerking..."
+          style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+      </div>
+      <div id="feedback-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeFeedbackModal()" style="flex:1;padding:14px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitFeedback()" id="feedback-submit-btn" style="flex:2">Versturen &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div id="s-admin" class="screen" style="background:#0D0D1A">
   <div class="topbar" style="background:#1A1A2E;border-bottom:1px solid #2A2A3E">
