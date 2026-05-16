@@ -2772,8 +2772,8 @@ async function loadAdminDashboard() {
     familiesRes, profilesRes, checkinsRes, feedbackRes, sharesRes
   ] = await Promise.all([
     sb.from('families').select('id,name,created_at'),
-    sb.from('profiles').select('id,family_id,name,role,emoji,created_at'),
-    sb.from('checkins').select('id,profile_id,meal_type,score,created_at').order('created_at',{ascending:false}).limit(200),
+    sb.from('profiles').select('id,family_id,name,role,emoji,created_at').order('created_at',{ascending:false}),
+    sb.from('checkins').select('id,profile_id,meal_type,score,created_at').order('created_at',{ascending:false}).limit(500),
     sb.from('feedback').select('id,profile_name,family_name,subject,message,positive,improve,other,status,rating,created_at').order('created_at',{ascending:false}),
     sb.from('meal_shares').select('id,from_family_name,meal_name,status,created_at').order('created_at',{ascending:false}).limit(50),
   ]);
