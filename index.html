@@ -4180,7 +4180,13 @@ function refreshHome() {
       const doneNameEl = document.getElementById('done-meal-name');
       const doneScoreEl = document.getElementById('done-score-display');
       const doneCommentEl = document.getElementById('done-comment-display');
-      if (doneNameEl && todayMeal) doneNameEl.textContent = getMealDisplay(todayMeal.meal_type);
+      // Toon weekmenu-naam als die beschikbaar is, anders de check-in naam
+      const todayMenuForDone = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+      if (doneNameEl) {
+        doneNameEl.textContent = todayMenuForDone
+          ? (todayMenuForDone.meal_emoji + ' ' + todayMenuForDone.meal_name)
+          : (todayMeal ? getMealDisplay(todayMeal.meal_type) : '');
+      }
       if (doneScoreEl && myCI) doneScoreEl.textContent = myCI.score===3?t('score_good'):myCI.score===2?t('score_ok'):myCI.score===1?t('score_bad'):'';
       if (doneCommentEl && myCI?.comment) doneCommentEl.textContent = '"'+myCI.comment+'"';
       else if (doneCommentEl) doneCommentEl.textContent = '';
@@ -9974,6 +9980,26 @@ async function confirmMealPick() {
 
   console.log('[Menu] Opgeslagen OK');
   await loadData();
+
+  // Vanuit cook-scherm: update ook bestaande check-ins van vandaag naar het nieuwe gerecht
+  if (window._afterChangeMeal) {
+    // Zoek bestaand meals-record voor vandaag en update het meal_type
+    // zodat check-ins ook het juiste gerecht tonen
+    const { data: existingMeal } = await sb.from('meals')
+      .select('id')
+      .eq('family_id', currentProfile.family_id)
+      .eq('eaten_at', dateStr)
+      .maybeSingle();
+
+    if (existingMeal) {
+      // Update het meals-record naar het nieuwe gerecht
+      await sb.from('meals').update({ meal_type: mealId }).eq('id', existingMeal.id);
+      // Update lokale todayMeal
+      if (todayMeal && todayMeal.eaten_at === dateStr) {
+        todayMeal = { ...todayMeal, meal_type: mealId };
+      }
+    }
+  }
 
   // Vanuit cook-scherm: ga terug naar cook met nieuwe gerecht
   if (window._afterChangeMeal) {
