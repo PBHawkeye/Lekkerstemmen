@@ -2281,236 +2281,256 @@ async function loadFriendsData() {
 }
 
 function renderFriendsScreen(friends, incoming, outgoing) {
-  // Gekoppelde gezinnen
   const listEl = document.getElementById('friends-list');
   if (listEl) {
     if (friends.length === 0) {
       listEl.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:12px 0">Nog geen gekoppelde gezinnen.</div>';
     } else {
       listEl.innerHTML = friends.map(f =>
-        '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">' +
+        '<div data-fid="' + f.id + '" data-fname="' + f.name.replace(/"/g,'&quot;') + '" onclick="openFriendDetailFromEl(this)" ' +
+          'style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">' +
           '<div>' +
             '<div style="font-weight:700;font-size:15px">&#x1F3E0; ' + f.name + '</div>' +
-            '<div style="font-size:12px;color:var(--muted)">Gekoppeld op ' + new Date(f.since).toLocaleDateString('nl-NL', {day:'numeric',month:'long'}) + '</div>' +
+            '<div style="font-size:12px;color:var(--muted)">Gekoppeld op ' + new Date(f.since).toLocaleDateString('nl-NL',{day:'numeric',month:'long'}) + '</div>' +
           '</div>' +
-          '<button onclick="browseSharedMeals(\'' + f.id + '\',\'' + f.name.replace(/'/g,"\\'") + '\')" ' +
-            'style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">' +
-            'Gerechten &#x1F4DC;' +
-          '</button>' +
+          '<span style="color:var(--green);font-size:18px">&#x276F;</span>' +
         '</div>'
       ).join('');
     }
   }
 
-  // Inkomende shares
-  const incomingSection = document.getElementById('friends-incoming-section');
-  const incomingList = document.getElementById('friends-incoming-list');
-  if (incomingSection && incomingList) {
-    incomingSection.style.display = incoming.length > 0 ? '' : 'none';
-    incomingList.innerHTML = incoming.map(s =>
-      '<div style="background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--r);padding:14px;margin-bottom:10px">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:4px">' +
-          s.from_family_name + ' wil ' + s.meal_emoji + ' ' + s.meal_name + ' met je delen' +
-        '</div>' +
-        '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">' +
-          new Date(s.created_at).toLocaleDateString('nl-NL', {day:'numeric',month:'long'}) +
-        '</div>' +
-        '<div style="display:flex;gap:8px">' +
-          '<button onclick="acceptMealShare(\'' + s.id + '\',\'' + s.meal_name.replace(/'/g,"\\'") + '\')" ' +
-            'style="flex:1;padding:8px;border-radius:99px;border:none;background:var(--green);color:white;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">&#x2713; Overnemen</button>' +
-          '<button onclick="declineMealShare(\'' + s.id + '\')" ' +
-            'style="flex:1;padding:8px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Afwijzen</button>' +
-        '</div>' +
-      '</div>'
-    ).join('');
+  // Pending banner
+  const banner = document.getElementById('friends-incoming-banner');
+  const countEl = document.getElementById('friends-incoming-count');
+  if (banner) {
+    banner.style.display = incoming.length > 0 ? '' : 'none';
+    if (countEl) countEl.textContent = incoming.length;
   }
 
-  // Uitgaande shares (geschiedenis)
-  const outSection = document.getElementById('friends-outgoing-section');
-  const outList = document.getElementById('friends-outgoing-list');
-  if (outSection && outList) {
-    outSection.style.display = outgoing.length > 0 ? '' : 'none';
-    outList.innerHTML = outgoing.map(s => {
-      const statusLabel = s.status === 'accepted' ? '&#x2713; Overgenomen' :
-                          s.status === 'declined' ? 'Afgewezen' : '&#x23F3; In afwachting';
-      const statusColor = s.status === 'accepted' ? 'var(--green)' :
-                          s.status === 'declined' ? 'var(--muted)' : 'var(--amber)';
-      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
-        '<div>' +
-          '<div style="font-weight:600;font-size:14px">' + s.meal_emoji + ' ' + s.meal_name + '</div>' +
-          '<div style="font-size:12px;color:var(--muted)">' + new Date(s.created_at).toLocaleDateString('nl-NL',{day:'numeric',month:'long'}) + '</div>' +
-        '</div>' +
-        '<div style="font-size:12px;font-weight:700;color:' + statusColor + '">' + statusLabel + '</div>' +
-      '</div>';
-    }).join('');
-  }
-
-  // Genereer-sectie: alleen voor ouders
+  // Generate sectie alleen voor ouders
   const genSection = document.getElementById('friends-generate-section');
   if (genSection) genSection.style.display = currentProfile?.role === 'parent' ? '' : 'none';
 }
 
-// ── Vriendschapscode genereren ────────────────────────────────
-async function generateFriendCode() {
-  const btn = document.getElementById('generate-friend-code-btn');
-  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+// ── Gezin detail met tabs ─────────────────────────────────────
+let currentFriendId = null;
+let currentFriendName = '';
+let selectedShareMealIds = new Set();
 
-  const digits = Math.floor(100000 + Math.random() * 900000);
-  const code = 'F-' + digits;
-
-  const { error } = await sb.from('friend_invites').insert({
-    family_id: currentProfile.family_id,
-    code: code,
-    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  });
-
-  if (btn) { btn.textContent = 'Nieuwe code genereren'; btn.disabled = false; }
-  if (error) { console.error('Code genereren mislukt:', error); return; }
-
-  const result = document.getElementById('friend-code-result');
-  const display = document.getElementById('friend-code-display');
-  if (display) display.textContent = code;
-  if (result) result.style.display = '';
-  window._lastFriendCode = code;
+function openFriendDetailFromEl(el) {
+  openFriendDetail(el.dataset.fid, el.dataset.fname);
 }
 
-function copyFriendCode() {
-  const code = window._lastFriendCode || document.getElementById('friend-code-display')?.textContent;
-  if (!code) return;
-  navigator.clipboard?.writeText(code).then(() => {
-    const btn = event.target;
-    btn.textContent = 'Gekopieerd!';
-    setTimeout(() => { btn.innerHTML = 'Kopi&euml;ren &#x1F4CB;'; }, 2000);
-  });
+async function openFriendDetail(familyId, familyName) {
+  currentFriendId = familyId;
+  currentFriendName = familyName;
+
+  const overview = document.getElementById('friends-overview');
+  const detail = document.getElementById('friends-detail');
+  const title = document.getElementById('friends-topbar-title');
+  const nameEl = document.getElementById('friends-detail-name');
+
+  if (overview) overview.style.display = 'none';
+  if (detail) detail.style.display = '';
+  if (title) title.textContent = familyName;
+  if (nameEl) nameEl.textContent = '&#x1F3E0; ' + familyName;
+
+  switchFriendTab('delen');
 }
 
-// ── Bestaand gezin: code invoeren ────────────────────────────
-async function claimFriendCode() {
-  const raw = (document.getElementById('friend-code-input')?.value || '').trim().toUpperCase();
-  const errEl = document.getElementById('friend-code-error');
-  if (errEl) errEl.style.display = 'none';
+function closeFriendDetail() {
+  const overview = document.getElementById('friends-overview');
+  const detail = document.getElementById('friends-detail');
+  const title = document.getElementById('friends-topbar-title');
 
-  if (!raw.match(/^F-\d{6}$/)) {
-    if (errEl) { errEl.textContent = 'Vul een geldige vriendschapscode in (bijv. F-847291).'; errEl.style.display = ''; }
-    return;
+  if (detail && detail.style.display !== 'none') {
+    // Terug naar overzicht
+    if (overview) overview.style.display = '';
+    if (detail) detail.style.display = 'none';
+    if (title) title.innerHTML = '&#x1F465; Vrienden';
+    currentFriendId = null;
+  } else {
+    // Terug naar home
+    show('home'); refreshHome();
   }
+}
 
-  const btn = document.querySelector('#s-friends .btn-primary:last-of-type');
-  if (btn) { btn.textContent = 'Koppelen...'; btn.disabled = true; }
+function switchFriendTab(tab) {
+  const delenContent = document.getElementById('tab-content-delen');
+  const ontvangenContent = document.getElementById('tab-content-ontvangen');
+  const tabDelen = document.getElementById('tab-delen');
+  const tabOntvangen = document.getElementById('tab-ontvangen');
 
-  const result = await linkFriendCode(raw);
+  const isActive = (btn, active) => {
+    btn.style.borderBottomColor = active ? 'var(--green)' : 'transparent';
+    btn.style.color = active ? 'var(--green)' : 'var(--muted)';
+  };
 
-  if (btn) { btn.textContent = 'Koppelen \u2192'; btn.disabled = false; }
-
-  if (!result.ok) {
-    if (errEl) { errEl.textContent = result.error; errEl.style.display = ''; }
-    return;
+  if (tab === 'delen') {
+    if (delenContent) delenContent.style.display = '';
+    if (ontvangenContent) ontvangenContent.style.display = 'none';
+    isActive(tabDelen, true);
+    isActive(tabOntvangen, false);
+    loadShareTab();
+  } else {
+    if (delenContent) delenContent.style.display = 'none';
+    if (ontvangenContent) ontvangenContent.style.display = '';
+    isActive(tabDelen, false);
+    isActive(tabOntvangen, true);
+    loadReceiveTab();
   }
-
-  document.getElementById('friend-code-input').value = '';
-  await loadFriendsData();
 }
 
-// Gedeelde functie: wordt ook aangeroepen vanuit checkAppCode bij registratie
-async function linkFriendCode(code) {
-  // Zoek de invite op
-  const { data: invite } = await sb.from('friend_invites')
-    .select('*').eq('code', code).is('used_by_family', null)
-    .gt('expires_at', new Date().toISOString()).maybeSingle();
+async function loadShareTab() {
+  if (!currentFriendId) return;
+  selectedShareMealIds = new Set();
 
-  if (!invite) return { ok: false, error: 'Code niet gevonden of al gebruikt.' };
-  if (invite.family_id === currentProfile.family_id) return { ok: false, error: 'Dit is jouw eigen code.' };
+  const listEl = document.getElementById('friend-share-meals-list');
+  const shareBtn = document.getElementById('friend-share-btn');
+  const histEl = document.getElementById('friend-share-history');
+  if (!listEl) return;
 
-  // Markeer invite als gebruikt
-  await sb.from('friend_invites').update({ used_by_family: currentProfile.family_id }).eq('id', invite.id);
-
-  // Maak vriendschapsrelatie aan (beide richtingen)
-  await sb.from('family_friends').insert([
-    { family_id: invite.family_id, friend_family_id: currentProfile.family_id },
-    { family_id: currentProfile.family_id, friend_family_id: invite.family_id },
-  ]);
-
-  return { ok: true, friendFamilyId: invite.family_id };
-}
-
-// ── Gerecht delen met vrienden ────────────────────────────────
-async function openShareMealModal(mealId) {
-  if (friendsList.length === 0) await loadFriendsData();
-  if (friendsList.length === 0) {
-    alert('Je hebt nog geen gekoppelde gezinnen. Voeg eerst een vriend toe via het Vrienden-scherm.');
-    return;
+  // Render eigen gerechten met checkboxes
+  if (customMeals.length === 0) {
+    listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;font-style:italic">Je hebt nog geen eigen gerechten.</p>';
+  } else {
+    listEl.innerHTML = customMeals.map(m =>
+      '<label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">' +
+        '<input type="checkbox" value="' + m.id + '" name="share-meal" ' +
+          'style="width:20px;height:20px;accent-color:var(--green);flex-shrink:0" ' +
+          'onchange="onShareMealToggle()">' +
+        '<span style="font-size:22px">' + (m.emoji||'\uD83C\uDF7D') + '</span>' +
+        '<div><div style="font-weight:600;font-size:14px">' + m.name + '</div>' +
+          (m.note ? '<div style="font-size:12px;color:var(--muted)">' + m.note + '</div>' : '') +
+        '</div>' +
+      '</label>'
+    ).join('');
   }
+  if (shareBtn) shareBtn.style.display = 'none';
 
-  const meal = customMeals.find(m => m.id === mealId);
-  if (!meal) return;
+  // Laad eerder gedeeld met dit gezin
+  const { data: history } = await sb.from('meal_shares')
+    .select('id,meal_name,meal_emoji,status,created_at')
+    .eq('from_family_id', currentProfile.family_id)
+    .eq('to_family_id', currentFriendId)
+    .order('created_at', { ascending: false });
 
-  // Verwijder bestaande modal als die er al is
-  const existing = document.getElementById('share-meal-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'share-meal-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
-  modal.innerHTML =
-    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:80vh;overflow-y:auto;padding:20px 16px 40px">' +
-      '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px;margin-bottom:4px">' + meal.emoji + ' ' + meal.name + ' delen</div>' +
-      '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Selecteer met welke gezinnen je dit gerecht wil delen:</div>' +
-      friendsList.map(f =>
-        '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:8px;cursor:pointer">' +
-          '<input type="checkbox" value="' + f.id + '" name="share-target" style="width:20px;height:20px;accent-color:var(--green)">' +
-          '<span style="font-weight:600">' + f.name + '</span>' +
-        '</label>'
-      ).join('') +
-      '<button onclick="submitMealShare(\'' + mealId + '\')" class="btn btn-primary" style="width:100%;margin-top:8px">Delen &rarr;</button>' +
-      '<button onclick="document.getElementById(\'share-meal-modal\').remove()" style="width:100%;margin-top:8px;padding:12px;border:none;background:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit">Annuleren</button>' +
-    '</div>';
-  document.body.appendChild(modal);
+  if (histEl) {
+    if (history && history.length > 0) {
+      const statusLabel = s => s.status==='accepted' ? '&#x2713; Overgenomen' : s.status==='declined' ? 'Afgewezen' : '&#x23F3; In afwachting';
+      const statusColor = s => s.status==='accepted' ? 'var(--green)' : s.status==='declined' ? 'var(--muted)' : 'var(--amber)';
+      histEl.innerHTML = '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Eerder gedeeld</div>' +
+        history.map(s =>
+          '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">' +
+            '<div style="font-size:13px">' + (s.meal_emoji||'') + ' ' + s.meal_name + '</div>' +
+            '<div style="font-size:12px;font-weight:700;color:' + statusColor(s) + '">' + statusLabel(s) + '</div>' +
+          '</div>'
+        ).join('');
+    } else {
+      histEl.innerHTML = '';
+    }
+  }
 }
 
-async function submitMealShare(mealId) {
-  const checks = document.querySelectorAll('#share-meal-modal input[name="share-target"]:checked');
-  if (checks.length === 0) { alert('Selecteer minstens één gezin.'); return; }
+function onShareMealToggle() {
+  selectedShareMealIds = new Set();
+  document.querySelectorAll('input[name="share-meal"]:checked').forEach(c => selectedShareMealIds.add(c.value));
+  const shareBtn = document.getElementById('friend-share-btn');
+  if (shareBtn) shareBtn.style.display = selectedShareMealIds.size > 0 ? '' : 'none';
+}
 
-  const meal = customMeals.find(m => m.id === mealId);
-  if (!meal) return;
-
-  const btn = document.querySelector('#share-meal-modal .btn-primary');
+async function submitFriendShare() {
+  if (!currentFriendId || selectedShareMealIds.size === 0) return;
+  const btn = document.getElementById('friend-share-btn');
   if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
 
   const { data: myFamily } = await sb.from('families').select('name').eq('id', currentProfile.family_id).maybeSingle();
   const fromName = myFamily?.name || 'Onbekend gezin';
 
-  const rows = Array.from(checks).map(c => ({
-    from_family_id: currentProfile.family_id,
-    from_family_name: fromName,
-    to_family_id: c.value,
-    meal_id: meal.id,
-    meal_name: meal.name,
-    meal_emoji: meal.emoji || '\uD83C\uDF7D',
-    ingredients: meal.ingredients || null,
-    instructions: meal.instructions || null,
-    note: meal.note || null,
-    status: 'pending',
-  }));
+  const rows = [];
+  selectedShareMealIds.forEach(mealId => {
+    const meal = customMeals.find(m => m.id === mealId);
+    if (!meal) return;
+    rows.push({
+      from_family_id: currentProfile.family_id,
+      from_family_name: fromName,
+      to_family_id: currentFriendId,
+      meal_id: meal.id,
+      meal_name: meal.name,
+      meal_emoji: meal.emoji || '\uD83C\uDF7D',
+      ingredients: meal.ingredients || null,
+      instructions: meal.instructions || null,
+      note: meal.note || null,
+      status: 'pending',
+    });
+  });
 
   const { error } = await sb.from('meal_shares').insert(rows);
-  document.getElementById('share-meal-modal')?.remove();
+  if (btn) { btn.textContent = 'Delen \u2192'; btn.disabled = false; }
+
   if (!error) {
-    // Korte bevestiging
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999';
-    toast.textContent = '\u2713 Gedeeld met ' + checks.length + ' gezin' + (checks.length > 1 ? 'nen' : '');
+    toast.textContent = '\u2713 Gedeeld!';
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
+    setTimeout(() => toast.remove(), 2000);
+    loadShareTab();
   }
 }
 
-// ── Share accepteren / afwijzen ───────────────────────────────
-async function acceptMealShare(shareId, mealName) {
-  const share = pendingShares.find(s => s.id === shareId);
+async function loadReceiveTab() {
+  if (!currentFriendId) return;
+  const listEl = document.getElementById('friend-received-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:13px">Laden...</div>';
+
+  const { data } = await sb.from('meal_shares')
+    .select('*')
+    .eq('from_family_id', currentFriendId)
+    .eq('to_family_id', currentProfile.family_id)
+    .order('created_at', { ascending: false });
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0;font-style:italic">Nog niets ontvangen van dit gezin.</div>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(s => {
+    const isPending = s.status === 'pending';
+    return '<div style="border:1.5px solid ' + (isPending?'var(--green)':'var(--border)') + ';border-radius:var(--r);padding:14px;margin-bottom:10px;background:' + (isPending?'var(--green-bg)':'white') + '">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<span style="font-size:24px">' + (s.meal_emoji||'\uD83C\uDF7D') + '</span>' +
+        '<div>' +
+          '<div style="font-weight:700;font-size:15px">' + s.meal_name + '</div>' +
+          '<div style="font-size:11px;color:var(--muted)">' + new Date(s.created_at).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) + '</div>' +
+        '</div>' +
+      '</div>' +
+      (s.ingredients ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">&#x1F6D2; ' + s.ingredients.substring(0,100) + (s.ingredients.length>100?'...':'') + '</div>' : '') +
+      (isPending
+        ? '<div style="display:flex;gap:8px">' +
+            '<button onclick="acceptMealShare('' + s.id + '')" ' +
+              'style="flex:1;padding:8px;border-radius:99px;border:none;background:var(--green);color:white;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">&#x2713; Overnemen</button>' +
+            '<button onclick="declineMealShareInDetail('' + s.id + '')" ' +
+              'style="flex:1;padding:8px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Afwijzen</button>' +
+          '</div>'
+        : '<div style="font-size:12px;font-weight:700;color:' + (s.status==='accepted'?'var(--green)':'var(--muted)') + '">' +
+            (s.status==='accepted' ? '&#x2713; Overgenomen' : 'Afgewezen') +
+          '</div>'
+      ) +
+    '</div>';
+  }).join('');
+}
+
+async function declineMealShareInDetail(shareId) {
+  await sb.from('meal_shares').update({ status: 'declined' }).eq('id', shareId);
+  loadReceiveTab();
+}
+
+async function acceptMealShare(shareId) {
+  const { data: allShares } = await sb.from('meal_shares').select('*').eq('id', shareId).maybeSingle();
+  const share = allShares || pendingShares.find(s => s.id === shareId);
   if (!share) return;
 
-  // Kopieer naar eigen custom_meals
   const { error } = await sb.from('custom_meals').insert({
     family_id: currentProfile.family_id,
     name: share.meal_name,
@@ -2518,89 +2538,44 @@ async function acceptMealShare(shareId, mealName) {
     ingredients: share.ingredients,
     instructions: share.instructions,
     note: share.note,
-    shared_from_family: share.from_family_name,
   });
-
   if (error) { console.error('Overnemen mislukt:', error); return; }
 
-  // Update status
   await sb.from('meal_shares').update({ status: 'accepted' }).eq('id', shareId);
-  await loadFriendsData();
-  await loadData(); // herlaad customMeals
+  await loadData();
+  // Herlaad juiste tab
+  if (currentFriendId) loadReceiveTab();
+  else await loadFriendsData();
 }
 
 async function declineMealShare(shareId) {
   await sb.from('meal_shares').update({ status: 'declined' }).eq('id', shareId);
-  await loadFriendsData();
+  if (currentFriendId) loadReceiveTab();
+  else await loadFriendsData();
 }
 
-// ── Gerechten van een bevriend gezin browsen ─────────────────
-async function browseSharedMeals(familyId, familyName) {
-  const { data: meals } = await sb.from('custom_meals')
-    .select('id,name,emoji,note,ingredients,instructions')
-    .eq('family_id', familyId)
-    .order('name');
-
-  const existing = document.getElementById('browse-meals-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'browse-meals-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
-
-  const mealItems = (meals||[]).map(m => {
-    const alreadyHave = customMeals.some(cm => cm.name.toLowerCase() === m.name.toLowerCase());
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">' +
-      '<div style="font-size:24px">' + (m.emoji||'\uD83C\uDF7D') + '</div>' +
-      '<div style="flex:1"><div style="font-weight:600;font-size:14px">' + m.name + '</div>' +
-      (m.note ? '<div style="font-size:12px;color:var(--muted)">' + m.note + '</div>' : '') + '</div>' +
-      (alreadyHave
-        ? '<span style="font-size:12px;color:var(--green);font-weight:700">\u2713 Heb je al</span>'
-        : '<button onclick="importFriendMeal(' + JSON.stringify(m).replace(/'/g,"&apos;") + ',\'' + familyName.replace(/'/g,"\\'") + '\')" ' +
-            'style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0">+ Overnemen</button>') +
-      '</div>';
-  }).join('');
-
-  modal.innerHTML =
-    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 16px 40px">' +
-      '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px;margin-bottom:16px">Gerechten van ' + familyName + '</div>' +
-      (meals?.length ? mealItems : '<div style="color:var(--muted);font-size:14px">Nog geen gerechten.</div>') +
-      '<button onclick="document.getElementById(\'browse-meals-modal\').remove()" style="width:100%;margin-top:16px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);background:white;color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit">Sluiten</button>' +
-    '</div>';
-  document.body.appendChild(modal);
-}
-
-async function importFriendMeal(meal, fromFamilyName) {
-  const { error } = await sb.from('custom_meals').insert({
-    family_id: currentProfile.family_id,
-    name: meal.name,
-    emoji: meal.emoji,
-    note: meal.note || null,
-    ingredients: meal.ingredients || null,
-    instructions: meal.instructions || null,
-    shared_from_family: fromFamilyName,
-  });
-  if (!error) {
-    await loadData();
-    // Update knop inline
-    const btns = document.querySelectorAll('#browse-meals-modal button');
-    btns.forEach(b => {
-      if (b.textContent === '+ Overnemen' && b.onclick) {
-        try {
-          const data = JSON.parse(b.getAttribute('onclick').match(/importFriendMeal\((.+?),/)?.[1]);
-          if (data?.name === meal.name) {
-            b.outerHTML = '<span style="font-size:12px;color:var(--green);font-weight:700">\u2713 Overgenomen</span>';
-          }
-        } catch(e) {}
-      }
-    });
-    // Herlaad modal volledig
-    document.getElementById('browse-meals-modal')?.remove();
-    browseSharedMeals(meal.family_id || '', fromFamilyName);
+function openPendingShares() {
+  // Open het eerste gezin dat iets heeft gedeeld
+  if (pendingShares.length > 0) {
+    const s = pendingShares[0];
+    openFriendDetail(s.from_family_id, s.from_family_name);
+    switchFriendTab('ontvangen');
   }
 }
 
-// ── Home banner: pending shares ───────────────────────────────
+async function openShareMealModal(mealId) {
+  await goFriendsScreen();
+  // Als er maar 1 vriend is, open direct het detail
+  if (friendsList.length === 1) {
+    await openFriendDetail(friendsList[0].id, friendsList[0].name);
+    setTimeout(() => {
+      const cb = document.querySelector('input[name="share-meal"][value="' + mealId + '"]');
+      if (cb) { cb.checked = true; onShareMealToggle(); }
+    }, 400);
+  }
+}
+
+
 async function checkPendingSharesBanner() {
   if (!currentProfile) return;
   const { data } = await sb.from('meal_shares')
@@ -11149,56 +11124,90 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 
 <div id="s-friends" class="screen">
   <div class="topbar">
-    <button class="back-btn" onclick="show('home');refreshHome()">&larr;</button>
-    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">&#x1F465; Vrienden</div>
-    <div style="width:38px"></div>
+    <button class="back-btn" onclick="closeFriendDetail()">&#x2190;</button>
+    <div id="friends-topbar-title" style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">&#x1F465; Vrienden</div>
+    <button onclick="loadFriendsData()" style="background:none;border:none;color:var(--green);font-size:18px;cursor:pointer">&#x21BB;</button>
   </div>
-  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+  <div style="flex:1;overflow-y:auto;padding:0 0 100px">
 
-    <div id="friends-incoming-section" style="display:none;margin-bottom:20px">
-      <div class="section-title">Gedeeld met jou</div>
-      <div id="friends-incoming-list"></div>
-    </div>
+    <!-- OVERZICHT (standaard zichtbaar) -->
+    <div id="friends-overview" style="padding:0 16px">
 
-    <div style="margin-bottom:20px">
-      <div class="section-title">Gekoppelde gezinnen</div>
-      <div id="friends-list"><div style="color:var(--muted);font-size:14px;padding:12px 0">Nog geen gekoppelde gezinnen.</div></div>
-    </div>
+      <!-- Pending shares badge -->
+      <div id="friends-incoming-banner" style="display:none;background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--r);padding:12px 14px;margin:14px 0;cursor:pointer" onclick="openPendingShares()">
+        <span style="font-weight:700;color:var(--green)">&#x1F381; <span id="friends-incoming-count"></span> gerecht(en) gedeeld met jou</span>
+        <span style="font-size:13px;color:var(--muted);display:block;margin-top:2px">Tik om te bekijken</span>
+      </div>
 
-    <div id="friends-generate-section" style="margin-bottom:20px">
-      <div class="section-title">Nieuw gezin uitnodigen</div>
-      <div class="card" style="margin:0">
-        <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5">Genereer een code en deel die buiten de app. Het andere gezin voert hem in bij aanmelding of hieronder.</p>
-        <button onclick="generateFriendCode()" class="btn btn-primary" id="generate-friend-code-btn">Code genereren &rarr;</button>
-        <div id="friend-code-result" style="display:none;margin-top:14px;padding:14px;background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--green);text-align:center">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:6px">Jouw vriendschapscode</div>
-          <div id="friend-code-display" style="font-size:28px;font-weight:900;font-family:'Fraunces',serif;letter-spacing:3px;color:var(--green)"></div>
-          <div style="font-size:12px;color:var(--muted);margin-top:6px">Geldig 30 dagen &middot; Eenmalig gebruik</div>
-          <button onclick="copyFriendCode()" style="margin-top:10px;padding:6px 16px;border-radius:99px;border:1.5px solid var(--green);background:white;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Kopi&euml;ren &#x1F4CB;</button>
+      <!-- Gekoppelde gezinnen -->
+      <div style="margin-bottom:20px">
+        <div class="section-title">Gekoppelde gezinnen</div>
+        <div id="friends-list"><div style="color:var(--muted);font-size:14px;padding:12px 0">Nog geen gekoppelde gezinnen.</div></div>
+      </div>
+
+      <!-- Nieuw gezin uitnodigen -->
+      <div id="friends-generate-section" style="margin-bottom:20px">
+        <div class="section-title">Nieuw gezin uitnodigen</div>
+        <div class="card" style="margin:0">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">Genereer een code en deel die buiten de app. Het andere gezin voert hem in bij aanmelding of hieronder.</p>
+          <button onclick="generateFriendCode()" class="btn btn-primary" id="generate-friend-code-btn">Code genereren &rarr;</button>
+          <div id="friend-code-result" style="display:none;margin-top:14px;padding:14px;background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--green);text-align:center">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:6px">Jouw vriendschapscode</div>
+            <div id="friend-code-display" style="font-size:28px;font-weight:900;font-family:'Fraunces',serif;letter-spacing:3px;color:var(--green)"></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px">Geldig 30 dagen &middot; Eenmalig gebruik</div>
+            <button onclick="copyFriendCode()" style="margin-top:10px;padding:6px 16px;border-radius:99px;border:1.5px solid var(--green);background:white;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Kopi&euml;ren &#x1F4CB;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code invoeren -->
+      <div style="margin-bottom:20px">
+        <div class="section-title">Code van een vriend invoeren</div>
+        <div class="card" style="margin:0">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Heb je een code ontvangen van een bevriend gezin?</p>
+          <input type="text" id="friend-code-input" placeholder="F-123456"
+            style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:'Fraunces',serif;margin-bottom:10px;box-sizing:border-box"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter')claimFriendCode()" />
+          <div id="friend-code-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:8px"></div>
+          <button onclick="claimFriendCode()" class="btn btn-primary" style="width:100%">Koppelen &rarr;</button>
         </div>
       </div>
     </div>
 
-    <div style="margin-bottom:20px">
-      <div class="section-title">Code van een vriend invoeren</div>
-      <div class="card" style="margin:0">
-        <p style="font-size:14px;color:var(--muted);margin-bottom:12px">Heb je een code ontvangen van een bevriend gezin?</p>
-        <input type="text" id="friend-code-input" placeholder="F-123456"
-          style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:'Fraunces',serif;margin-bottom:10px"
-          oninput="this.value=this.value.toUpperCase()"
-          onkeydown="if(event.key==='Enter')claimFriendCode()" />
-        <div id="friend-code-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:8px"></div>
-        <button onclick="claimFriendCode()" class="btn btn-primary">Koppelen &rarr;</button>
-      </div>
-    </div>
+    <!-- DETAIL: per gezin, met tabs Delen / Ontvangen -->
+    <div id="friends-detail" style="display:none;padding:0 16px">
+      <div id="friends-detail-name" style="font-family:'Fraunces',serif;font-weight:800;font-size:20px;padding:14px 0 10px"></div>
 
-    <div id="friends-outgoing-section" style="display:none;margin-bottom:20px">
-      <div class="section-title">Door jou gedeeld</div>
-      <div id="friends-outgoing-list"></div>
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:16px">
+        <button id="tab-delen" onclick="switchFriendTab('delen')"
+          style="flex:1;padding:10px;border:none;background:none;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;border-bottom:3px solid var(--green);color:var(--green);margin-bottom:-2px">
+          &#x2B06; Delen
+        </button>
+        <button id="tab-ontvangen" onclick="switchFriendTab('ontvangen')"
+          style="flex:1;padding:10px;border:none;background:none;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+          &#x2B07; Ontvangen
+        </button>
+      </div>
+
+      <!-- Tab: Delen -->
+      <div id="tab-content-delen">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Selecteer gerechten die je wil delen met dit gezin:</p>
+        <div id="friend-share-meals-list" style="margin-bottom:14px"></div>
+        <button onclick="submitFriendShare()" id="friend-share-btn" class="btn btn-primary" style="width:100%;display:none">Delen &rarr;</button>
+        <div id="friend-share-history" style="margin-top:16px"></div>
+      </div>
+
+      <!-- Tab: Ontvangen -->
+      <div id="tab-content-ontvangen" style="display:none">
+        <div id="friend-received-list"></div>
+      </div>
     </div>
 
   </div>
 </div>
+
 
 <div id="s-cook" class="screen">
   <div class="topbar">
