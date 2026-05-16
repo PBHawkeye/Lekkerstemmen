@@ -4058,13 +4058,14 @@ function refreshHome() {
     // Kind nav: Home · Voorkeur · Sport
     // Verberg nav-action (Stem knop) en alle ouder items
     ['nav-action','nav-menu','nav-status','nav-shopping','nav-sport-parent','nav-more',
-     'nav-stats','nav-meals','nav-invite','nav-log'].forEach(id => {
+     'nav-stats','nav-meals','nav-invite','nav-log','nav-profile-child'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Toon: Voorkeur + Sport (geen Meer voor kinderen)
+    // Toon: Voorkeur · Sport · Profiel (geen Meer voor kinderen)
     document.getElementById('nav-vote-btn') && (document.getElementById('nav-vote-btn').style.display='');
     document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
+    document.getElementById('nav-profile-child') && (document.getElementById('nav-profile-child').style.display='');
   }
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
@@ -10860,6 +10861,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label"><span data-i18n="nav_menu">Menu</span></span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
     <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
+    <button class="nav-btn" id="nav-profile-child" onclick="goScreen('profile')" style="display:none"><span class="nav-icon">&#x1F464;</span><span class="nav-label">Profiel</span></button>
     <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label"><span data-i18n="nav_more">Meer</span></span></button>
   <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
     <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
