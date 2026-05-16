@@ -2508,9 +2508,9 @@ async function loadReceiveTab() {
       (s.ingredients ? '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">&#x1F6D2; ' + s.ingredients.substring(0,100) + (s.ingredients.length>100?'...':'') + '</div>' : '') +
       (isPending
         ? '<div style="display:flex;gap:8px">' +
-            '<button onclick="acceptMealShare('' + s.id + '')" ' +
+            '<button onclick="acceptMealShare(\\x27' + s.id + '\\x27)" ' +
               'style="flex:1;padding:8px;border-radius:99px;border:none;background:var(--green);color:white;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">&#x2713; Overnemen</button>' +
-            '<button onclick="declineMealShareInDetail('' + s.id + '')" ' +
+            '<button onclick="declineMealShareInDetail(\\x27' + s.id + '\\x27)" ' +
               'style="flex:1;padding:8px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Afwijzen</button>' +
           '</div>'
         : '<div style="font-size:12px;font-weight:700;color:' + (s.status==='accepted'?'var(--green)':'var(--muted)') + '">' +
