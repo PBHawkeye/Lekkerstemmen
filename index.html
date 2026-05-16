@@ -3683,7 +3683,31 @@ function goScreen(name) {
   }
   else if (name==='meals') { renderMealsScreen(); show('meals'); }
   else if (name==='stats') { renderStats(); show('stats'); }
-  else if (name==='menu') { menuBaseOffset = getRealWeekOffset(); menuWeekOffset = menuBaseOffset; renderMenuScreen().then(()=>show('menu')); }
+  else if (name==='menu') {
+    menuBaseOffset = getRealWeekOffset();
+    menuWeekOffset = menuBaseOffset;
+    // Slimme startweek: bepaal of er nog ongepubliceerde toekomstige dagen zijn deze week
+    (async () => {
+      const thisWeekStart = getMenuWeekStart();
+      const today = todayStr();
+      const { data: thisWeek } = await sb.from('weekly_menu')
+        .select('day_date,published')
+        .eq('family_id', currentProfile.family_id)
+        .eq('week_of', thisWeekStart);
+      const thisWeekItems = thisWeek || [];
+      // Toekomstige dagen = vandaag of later
+      const futureDays = thisWeekItems.filter(m => m.day_date >= today);
+      // Heeft de huidige week nog toekomstige ongepubliceerde dagen?
+      const hasOpenFuture = futureDays.some(m => !m.published);
+      // Of: heeft de huidige week helemaal geen items voor toekomstige dagen?
+      const hasNoFuture = futureDays.length === 0;
+      if (!hasOpenFuture || hasNoFuture) {
+        // Geen werk meer deze week: spring naar volgende week
+        menuWeekOffset = menuBaseOffset + 1;
+      }
+      renderMenuScreen().then(()=>show('menu'));
+    })();
+  }
   else if (name==='vote-setup') { voteSetupBaseOffset = getRealWeekOffset(); voteSetupWeekOffset = voteSetupBaseOffset; renderVoteSetup().then(()=>show('vote-setup')); }
   else if (name==='status') { statusBaseOffset = getRealWeekOffset(); statusWeekOffset = statusBaseOffset; renderStatus().then(()=>show('status')); }
   else if (name==='sport') {
@@ -9906,7 +9930,8 @@ async function confirmMealPick() {
     cook_name: cookName,
     corvee_ids: selectedCorvee.length ? JSON.stringify(selectedCorvee) : null,
     corvee_names: corveeNames.length ? corveeNames.join(', ') : null,
-    published: false,
+    // Bij "toch iets anders" de published-status van het origineel overnemen
+    published: window._afterChangeMeal && currentPickDay?.existing?.published ? true : false,
     variant: variant,
     for_profile_ids: forProfileIds,
   });
