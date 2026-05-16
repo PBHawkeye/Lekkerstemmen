@@ -2609,74 +2609,64 @@ async function checkPendingSharesBanner() {
 
 
 
-// ── Sport instellen voor gezinslid (modal met sport-UI) ──────
+// ── Sport instellen voor gezinslid (modal) ───────────────────
 function openMemberSportsModal(profileId) {
-  // Tijdelijk het profiel switchen zodat renderProfileSportsList correct werkt
   let member = familyProfiles.find(p => p.id === profileId);
   if (!member && currentProfile?.id === profileId) member = currentProfile;
   if (!member) return;
 
-  const prevProfile = currentProfile;
-  currentProfile = {...currentProfile, ...member}; // overschrijf sports etc.
+  // Sla profileId op voor renderProfileSportsList
+  window._memberSportsProfileId = profileId;
 
   const existing = document.getElementById('member-sports-modal');
   if (existing) existing.remove();
 
   const modal = document.createElement('div');
   modal.id = 'member-sports-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
-  modal.innerHTML =
-    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 16px 40px">' +
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">' +
-        '<span style="font-size:28px">' + member.emoji + '</span>' +
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
+
+  const inner = document.createElement('div');
+  inner.style.cssText = 'background:white;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 16px 40px';
+  inner.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:28px">' + (member.emoji||'\uD83D\uDC64') + '</span>' +
         '<div>' +
           '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px">' + member.name + '</div>' +
           '<div style="font-size:12px;color:var(--muted)">Sporten instellen</div>' +
         '</div>' +
       '</div>' +
-      '<p style="font-size:12px;color:var(--muted);margin:10px 0 12px;line-height:1.5">Voeg maximaal 2 sporten toe. Dit wordt getoond in het sportrooster.</p>' +
-      '<div id="member-sports-list" style="margin-bottom:12px"></div>' +
-      '<button id="member-add-sport-btn" onclick="openAddSportModal()" ' +
-        'style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:var(--r);background:transparent;color:var(--green);font-size:13px;font-weight:700;cursor:pointer">' +
-        '+ Sport toevoegen' +
-      '</button>' +
-      '<button onclick="closeMemberSportsModal(' + JSON.stringify(profileId) + ')" ' +
-        'style="width:100%;margin-top:12px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);background:white;font-size:14px;color:var(--muted);cursor:pointer;font-family:inherit">Klaar</button>' +
-    '</div>';
+    '</div>' +
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Voeg maximaal 2 sporten toe.</p>' +
+    '<div id="profile-sports-list" style="margin-bottom:12px"></div>' +
+    '<button id="profile-add-sport-btn" onclick="openAddSportModal()" ' +
+      'style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:var(--r);background:transparent;color:var(--green);font-size:13px;font-weight:700;cursor:pointer">' +
+      '+ Sport toevoegen</button>' +
+    '<button onclick="closeMemberSportsModal()" ' +
+      'style="width:100%;margin-top:12px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);background:white;font-size:14px;color:var(--muted);cursor:pointer;font-family:inherit">Klaar</button>';
+
+  modal.appendChild(inner);
   document.body.appendChild(modal);
 
-  // Render de sportlijst in de modal — hergebruik profiel-sports-list tijdelijk
-  // Door te swappen met de modal's list
-  const origList = document.getElementById('profile-sports-list');
-  const origAddBtn = document.getElementById('profile-add-sport-btn');
-  const modalList = document.getElementById('member-sports-list');
-  const modalAddBtn = document.getElementById('member-add-sport-btn');
-
-  // Patch de IDs tijdelijk
-  if (origList) origList.id = 'profile-sports-list-hidden';
-  if (origAddBtn) origAddBtn.id = 'profile-add-sport-btn-hidden';
-  modalList.id = 'profile-sports-list';
-  modalAddBtn.id = 'profile-add-sport-btn';
-
+  // Switch currentProfile voor de duur van de modal
+  // (saveProfileSport/deleteProfileSport gebruiken currentProfile.id)
+  const prevProfile = currentProfile;
+  currentProfile = {...member, family_id: prevProfile.family_id};
   renderProfileSportsList();
 
-  // Herstel IDs
-  modalList.id = 'member-sports-modal-list';
-  modalAddBtn.id = 'member-sports-modal-add-btn';
-  if (origList) origList.id = 'profile-sports-list';
-  if (origAddBtn) origAddBtn.id = 'profile-add-sport-btn';
-
-  // Patch add/delete buttons om member-sports-modal-list te targeten
-  modalList.id = 'profile-sports-list'; // laat zo voor openAddSportModal
-
   modal._prevProfile = prevProfile;
+  modal._memberId = profileId;
 }
 
-async function closeMemberSportsModal(profileId) {
+async function closeMemberSportsModal() {
   const modal = document.getElementById('member-sports-modal');
   const prevProfile = modal?._prevProfile;
   if (prevProfile) currentProfile = prevProfile;
   modal?.remove();
+  window._memberSportsProfileId = null;
+  // Herstel profile-sports-list voor de profielpagina
+  const profList = document.getElementById('profile-sports-list');
+  if (profList) renderProfileSportsList();
   // Herlaad sportrooster
   await renderSportSchedule();
 }
@@ -2772,7 +2762,7 @@ async function openAdminDashboard() {
 async function loadAdminDashboard() {
   // Reset
   ['admin-stat-families','admin-stat-users','admin-stat-checkins',
-   'admin-stat-active7','admin-stat-feedback'].forEach(id => {
+   'admin-stat-active7','admin-stat-feedback','admin-stat-handled'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = '...';
   });
@@ -2784,7 +2774,7 @@ async function loadAdminDashboard() {
     sb.from('families').select('id,name,created_at'),
     sb.from('profiles').select('id,family_id,name,role,emoji,created_at'),
     sb.from('checkins').select('id,profile_id,meal_type,score,created_at').order('created_at',{ascending:false}).limit(200),
-    sb.from('feedback').select('id,profile_name,family_name,subject,message,status,created_at').order('created_at',{ascending:false}),
+    sb.from('feedback').select('id,profile_name,family_name,subject,message,positive,improve,other,status,rating,created_at').order('created_at',{ascending:false}),
     sb.from('meal_shares').select('id,from_family_name,meal_name,status,created_at').order('created_at',{ascending:false}).limit(50),
   ]);
 
@@ -2798,7 +2788,8 @@ async function loadAdminDashboard() {
   const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
   const activeProfileIds = new Set(checkins.filter(c => c.created_at > cutoff7).map(c => c.profile_id));
   const activeFamilyIds  = new Set(profiles.filter(p => activeProfileIds.has(p.id)).map(p => p.family_id));
-  const openFeedback     = feedbacks.filter(f => f.status !== 'closed');
+  const openFeedback    = feedbacks.filter(f => !f.status || f.status === 'open');
+  const handledFeedback = feedbacks.filter(f => f.status === 'answered' || f.status === 'closed');
 
   // Stats
   document.getElementById('admin-stat-families').textContent = families.length;
@@ -2806,9 +2797,11 @@ async function loadAdminDashboard() {
   document.getElementById('admin-stat-checkins').textContent = checkins.length;
   document.getElementById('admin-stat-active7').textContent  = activeFamilyIds.size;
   document.getElementById('admin-stat-feedback').textContent = openFeedback.length;
+  const handledEl = document.getElementById('admin-stat-handled');
+  if (handledEl) handledEl.textContent = handledFeedback.length;
 
-  // Feedback lijst (open items)
-  renderAdminFeedback(openFeedback.slice(0, 10));
+  // Feedback lijst: open bovenaan, daarna afgehandeld
+  renderAdminFeedback(openFeedback, handledFeedback);
 
   // Gezinnen lijst
   renderAdminFamilies(families, profiles, checkins, activeFamilyIds);
@@ -2817,25 +2810,51 @@ async function loadAdminDashboard() {
   renderAdminActivity(checkins, shares, profiles);
 }
 
-function renderAdminFeedback(items) {
+function renderAdminFeedback(openItems, handledItems) {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
-  if (!items.length) {
-    el.innerHTML = '<div style="color:#555;font-size:13px;padding:8px 0">Geen openstaande feedback. &#x1F44D;</div>';
-    return;
-  }
-  el.innerHTML = items.map(f => {
+
+  function feedbackCard(f, isHandled) {
     const ago = timeAgo(f.created_at);
-    const preview = (f.subject || f.message || '').substring(0,60);
+    const text = f.subject || f.message || f.positive || f.improve || f.other || '';
+    const preview = text.substring(0, 70) + (text.length > 70 ? '...' : '');
+    const ratingEmojis = ['','\uD83D\uDE1E','\uD83D\uDE10','\uD83D\uDE42','\uD83D\uDE04','\uD83E\uDD29'];
+    const rating = f.rating ? ' ' + (ratingEmojis[f.rating] || '') : '';
+    const borderColor = isHandled ? '#222' : '#3A3A2E';
+    const nameColor = isHandled ? '#888' : 'white';
+    const statusLabel = isHandled ? '\u2713' : '\u2022';
+    const statusColor = isHandled ? '#555' : '#F5A623';
     return '<div onclick="openAdminFeedbackThread(\'' + f.id + '\')" '
-      + 'style="padding:10px 12px;background:#1A1A2E;border-radius:10px;margin-bottom:8px;cursor:pointer;border:1px solid #2A2A3E">'
-      + '<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
-      + '<div style="font-size:13px;font-weight:700;color:white">' + (f.family_name || f.profile_name || 'Onbekend') + '</div>'
-      + '<div style="font-size:11px;color:#666">' + ago + '</div>'
+      + 'style="padding:10px 12px;background:#1A1A2E;border-radius:10px;margin-bottom:8px;cursor:pointer;'
+      + 'border:1px solid ' + borderColor + ';opacity:' + (isHandled ? '0.65' : '1') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+        + '<div style="font-size:13px;font-weight:700;color:' + nameColor + '">'
+          + (f.family_name || f.profile_name || 'Onbekend') + rating
+        + '</div>'
+        + '<div style="display:flex;gap:6px;align-items:center">'
+          + '<span style="font-size:11px;color:' + statusColor + '">' + statusLabel + '</span>'
+          + '<span style="font-size:11px;color:#555">' + ago + '</span>'
+        + '</div>'
       + '</div>'
-      + '<div style="font-size:12px;color:#aaa">' + preview + '</div>'
+      + '<div style="font-size:12px;color:#888">' + preview + '</div>'
       + '</div>';
-  }).join('');
+  }
+
+  let html = '';
+  if (!openItems.length) {
+    html += '<div style="color:#555;font-size:13px;padding:8px 0">Geen openstaande feedback. &#x1F44D;</div>';
+  } else {
+    html += openItems.map(f => feedbackCard(f, false)).join('');
+  }
+  if (handledItems && handledItems.length > 0) {
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#444;margin:14px 0 8px">'
+          + 'Afgehandeld (' + handledItems.length + ')</div>';
+    html += handledItems.slice(0, 5).map(f => feedbackCard(f, true)).join('');
+    if (handledItems.length > 5) {
+      html += '<div style="font-size:12px;color:#555;padding:4px 0">' + (handledItems.length - 5) + ' meer...</div>';
+    }
+  }
+  el.innerHTML = html;
 }
 
 function renderAdminFamilies(families, profiles, checkins, activeFamilyIds) {
@@ -4620,6 +4639,7 @@ function renderMealsScreen() {
 
 function renderEmojiPicker() {
   const picker = document.getElementById('emoji-picker');
+  if (!picker) return;
   picker.innerHTML = '';
   EMOJI_OPTIONS.forEach(e => {
     const btn = document.createElement('button');
@@ -6998,6 +7018,30 @@ async function openChangeMeal() {
   const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
   currentPickDay = { dateStr, dayIndex, existing: currentCookEntry };
   window._afterChangeMeal = true;
+
+  // Vul gerechtenlijst — ontbrak waardoor grid leeg was
+  const searchEl = document.getElementById('meal-search');
+  if (searchEl) searchEl.value = '';
+  const labelEl = document.getElementById('meal-grid-label');
+  if (labelEl) labelEl.textContent = 'Kies een gerecht:';
+
+  const {data: histMenuData} = await sb.from('weekly_menu')
+    .select('meal_id,day_date')
+    .eq('family_id', currentProfile.family_id)
+    .order('day_date', {ascending: false}).limit(100);
+
+  histMenu = histMenuData || [];
+  const usageCount = {};
+  histMenu.forEach(m => { if (m.meal_id) usageCount[m.meal_id] = (usageCount[m.meal_id]||0) + 1; });
+
+  allPickerMeals = getAllMeals().sort((a, b) => {
+    const ua = usageCount[a.id] || 0;
+    const ub = usageCount[b.id] || 0;
+    if (ub !== ua) return ub - ua;
+    return a.label.localeCompare(b.label, 'nl');
+  });
+
+  renderMealGrid(allPickerMeals, currentCookEntry.meal_id);
   show('meal-picker');
 }
 
@@ -10761,6 +10805,48 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 
 
 
+<!-- Add meal sheet (fixed overlay, buiten schermen) -->
+<div id="add-meal-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px 40px;max-height:90vh;overflow-y:auto">
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:14px">Nieuw gerecht</div>
+    <div class="emoji-picker" id="emoji-picker"></div>
+    <div class="field">
+      <label class="label">Naam</label>
+      <input type="text" id="new-meal-name" placeholder="bijv. Lasagne, Sushi..." maxlength="60"
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')addCustomMeal()" />
+    </div>
+    <div class="field">
+      <label class="label">Notitie (optioneel)</label>
+      <input type="text" id="new-meal-note" placeholder="bijv. zonder ui, extra knoflook..."
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <div class="field">
+      <label class="label">Bijgerecht (optioneel)</label>
+      <input type="text" id="new-meal-side" placeholder="bijv. salade, rijst..."
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <div class="field">
+      <label class="label">Ingredi&euml;nten (optioneel)</label>
+      <textarea id="new-meal-ingredients" rows="3" placeholder="200g gehakt, 1 ui, 2 teentjes knoflook..."
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+    </div>
+    <div class="field">
+      <label class="label">Bereidingswijze (optioneel)</label>
+      <textarea id="new-meal-instructions" rows="3" placeholder="1. Ui snipperen... 2. ..."
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+    </div>
+    <div class="field">
+      <label class="label">Recept URL (optioneel)</label>
+      <input type="url" id="new-meal-url" placeholder="https://..."
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <button class="btn btn-primary" onclick="addCustomMeal()" style="width:100%;margin-bottom:8px">Toevoegen</button>
+    <button class="btn btn-ghost" onclick="closeAddMealSheet()" style="width:100%">Annuleren</button>
+  </div>
+</div>
+
+
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label"><span data-i18n="nav_home">Home</span></span></button>
     <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Stem</span></button>
@@ -10818,6 +10904,10 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
         <div id="admin-stat-feedback" style="font-size:24px;font-weight:900;color:#F5A623;font-family:'Fraunces',serif">—</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Open feedback</div>
+      </div>
+      <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
+        <div id="admin-stat-handled" style="font-size:24px;font-weight:900;color:#22C9A0;font-family:'Fraunces',serif">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Afgehandeld</div>
       </div>
     </div>
 
@@ -10975,7 +11065,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 </div>
 
 <!-- Sport toevoegen/bewerken modal -->
-<div id="add-sport-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:600;align-items:flex-end;justify-content:center">
+<div id="add-sport-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:flex-end;justify-content:center">
   <div style="background:white;border-radius:20px 20px 0 0;padding:24px 24px 48px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-family:'Fraunces',serif;font-weight:900;font-size:18px" id="sport-modal-title">Sport toevoegen</div>
