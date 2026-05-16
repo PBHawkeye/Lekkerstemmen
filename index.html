@@ -395,6 +395,10 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         <label class="label">Jouw naam</label>
         <input type="text" id="setup-name" placeholder="bijv. Paul, Emma, ..." />
       </div>
+      <div class="field">
+        <label class="label">Kies een emoji</label>
+        <div id="setup-emoji-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+      </div>
 
       <!-- Uitnodigingscode -->
       <div style="margin-bottom:16px">
@@ -601,6 +605,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
   <div id="no-members-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x1F468;&#x200D;&#x1F467;</span> <strong>Je bent nog alleen in het gezin.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('invite');return false" style="color:var(--green);font-weight:700">Gezin uitnodigen</a> om gezinsleden toe te voegen.</span></div>
+  <div id="pending-shares-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#EEF0FF;border:1.5px solid #7C6FF7;border-radius:12px;font-size:13px;color:#3D2E8C;line-height:1.5;cursor:pointer" onclick="goFriendsScreen()"><span style="font-size:16px">&#x1F381;</span> <strong>Gerecht gedeeld!</strong><br><span id="pending-shares-text" style="color:var(--muted)"></span> <span style="color:#7C6FF7;font-weight:700">Bekijk &rarr;</span></div>
   <div id="no-menu-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x26A0;&#xFE0F;</span> <strong>Nog geen weekmenu vastgesteld.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('menu');return false" style="color:var(--green);font-weight:700">Menu</a> om het weekmenu in te stellen en te publiceren.</span></div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
@@ -2166,7 +2171,7 @@ async function doForgotPassword() {
   const btn = document.querySelector('#auth-forgot-wrap button');
   if (btn) btn.textContent = 'Bezig...';
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/?reset=1',
+    redirectTo: 'https://lekkerstemmen.app',
   });
   if (btn) btn.textContent = 'Wachtwoord vergeten?';
   if (error) {
@@ -2202,6 +2207,395 @@ async function doResendEmail() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// VRIENDEN FEATURE
+// ══════════════════════════════════════════════════════════════
+
+let friendsList = [];          // gekoppelde gezinnen
+let pendingShares = [];        // ontvangen gedeelde gerechten (pending)
+
+// ── Scherm laden ─────────────────────────────────────────────
+async function goFriendsScreen() {
+  show('friends');
+  await loadFriendsData();
+}
+
+async function loadFriendsData() {
+  if (!currentProfile) return;
+  const fid = currentProfile.family_id;
+
+  // Laad gekoppelde vrienden (beide richtingen)
+  const { data: friendRows } = await sb.from('family_friends')
+    .select('family_id, friend_family_id, created_at')
+    .or('family_id.eq.' + fid + ',friend_family_id.eq.' + fid);
+
+  // Haal gezinsnamen op
+  const otherIds = (friendRows||[]).map(r =>
+    r.family_id === fid ? r.friend_family_id : r.family_id
+  );
+  let familyNames = {};
+  if (otherIds.length > 0) {
+    const { data: fams } = await sb.from('families').select('id,name').in('id', otherIds);
+    (fams||[]).forEach(f => { familyNames[f.id] = f.name; });
+  }
+  friendsList = (friendRows||[]).map(r => ({
+    id: r.family_id === fid ? r.friend_family_id : r.family_id,
+    name: familyNames[r.family_id === fid ? r.friend_family_id : r.family_id] || 'Onbekend',
+    since: r.created_at,
+  }));
+
+  // Laad ontvangen shares (pending)
+  const { data: incoming } = await sb.from('meal_shares')
+    .select('*').eq('to_family_id', fid).eq('status', 'pending')
+    .order('created_at', { ascending: false });
+  pendingShares = incoming || [];
+
+  // Laad uitgaande shares (geschiedenis)
+  const { data: outgoing } = await sb.from('meal_shares')
+    .select('*').eq('from_family_id', fid)
+    .order('created_at', { ascending: false });
+
+  renderFriendsScreen(friendsList, pendingShares, outgoing || []);
+}
+
+function renderFriendsScreen(friends, incoming, outgoing) {
+  // Gekoppelde gezinnen
+  const listEl = document.getElementById('friends-list');
+  if (listEl) {
+    if (friends.length === 0) {
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:12px 0">Nog geen gekoppelde gezinnen.</div>';
+    } else {
+      listEl.innerHTML = friends.map(f =>
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">' +
+          '<div>' +
+            '<div style="font-weight:700;font-size:15px">&#x1F3E0; ' + f.name + '</div>' +
+            '<div style="font-size:12px;color:var(--muted)">Gekoppeld op ' + new Date(f.since).toLocaleDateString('nl-NL', {day:'numeric',month:'long'}) + '</div>' +
+          '</div>' +
+          '<button onclick="browseSharedMeals(\'' + f.id + '\',\'' + f.name.replace(/'/g,"\\'") + '\')" ' +
+            'style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">' +
+            'Gerechten &#x1F4DC;' +
+          '</button>' +
+        '</div>'
+      ).join('');
+    }
+  }
+
+  // Inkomende shares
+  const incomingSection = document.getElementById('friends-incoming-section');
+  const incomingList = document.getElementById('friends-incoming-list');
+  if (incomingSection && incomingList) {
+    incomingSection.style.display = incoming.length > 0 ? '' : 'none';
+    incomingList.innerHTML = incoming.map(s =>
+      '<div style="background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--r);padding:14px;margin-bottom:10px">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:4px">' +
+          s.from_family_name + ' wil ' + s.meal_emoji + ' ' + s.meal_name + ' met je delen' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">' +
+          new Date(s.created_at).toLocaleDateString('nl-NL', {day:'numeric',month:'long'}) +
+        '</div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button onclick="acceptMealShare(\'' + s.id + '\',\'' + s.meal_name.replace(/'/g,"\\'") + '\')" ' +
+            'style="flex:1;padding:8px;border-radius:99px;border:none;background:var(--green);color:white;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">&#x2713; Overnemen</button>' +
+          '<button onclick="declineMealShare(\'' + s.id + '\')" ' +
+            'style="flex:1;padding:8px;border-radius:99px;border:1.5px solid var(--border);background:white;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Afwijzen</button>' +
+        '</div>' +
+      '</div>'
+    ).join('');
+  }
+
+  // Uitgaande shares (geschiedenis)
+  const outSection = document.getElementById('friends-outgoing-section');
+  const outList = document.getElementById('friends-outgoing-list');
+  if (outSection && outList) {
+    outSection.style.display = outgoing.length > 0 ? '' : 'none';
+    outList.innerHTML = outgoing.map(s => {
+      const statusLabel = s.status === 'accepted' ? '&#x2713; Overgenomen' :
+                          s.status === 'declined' ? 'Afgewezen' : '&#x23F3; In afwachting';
+      const statusColor = s.status === 'accepted' ? 'var(--green)' :
+                          s.status === 'declined' ? 'var(--muted)' : 'var(--amber)';
+      return '<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+          '<div style="font-weight:600;font-size:14px">' + s.meal_emoji + ' ' + s.meal_name + '</div>' +
+          '<div style="font-size:12px;color:var(--muted)">' + new Date(s.created_at).toLocaleDateString('nl-NL',{day:'numeric',month:'long'}) + '</div>' +
+        '</div>' +
+        '<div style="font-size:12px;font-weight:700;color:' + statusColor + '">' + statusLabel + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Genereer-sectie: alleen voor ouders
+  const genSection = document.getElementById('friends-generate-section');
+  if (genSection) genSection.style.display = currentProfile?.role === 'parent' ? '' : 'none';
+}
+
+// ── Vriendschapscode genereren ────────────────────────────────
+async function generateFriendCode() {
+  const btn = document.getElementById('generate-friend-code-btn');
+  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+
+  const digits = Math.floor(100000 + Math.random() * 900000);
+  const code = 'F-' + digits;
+
+  const { error } = await sb.from('friend_invites').insert({
+    family_id: currentProfile.family_id,
+    code: code,
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+
+  if (btn) { btn.textContent = 'Nieuwe code genereren'; btn.disabled = false; }
+  if (error) { console.error('Code genereren mislukt:', error); return; }
+
+  const result = document.getElementById('friend-code-result');
+  const display = document.getElementById('friend-code-display');
+  if (display) display.textContent = code;
+  if (result) result.style.display = '';
+  window._lastFriendCode = code;
+}
+
+function copyFriendCode() {
+  const code = window._lastFriendCode || document.getElementById('friend-code-display')?.textContent;
+  if (!code) return;
+  navigator.clipboard?.writeText(code).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Gekopieerd!';
+    setTimeout(() => { btn.innerHTML = 'Kopi&euml;ren &#x1F4CB;'; }, 2000);
+  });
+}
+
+// ── Bestaand gezin: code invoeren ────────────────────────────
+async function claimFriendCode() {
+  const raw = (document.getElementById('friend-code-input')?.value || '').trim().toUpperCase();
+  const errEl = document.getElementById('friend-code-error');
+  if (errEl) errEl.style.display = 'none';
+
+  if (!raw.match(/^F-\d{6}$/)) {
+    if (errEl) { errEl.textContent = 'Vul een geldige vriendschapscode in (bijv. F-847291).'; errEl.style.display = ''; }
+    return;
+  }
+
+  const btn = document.querySelector('#s-friends .btn-primary:last-of-type');
+  if (btn) { btn.textContent = 'Koppelen...'; btn.disabled = true; }
+
+  const result = await linkFriendCode(raw);
+
+  if (btn) { btn.textContent = 'Koppelen \u2192'; btn.disabled = false; }
+
+  if (!result.ok) {
+    if (errEl) { errEl.textContent = result.error; errEl.style.display = ''; }
+    return;
+  }
+
+  document.getElementById('friend-code-input').value = '';
+  await loadFriendsData();
+}
+
+// Gedeelde functie: wordt ook aangeroepen vanuit checkAppCode bij registratie
+async function linkFriendCode(code) {
+  // Zoek de invite op
+  const { data: invite } = await sb.from('friend_invites')
+    .select('*').eq('code', code).is('used_by_family', null)
+    .gt('expires_at', new Date().toISOString()).maybeSingle();
+
+  if (!invite) return { ok: false, error: 'Code niet gevonden of al gebruikt.' };
+  if (invite.family_id === currentProfile.family_id) return { ok: false, error: 'Dit is jouw eigen code.' };
+
+  // Markeer invite als gebruikt
+  await sb.from('friend_invites').update({ used_by_family: currentProfile.family_id }).eq('id', invite.id);
+
+  // Maak vriendschapsrelatie aan (beide richtingen)
+  await sb.from('family_friends').insert([
+    { family_id: invite.family_id, friend_family_id: currentProfile.family_id },
+    { family_id: currentProfile.family_id, friend_family_id: invite.family_id },
+  ]);
+
+  return { ok: true, friendFamilyId: invite.family_id };
+}
+
+// ── Gerecht delen met vrienden ────────────────────────────────
+async function openShareMealModal(mealId) {
+  if (friendsList.length === 0) await loadFriendsData();
+  if (friendsList.length === 0) {
+    alert('Je hebt nog geen gekoppelde gezinnen. Voeg eerst een vriend toe via het Vrienden-scherm.');
+    return;
+  }
+
+  const meal = customMeals.find(m => m.id === mealId);
+  if (!meal) return;
+
+  // Verwijder bestaande modal als die er al is
+  const existing = document.getElementById('share-meal-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'share-meal-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
+  modal.innerHTML =
+    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:80vh;overflow-y:auto;padding:20px 16px 40px">' +
+      '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px;margin-bottom:4px">' + meal.emoji + ' ' + meal.name + ' delen</div>' +
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Selecteer met welke gezinnen je dit gerecht wil delen:</div>' +
+      friendsList.map(f =>
+        '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:8px;cursor:pointer">' +
+          '<input type="checkbox" value="' + f.id + '" name="share-target" style="width:20px;height:20px;accent-color:var(--green)">' +
+          '<span style="font-weight:600">' + f.name + '</span>' +
+        '</label>'
+      ).join('') +
+      '<button onclick="submitMealShare(\'' + mealId + '\')" class="btn btn-primary" style="width:100%;margin-top:8px">Delen &rarr;</button>' +
+      '<button onclick="document.getElementById(\'share-meal-modal\').remove()" style="width:100%;margin-top:8px;padding:12px;border:none;background:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit">Annuleren</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+async function submitMealShare(mealId) {
+  const checks = document.querySelectorAll('#share-meal-modal input[name="share-target"]:checked');
+  if (checks.length === 0) { alert('Selecteer minstens één gezin.'); return; }
+
+  const meal = customMeals.find(m => m.id === mealId);
+  if (!meal) return;
+
+  const btn = document.querySelector('#share-meal-modal .btn-primary');
+  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+
+  const { data: myFamily } = await sb.from('families').select('name').eq('id', currentProfile.family_id).maybeSingle();
+  const fromName = myFamily?.name || 'Onbekend gezin';
+
+  const rows = Array.from(checks).map(c => ({
+    from_family_id: currentProfile.family_id,
+    from_family_name: fromName,
+    to_family_id: c.value,
+    meal_id: meal.id,
+    meal_name: meal.name,
+    meal_emoji: meal.emoji || '\uD83C\uDF7D',
+    ingredients: meal.ingredients || null,
+    instructions: meal.instructions || null,
+    note: meal.note || null,
+    status: 'pending',
+  }));
+
+  const { error } = await sb.from('meal_shares').insert(rows);
+  document.getElementById('share-meal-modal')?.remove();
+  if (!error) {
+    // Korte bevestiging
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999';
+    toast.textContent = '\u2713 Gedeeld met ' + checks.length + ' gezin' + (checks.length > 1 ? 'nen' : '');
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  }
+}
+
+// ── Share accepteren / afwijzen ───────────────────────────────
+async function acceptMealShare(shareId, mealName) {
+  const share = pendingShares.find(s => s.id === shareId);
+  if (!share) return;
+
+  // Kopieer naar eigen custom_meals
+  const { error } = await sb.from('custom_meals').insert({
+    family_id: currentProfile.family_id,
+    name: share.meal_name,
+    emoji: share.meal_emoji,
+    ingredients: share.ingredients,
+    instructions: share.instructions,
+    note: share.note,
+    shared_from_family: share.from_family_name,
+  });
+
+  if (error) { console.error('Overnemen mislukt:', error); return; }
+
+  // Update status
+  await sb.from('meal_shares').update({ status: 'accepted' }).eq('id', shareId);
+  await loadFriendsData();
+  await loadData(); // herlaad customMeals
+}
+
+async function declineMealShare(shareId) {
+  await sb.from('meal_shares').update({ status: 'declined' }).eq('id', shareId);
+  await loadFriendsData();
+}
+
+// ── Gerechten van een bevriend gezin browsen ─────────────────
+async function browseSharedMeals(familyId, familyName) {
+  const { data: meals } = await sb.from('custom_meals')
+    .select('id,name,emoji,note,ingredients,instructions')
+    .eq('family_id', familyId)
+    .order('name');
+
+  const existing = document.getElementById('browse-meals-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'browse-meals-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
+
+  const mealItems = (meals||[]).map(m => {
+    const alreadyHave = customMeals.some(cm => cm.name.toLowerCase() === m.name.toLowerCase());
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="font-size:24px">' + (m.emoji||'\uD83C\uDF7D') + '</div>' +
+      '<div style="flex:1"><div style="font-weight:600;font-size:14px">' + m.name + '</div>' +
+      (m.note ? '<div style="font-size:12px;color:var(--muted)">' + m.note + '</div>' : '') + '</div>' +
+      (alreadyHave
+        ? '<span style="font-size:12px;color:var(--green);font-weight:700">\u2713 Heb je al</span>'
+        : '<button onclick="importFriendMeal(' + JSON.stringify(m).replace(/'/g,"&apos;") + ',\'' + familyName.replace(/'/g,"\\'") + '\')" ' +
+            'style="padding:6px 12px;border-radius:99px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0">+ Overnemen</button>') +
+      '</div>';
+  }).join('');
+
+  modal.innerHTML =
+    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 16px 40px">' +
+      '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px;margin-bottom:16px">Gerechten van ' + familyName + '</div>' +
+      (meals?.length ? mealItems : '<div style="color:var(--muted);font-size:14px">Nog geen gerechten.</div>') +
+      '<button onclick="document.getElementById(\'browse-meals-modal\').remove()" style="width:100%;margin-top:16px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);background:white;color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit">Sluiten</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+async function importFriendMeal(meal, fromFamilyName) {
+  const { error } = await sb.from('custom_meals').insert({
+    family_id: currentProfile.family_id,
+    name: meal.name,
+    emoji: meal.emoji,
+    note: meal.note || null,
+    ingredients: meal.ingredients || null,
+    instructions: meal.instructions || null,
+    shared_from_family: fromFamilyName,
+  });
+  if (!error) {
+    await loadData();
+    // Update knop inline
+    const btns = document.querySelectorAll('#browse-meals-modal button');
+    btns.forEach(b => {
+      if (b.textContent === '+ Overnemen' && b.onclick) {
+        try {
+          const data = JSON.parse(b.getAttribute('onclick').match(/importFriendMeal\((.+?),/)?.[1]);
+          if (data?.name === meal.name) {
+            b.outerHTML = '<span style="font-size:12px;color:var(--green);font-weight:700">\u2713 Overgenomen</span>';
+          }
+        } catch(e) {}
+      }
+    });
+    // Herlaad modal volledig
+    document.getElementById('browse-meals-modal')?.remove();
+    browseSharedMeals(meal.family_id || '', fromFamilyName);
+  }
+}
+
+// ── Home banner: pending shares ───────────────────────────────
+async function checkPendingSharesBanner() {
+  if (!currentProfile) return;
+  const { data } = await sb.from('meal_shares')
+    .select('id,from_family_name,meal_name,meal_emoji')
+    .eq('to_family_id', currentProfile.family_id)
+    .eq('status', 'pending');
+  const banner = document.getElementById('pending-shares-banner');
+  if (!banner) return;
+  if (!data || data.length === 0) { banner.classList.add('hidden'); return; }
+  banner.classList.remove('hidden');
+  const names = [...new Set(data.map(s => s.from_family_name))].join(', ');
+  document.getElementById('pending-shares-text').textContent =
+    names + (data.length === 1 ? ' wil 1 gerecht' : ' willen ' + data.length + ' gerechten') + ' met je delen.';
+}
+
+
 async function doSignOut() {
   await sb.auth.signOut();
   currentProfile = null; currentUser = null;
@@ -2214,6 +2608,32 @@ let currentHouseType = localStorage.getItem('house_type') || 'family';
 
 // App toegangscode
 const VALID_APP_CODES = ['LEKKER2024', 'LEKKER2025', 'BETA2024', 'BETA2025', 'LEKKERSTEMMEN'];
+
+// Setup emoji picker
+const SETUP_EMOJIS = [
+  '\uD83D\uDE0A','\uD83D\uDE04','\uD83E\uDD73','\uD83D\uDE07','\uD83E\uDD17',
+  '\uD83D\uDE0E','\uD83E\uDD29','\uD83D\uDE38','\uD83D\uDC69','\uD83D\uDC68',
+  '\uD83D\uDC31','\uD83D\uDC36','\uD83E\uDD81','\uD83D\uDC3C','\uD83E\uDD84',
+  '\uD83E\uDDD9','\uD83E\uDDDD','\uD83E\uDDB8','\uD83E\uDDB9','\uD83E\uDDD1',
+];
+let selectedSetupEmoji = SETUP_EMOJIS[0];
+
+function renderSetupEmojiPicker() {
+  const picker = document.getElementById('setup-emoji-picker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  SETUP_EMOJIS.forEach(function(e) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const sel = e === selectedSetupEmoji;
+    btn.style.cssText = 'width:44px;height:44px;border-radius:50%;border:2.5px solid ' +
+      (sel ? 'var(--green)' : 'var(--border)') + ';background:' +
+      (sel ? 'var(--green-bg)' : 'white') + ';font-size:22px;cursor:pointer;transition:all 0.15s';
+    btn.textContent = e;
+    btn.onclick = function() { selectedSetupEmoji = e; renderSetupEmojiPicker(); };
+    picker.appendChild(btn);
+  });
+}
 let appCodeVerified = localStorage.getItem('app_code_ok') === '1';
 
 async function checkAppCode() {
@@ -2222,6 +2642,25 @@ async function checkAppCode() {
   const errEl = document.getElementById('setup-appcode-error');
   if (errEl) errEl.style.display = 'none';
   const btn = document.querySelector('#setup-appcode-section .btn');
+
+  // Vriendschapscode F-XXXXXX -> koppelen na setup
+  if (/^F-\d{6}$/i.test(raw)) {
+    localStorage.setItem('pending_friend_code', raw.toUpperCase());
+    localStorage.setItem('app_code_ok', '1');
+    appCodeVerified = true;
+    document.getElementById('setup-appcode-section').style.display = 'none';
+    document.getElementById('setup-profile-section').style.display = '';
+    selectedSetupEmoji = SETUP_EMOJIS[0]; renderSetupEmojiPicker();
+    const profileSection = document.getElementById('setup-profile-section');
+    if (!document.getElementById('setup-friend-banner')) {
+      const banner = document.createElement('div');
+      banner.id = 'setup-friend-banner';
+      banner.style.cssText = 'background:#EEF0FF;border-radius:var(--r);padding:12px 14px;margin-bottom:16px;font-size:13px;color:#3D2E8C;font-weight:600';
+      banner.innerHTML = '&#x1F91D; Vriendschapscode herkend! Na je aanmelding word je automatisch gekoppeld.';
+      profileSection.insertBefore(banner, profileSection.firstChild);
+    }
+    return;
+  }
 
   // 6-cijferige uitnodigingscode -> meteen joinen
   if (/^\d{6}$/.test(raw)) {
@@ -2260,6 +2699,8 @@ async function checkAppCode() {
     // Zet hidden invite code zodat doSetup hem oppikt
     document.getElementById('setup-invite-code').value = raw;
     toggleInviteCode(true);
+    selectedSetupEmoji = SETUP_EMOJIS[0];
+    renderSetupEmojiPicker();
     return;
   }
 
@@ -2272,6 +2713,8 @@ async function checkAppCode() {
   appCodeVerified = true;
   document.getElementById('setup-appcode-section').style.display = 'none';
   document.getElementById('setup-profile-section').style.display = '';
+  selectedSetupEmoji = SETUP_EMOJIS[0];
+  renderSetupEmojiPicker();
 }
 
 function toggleInviteCode(hasCode) {
@@ -2554,7 +2997,7 @@ async function doSetup() {
       if (invErr || !invite) throw new Error('Uitnodigingscode niet geldig of verlopen.');
       const {error: profErr} = await sb.from('profiles').insert({
         id: currentUser.id, family_id: invite.family_id,
-        name, role: invite.role || 'child', emoji: '\uD83D\uDE00', language: currentLang || 'nl',
+        name, role: invite.role || 'child', emoji: selectedSetupEmoji || '\uD83D\uDE0A', language: currentLang || 'nl',
       });
       if (profErr) throw profErr;
       await sb.from('invites').update({used_by: currentUser.id}).eq('code', inviteCode);
@@ -2572,7 +3015,7 @@ async function doSetup() {
       if (famErr) throw famErr;
       const {error: profErr} = await sb.from('profiles').insert({
         id: currentUser.id, family_id: fam.id,
-        name, role: selectedRole, emoji: '\uD83D\uDE00', language: currentLang || 'nl',
+        name, role: selectedRole, emoji: selectedSetupEmoji || '\uD83D\uDE0A', language: currentLang || 'nl',
       });
       if (profErr) throw profErr;
     }
@@ -2582,6 +3025,12 @@ async function doSetup() {
     currentProfile = newProf;
     if (newProf.family_id) localStorage.setItem('lk_family_id', newProf.family_id);
     await loadData();
+    // Vriendschapscode afhandelen indien aanwezig
+    const pendingFriendCode = localStorage.getItem('pending_friend_code');
+    if (pendingFriendCode) {
+      localStorage.removeItem('pending_friend_code');
+      await linkFriendCode(pendingFriendCode);
+    }
     // Check of onboarding nodig is
     const {data: meals} = await sb.from('custom_meals')
       .select('id').eq('family_id', currentProfile.family_id).limit(1);
@@ -3007,8 +3456,42 @@ function renderMealSuggestions(suggestions, intro) {
 async function addSuggestedMeal(btn) {
   const naam = btn.dataset.naam;
   const emoji = btn.dataset.emoji;
-  btn.textContent = '...'; btn.disabled = true;
-  const { error } = await sb.from('custom_meals').insert({ family_id: currentProfile.family_id, name: naam, emoji: emoji });
+  btn.textContent = '\u23F3 Recept ophalen...'; btn.disabled = true;
+
+  // Haal ingredienten + bereidingswijze op via AI
+  let ingredients = null, instructions = null;
+  try {
+    const houseCtx = getHouseType() === 'house' ? 'studenten' : 'een gezin met kinderen (4 personen)';
+    const recipePrompt =
+      'Geef een beknopt recept voor "' + naam + '" voor ' + houseCtx + '.\n' +
+      'Antwoord ALLEEN als JSON object, geen uitleg:\n' +
+      '{"ingredients":"...","instructions":"..."}\n' +
+      'ingredients: kommalijst van ingredienten met hoeveelheden.\n' +
+      'instructions: genummerde stappen, gescheiden door \\n.';
+    const res = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:800,
+      messages:[{role:'user', content:recipePrompt}] });
+    if (res && res.ok) {
+      const d = await res.json();
+      const raw = (d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        ingredients = parsed.ingredients || null;
+        instructions = parsed.instructions || null;
+      }
+    }
+  } catch(e) {
+    console.warn('Recept ophalen mislukt, gerecht wordt zonder recept opgeslagen:', e.message);
+  }
+
+  btn.textContent = '\u23F3 Opslaan...';
+  const { error } = await sb.from('custom_meals').insert({
+    family_id: currentProfile.family_id,
+    name: naam,
+    emoji: emoji,
+    ingredients: ingredients,
+    instructions: instructions,
+  });
   if (!error) {
     await loadData();
     btn.textContent = '\u2713 Toegevoegd';
@@ -3281,6 +3764,9 @@ function refreshHome() {
       noMenuBanner.classList.add('hidden');
     }
   }
+
+  // ── Pending shares banner ────────────────────────────────────
+  if (currentProfile.role === 'parent') checkPendingSharesBanner();
 
   // ── No-members banner (alleen voor ouders) ───────────────────
   const noMembersBanner = document.getElementById('no-members-banner');
@@ -3795,6 +4281,7 @@ function renderCustomMealsList() {
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">\uD83D\uDCD6</button>':'') +
         '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>'+
         '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" data-meal-side="'+(m.side_dish||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
+        '<button onclick="openShareMealModal(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Delen met vrienden">&#x1F91D;</button>'+
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">\uD83D\uDDD1</button>'+
         '</div>'+
         (lastComment?
@@ -4846,8 +5333,64 @@ function openEditMeal(meal) {
     picker.appendChild(btn);
   });
 
+  // Toon AI-voorstel knop als ingredienten of instructies nog leeg zijn
+  const aiSuggestWrap = document.getElementById('edit-meal-ai-suggest-wrap');
+  if (aiSuggestWrap) {
+    const hasIngr = !!(meal.ingredients && meal.ingredients.trim());
+    const hasInst = !!(meal.instructions && meal.instructions.trim());
+    aiSuggestWrap.style.display = (hasIngr && hasInst) ? 'none' : '';
+    // Sla mealdata op voor de AI call
+    aiSuggestWrap.dataset.mealName = meal.name || meal.label || '';
+    aiSuggestWrap.dataset.mealNote = meal.note || '';
+  }
+
   const modal = document.getElementById('edit-meal-modal');
   modal.style.display = 'flex';
+}
+
+async function generateEditMealRecipe() {
+  const wrap = document.getElementById('edit-meal-ai-suggest-wrap');
+  const btn = document.getElementById('edit-meal-ai-suggest-btn');
+  const naam = wrap?.dataset.mealName || document.getElementById('edit-meal-name')?.value?.trim() || '';
+  const note = wrap?.dataset.mealNote || document.getElementById('edit-meal-note')?.value?.trim() || '';
+  if (!naam) return;
+
+  if (btn) { btn.textContent = '\u23F3 Bezig...'; btn.disabled = true; }
+
+  const houseCtx = getHouseType() === 'house' ? 'studenten' : 'een gezin met kinderen (4 personen)';
+  const noteCtx = note ? ('Extra info: ' + note + '.') : '';
+  const recipePrompt =
+    'Geef een beknopt recept voor "' + naam + '" voor ' + houseCtx + '. ' + noteCtx + '\n' +
+    'Antwoord ALLEEN als JSON object, geen uitleg:\n' +
+    '{"ingredients":"...","instructions":"..."}\n' +
+    'ingredients: kommalijst van ingredienten met hoeveelheden.\n' +
+    'instructions: genummerde stappen, gescheiden door \\n.';
+
+  try {
+    const res = await anthropicFetch({ model:'claude-sonnet-4-5', max_tokens:800,
+      messages:[{role:'user', content:recipePrompt}] });
+    if (!res || !res.ok) throw new Error('API fout');
+    const d = await res.json();
+    const raw = (d.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Geen JSON in antwoord');
+    const parsed = JSON.parse(match[0]);
+
+    // Vul alleen lege velden in — overschrijf bestaande inhoud niet
+    const ingrEl = document.getElementById('edit-meal-ingredients');
+    const instEl = document.getElementById('edit-meal-instructions');
+    if (ingrEl && !ingrEl.value.trim() && parsed.ingredients) ingrEl.value = parsed.ingredients;
+    if (instEl && !instEl.value.trim() && parsed.instructions) instEl.value = parsed.instructions;
+
+    if (wrap) wrap.style.display = 'none';
+  } catch(e) {
+    if (btn) {
+      btn.textContent = 'Probeer opnieuw';
+      btn.disabled = false;
+      btn.style.borderColor = 'var(--coral)';
+      btn.style.color = 'var(--coral)';
+    }
+  }
 }
 
 function openEditFromBtn(btn) {
@@ -5911,9 +6454,28 @@ async function openCookScreen(menuEntry) {
     aiBtn.style.display = '';
   }
 
-  // Reset AI recept
-  document.getElementById('cook-ai-recipe').style.display = 'none';
-  const _el_cook_ai_recipe_text = document.getElementById('cook-ai-recipe-text'); if (_el_cook_ai_recipe_text) _el_cook_ai_recipe_text.textContent = '';
+  // Herstel gecached AI recept als aanwezig (persistentie over sessies)
+  const cacheKey = 'cook_recipe_' + (menuEntry?.meal_id || menuEntry?.meal_name);
+  const cached = localStorage.getItem(cacheKey);
+  const recipeEl = document.getElementById('cook-ai-recipe');
+  const textEl = document.getElementById('cook-ai-recipe-text');
+  const aiBtn2 = document.getElementById('cook-ai-recipe-btn');
+  const existing = document.getElementById('cook-save-recipe-btn');
+  if (existing) existing.remove();
+
+  if (cached && !meal?.instructions) {
+    // Toon het gecachte recept
+    if (recipeEl) recipeEl.style.display = '';
+    if (textEl) textEl.textContent = cached;
+    if (aiBtn2) aiBtn2.style.display = 'none';
+    showCookSaveBtn(cached);
+  } else {
+    // Geen cache of al opgeslagen: reset
+    if (recipeEl) recipeEl.style.display = 'none';
+    if (textEl) textEl.textContent = '';
+    // Als al opgeslagen: verberg AI-knop
+    if (meal?.instructions && aiBtn2) aiBtn2.style.display = 'none';
+  }
 
   // Haal geschiedenis op
   const {data:history} = await sb.from('checkins_with_context')
@@ -6194,14 +6756,77 @@ function generateCookRecipe() {
         throw new Error('API ' + res.status + ': ' + errText.slice(0, 150));
       }
       const data = await res.json();
-      if (textEl) textEl.textContent = data.content?.[0]?.text || 'Geen recept gegenereerd.';
+      const recipeText = data.content?.[0]?.text || 'Geen recept gegenereerd.';
+      if (textEl) textEl.textContent = recipeText;
       if (btn) btn.style.display = 'none';
+
+      // Cache in localStorage zodat het niet verdwijnt na afsluiten
+      const cacheKey = 'cook_recipe_' + (currentCookEntry?.meal_id || currentCookEntry?.meal_name);
+      localStorage.setItem(cacheKey, recipeText);
+
+      // Toon opslaan-knop
+      showCookSaveBtn(recipeText);
+
     } catch(e) {
       console.error('Recipe error:', e);
       if (textEl) textEl.textContent = 'Fout: ' + e.message;
       if (btn) { btn.textContent = t('cook_ai_recipe'); btn.disabled = false; }
     }
   });
+}
+
+function showCookSaveBtn(recipeText) {
+  const existing = document.getElementById('cook-save-recipe-btn');
+  if (existing) existing.remove();
+  const aiSection = document.getElementById('cook-ai-recipe');
+  if (!aiSection) return;
+  const btn = document.createElement('button');
+  btn.id = 'cook-save-recipe-btn';
+  btn.className = 'btn';
+  btn.style.cssText = 'width:100%;margin-top:10px;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green)';
+  btn.innerHTML = '&#x1F4BE; Opslaan bij gerecht';
+  btn.onclick = () => saveCookRecipeToMeal(recipeText);
+  aiSection.appendChild(btn);
+}
+
+async function saveCookRecipeToMeal(recipeText) {
+  const btn = document.getElementById('cook-save-recipe-btn');
+  if (!btn) return;
+  if (!currentCookEntry?.meal_name) return;
+  btn.textContent = 'Bezig...'; btn.disabled = true;
+
+  // Splits recept in ingredienten en instructies op basis van koppen
+  let ingredients = null, instructions = null;
+  const ingrMatch = recipeText.split(/ingredi.nten/i);
+  const instMatch = recipeText.split(/(?:bereiding|stappen|instructies|bereidingswijze)/i);
+  if (ingrMatch.length > 1) ingredients = ingrMatch[1].split(/(?:bereiding|stappen|instructies|bereidingswijze)/i)[0].trim();
+  if (instMatch.length > 1) instructions = instMatch[1].trim();
+  if (ingrMatch) ingredients = ingrMatch[1].trim();
+  if (instMatch) instructions = instMatch[1].trim();
+  // Fallback: sla het hele recept op als instructions
+  if (!ingredients && !instructions) instructions = recipeText;
+
+  const { error } = await sb.from('custom_meals')
+    .update({ ingredients, instructions })
+    .eq('family_id', currentProfile.family_id)
+    .eq('name', currentCookEntry.meal_name);
+
+  if (error) {
+    btn.textContent = 'Fout bij opslaan';
+    btn.disabled = false;
+    return;
+  }
+
+  btn.innerHTML = '&#x2713; Opgeslagen!';
+  btn.style.background = 'var(--green)';
+  btn.style.color = 'white';
+  btn.disabled = true;
+
+  // Verwijder cache: recept staat nu in DB
+  const cacheKey2 = 'cook_recipe_' + (currentCookEntry?.meal_id || currentCookEntry?.meal_name);
+  localStorage.removeItem(cacheKey2);
+  // Herlaad customMeals
+  await loadData();
 }
 
 
@@ -6300,81 +6925,263 @@ async function checkPromptIsAboutFood(prompt) {
 
 // ── FEEDBACK ────────────────────────────────────────────────────
 let feedbackRating = 0;
+let currentFeedbackThreadId = null;
+const ADMIN_FEEDBACK_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
 
 function setFeedbackRating(val) {
   feedbackRating = val;
   document.querySelectorAll('#feedback-rating-btns button').forEach(btn => {
     const r = parseInt(btn.getAttribute('data-rating'));
     btn.style.borderColor = r === val ? 'var(--green)' : 'var(--border)';
-    btn.style.background = r === val ? 'var(--green-bg)' : 'white';
-    btn.style.transform = r === val ? 'scale(1.1)' : 'scale(1)';
+    btn.style.background  = r === val ? 'var(--green-bg)' : 'white';
+    btn.style.transform   = r === val ? 'scale(1.1)' : 'scale(1)';
   });
 }
 
 function openFeedbackScreen() {
-  // Reset het scherm
   feedbackRating = 0;
-  ['feedback-positive','feedback-improve','feedback-other'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.querySelectorAll('#feedback-rating-btns button').forEach(btn => {
-    btn.style.borderColor = 'var(--border)';
-    btn.style.background = 'white';
-    btn.style.transform = 'scale(1)';
-  });
-  const errEl = document.getElementById('feedback-error');
-  const sucEl = document.getElementById('feedback-success');
-  const btn = document.getElementById('feedback-submit-btn');
-  if (errEl) errEl.style.display = 'none';
-  if (sucEl) sucEl.style.display = 'none';
-  if (btn) { btn.style.display = ''; btn.textContent = 'Versturen →'; }
+  currentFeedbackThreadId = null;
   show('feedback');
+  loadFeedbackThreads();
+}
+
+function openNewFeedbackForm() {
+  feedbackRating = 0;
+  const modal = document.getElementById('feedback-new-modal');
+  if (modal) modal.style.display = 'flex';
+  const subj = document.getElementById('feedback-new-subject');
+  const msg  = document.getElementById('feedback-new-message');
+  const err  = document.getElementById('feedback-error');
+  if (subj) subj.value = '';
+  if (msg)  msg.value  = '';
+  if (err)  err.style.display = 'none';
+  document.querySelectorAll('#feedback-rating-btns button').forEach(b => {
+    b.style.borderColor = 'var(--border)'; b.style.background = 'white'; b.style.transform = 'scale(1)';
+  });
+  const btn = document.getElementById('feedback-submit-btn');
+  if (btn) { btn.textContent = 'Versturen →'; btn.disabled = false; }
+}
+
+function closeFeedbackModal() {
+  const modal = document.getElementById('feedback-new-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function loadFeedbackThreads() {
+  const listEl  = document.getElementById('feedback-threads-list');
+  const emptyEl = document.getElementById('feedback-empty');
+  const detailEl = document.getElementById('feedback-thread-detail');
+  if (!listEl) return;
+  if (detailEl) detailEl.style.display = 'none';
+  listEl.style.display = '';
+  listEl.innerHTML = '<div style="padding:20px 0;color:var(--muted);font-size:14px">Laden...</div>';
+
+  // Admin ziet alle feedback; gebruiker ziet zijn eigen
+  let query = sb.from('feedback').select('*').order('created_at', { ascending: false });
+  if (!TEST_MODE) query = query.eq('family_id', currentProfile.family_id);
+
+  const { data: threads } = await query;
+
+  // Laad replies
+  const { data: replies } = await sb.from('feedback_replies')
+    .select('*').order('created_at', { ascending: true });
+
+  const replyMap = {};
+  (replies||[]).forEach(r => {
+    if (!replyMap[r.feedback_id]) replyMap[r.feedback_id] = [];
+    replyMap[r.feedback_id].push(r);
+  });
+
+  // Unread badge: admin-antwoorden die de gebruiker nog niet gelezen heeft
+  const unreadCount = (threads||[]).filter(t => {
+    const reps = replyMap[t.id] || [];
+    return reps.some(r => r.author_type === 'admin' && !r.is_read);
+  }).length;
+  const badge = document.getElementById('feedback-unread-badge');
+  if (badge) { badge.style.display = unreadCount > 0 ? '' : 'none'; badge.textContent = unreadCount; }
+
+  listEl.innerHTML = '';
+  if (!threads || threads.length === 0) {
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  threads.forEach(t => {
+    const reps = replyMap[t.id] || [];
+    const lastMsg = reps.length > 0 ? reps[reps.length-1] : null;
+    const hasUnread = reps.some(r => r.author_type === 'admin' && !r.is_read);
+    const preview = lastMsg ? lastMsg.message : (t.positive || t.improve || t.other || t.message || '');
+    const dateStr = new Date(t.created_at).toLocaleDateString('nl-NL', {day:'numeric',month:'short'});
+    const ratingEmojis = ['','\uD83D\uDE1E','\uD83D\uDE10','\uD83D\uDE42','\uD83D\uDE04','\uD83E\uDD29'];
+
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:12px;align-items:flex-start';
+    item.onclick = () => openFeedbackThread(t.id, replyMap[t.id]||[], t);
+    item.innerHTML =
+      '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+          '<div style="font-weight:700;font-size:14px' + (hasUnread?';color:var(--green)':'') + '">' +
+            (hasUnread ? '&#x25CF; ' : '') +
+            (t.subject || 'Feedback') +
+            (t.rating ? ' <span style="font-size:12px">' + (ratingEmojis[t.rating]||'') + '</span>' : '') +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--muted);flex-shrink:0;margin-left:8px">' + dateStr + '</div>' +
+        '</div>' +
+        (TEST_MODE && t.family_name ? '<div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:2px">' + t.family_name + ' / ' + t.profile_name + '</div>' : '') +
+        '<div style="font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' +
+          (preview ? preview.substring(0,80) + (preview.length>80?'...':'') : '') +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px">' + reps.length + ' bericht' + (reps.length!==1?'en':'') + '</div>' +
+      '</div>' +
+      '<div style="font-size:20px;flex-shrink:0;margin-top:2px">&#x1F4AC;</div>';
+    listEl.appendChild(item);
+  });
+}
+
+async function openFeedbackThread(threadId, replies, thread) {
+  currentFeedbackThreadId = threadId;
+  const listEl   = document.getElementById('feedback-threads-list');
+  const detailEl = document.getElementById('feedback-thread-detail');
+  const emptyEl  = document.getElementById('feedback-empty');
+  if (listEl)  listEl.style.display  = 'none';
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (detailEl) detailEl.style.display = '';
+
+  const subjEl = document.getElementById('feedback-thread-subject');
+  if (subjEl) subjEl.textContent = thread.subject || 'Feedback';
+
+  renderThreadMessages(thread, replies);
+
+  // Markeer admin-replies als gelezen
+  const unreadIds = replies.filter(r => r.author_type === 'admin' && !r.is_read).map(r => r.id);
+  if (unreadIds.length > 0) {
+    await sb.from('feedback_replies').update({ is_read: true }).in('id', unreadIds);
+  }
+}
+
+function renderThreadMessages(thread, replies) {
+  const msgsEl = document.getElementById('feedback-thread-messages');
+  if (!msgsEl) return;
+
+  const isAdmin = TEST_MODE;
+  const bubbles = [];
+
+  // Eerste bericht = de originele feedback
+  const origText = [thread.positive, thread.improve, thread.other, thread.message].filter(Boolean).join('\n\n');
+  if (origText) {
+    const dateStr = new Date(thread.created_at).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    bubbles.push({
+      author_type: 'user',
+      author_name: thread.profile_name || 'Gebruiker',
+      message: origText,
+      created_at: thread.created_at,
+      dateStr,
+    });
+  }
+
+  replies.forEach(r => {
+    const dateStr = new Date(r.created_at).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    bubbles.push({...r, dateStr});
+  });
+
+  msgsEl.innerHTML = bubbles.map(b => {
+    const isMine = isAdmin ? b.author_type === 'admin' : b.author_type === 'user';
+    return '<div style="display:flex;flex-direction:column;align-items:' + (isMine?'flex-end':'flex-start') + ';margin-bottom:12px">' +
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:3px">' +
+        (isMine ? 'Jij' : b.author_name) + ' &middot; ' + b.dateStr +
+      '</div>' +
+      '<div style="max-width:85%;padding:12px 14px;border-radius:' + (isMine?'18px 18px 4px 18px':'18px 18px 18px 4px') + ';' +
+        'background:' + (isMine?'var(--green)':'white') + ';' +
+        'color:' + (isMine?'white':'var(--text)') + ';' +
+        'border:1.5px solid ' + (isMine?'var(--green)':'var(--border)') + ';' +
+        'font-size:14px;line-height:1.5;white-space:pre-wrap">' +
+        b.message +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Scroll naar beneden
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function closeFeedbackThread() {
+  currentFeedbackThreadId = null;
+  const listEl   = document.getElementById('feedback-threads-list');
+  const detailEl = document.getElementById('feedback-thread-detail');
+  if (listEl)  listEl.style.display = '';
+  if (detailEl) detailEl.style.display = 'none';
+  loadFeedbackThreads();
+}
+
+async function submitFeedbackReply() {
+  const input = document.getElementById('feedback-reply-input');
+  const btn   = document.getElementById('feedback-reply-btn');
+  const msg   = input?.value?.trim();
+  if (!msg || !currentFeedbackThreadId) return;
+
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  const authorType = TEST_MODE ? 'admin' : 'user';
+  const authorName = TEST_MODE ? 'Paul (developer)' : (currentProfile?.name || 'Gebruiker');
+
+  const { error } = await sb.from('feedback_replies').insert({
+    feedback_id:  currentFeedbackThreadId,
+    author_type:  authorType,
+    author_name:  authorName,
+    message:      msg,
+    is_read:      false,
+  });
+
+  if (btn) { btn.textContent = 'Versturen →'; btn.disabled = false; }
+  if (error) { console.error('Reply error:', error); return; }
+
+  if (input) input.value = '';
+
+  // Herlaad thread
+  const { data: replies } = await sb.from('feedback_replies')
+    .select('*').eq('feedback_id', currentFeedbackThreadId).order('created_at');
+  const { data: thread } = await sb.from('feedback').select('*').eq('id', currentFeedbackThreadId).maybeSingle();
+  if (thread) renderThreadMessages(thread, replies||[]);
 }
 
 async function submitFeedback() {
-  const positive = document.getElementById('feedback-positive')?.value?.trim() || '';
-  const improve = document.getElementById('feedback-improve')?.value?.trim() || '';
-  const other = document.getElementById('feedback-other')?.value?.trim() || '';
+  const subject = document.getElementById('feedback-new-subject')?.value?.trim() || '';
+  const message = document.getElementById('feedback-new-message')?.value?.trim() || '';
   const errEl = document.getElementById('feedback-error');
-  const sucEl = document.getElementById('feedback-success');
-  const btn = document.getElementById('feedback-submit-btn');
+  const btn   = document.getElementById('feedback-submit-btn');
 
-  if (!feedbackRating && !positive && !improve && !other) {
-    if (errEl) { errEl.textContent = 'Vul minimaal één veld in of geef een beoordeling.'; errEl.style.display = ''; }
+  if (!subject && !message) {
+    if (errEl) { errEl.textContent = 'Vul minimaal een onderwerp of bericht in.'; errEl.style.display = ''; }
     return;
   }
-
   if (btn) { btn.textContent = 'Versturen...'; btn.disabled = true; }
   if (errEl) errEl.style.display = 'none';
 
-  try {
-    const { error } = await sb.from('feedback').insert({
-      profile_id: currentProfile?.id || null,
-      family_id: currentProfile?.family_id || null,
-      profile_name: currentProfile?.name || 'Onbekend',
-      rating: feedbackRating || null,
-      positive: positive || null,
-      improve: improve || null,
-      other: other || null,
-      app_version: 'beta-2026',
-      created_at: new Date().toISOString(),
-    });
+  const { data: myFamily } = await sb.from('families').select('name').eq('id', currentProfile.family_id).maybeSingle();
 
-    if (error) throw error;
+  const { error } = await sb.from('feedback').insert({
+    profile_id:   currentProfile?.id || null,
+    family_id:    currentProfile?.family_id || null,
+    profile_name: currentProfile?.name || 'Onbekend',
+    family_name:  myFamily?.name || null,
+    subject:      subject || null,
+    message:      message || null,
+    rating:       feedbackRating || null,
+    app_version:  'beta-2026',
+    status:       'open',
+    created_at:   new Date().toISOString(),
+  });
 
-    if (sucEl) sucEl.style.display = '';
-    if (btn) btn.style.display = 'none';
-
-    // Reset na 3 seconden en ga terug
-    setTimeout(() => { goScreen('home'); }, 3000);
-
-  } catch(e) {
-    console.error('Feedback error:', e);
-    if (errEl) { errEl.textContent = 'Opslaan mislukt: ' + (e.message || 'onbekende fout'); errEl.style.display = ''; }
-    if (btn) { btn.textContent = 'Versturen →'; btn.disabled = false; }
+  if (btn) { btn.textContent = 'Versturen →'; btn.disabled = false; }
+  if (error) {
+    if (errEl) { errEl.textContent = 'Opslaan mislukt: ' + error.message; errEl.style.display = ''; }
+    return;
   }
+  closeFeedbackModal();
+  loadFeedbackThreads();
 }
+
 
 function openProfileScreen() {
   const ki = document.getElementById('api-key-input'); if (ki) ki.placeholder = getApiKey() ? 'Key opgeslagen \u2713' : 'sk-ant-...';
@@ -9154,6 +9961,18 @@ async function boot() {
     }
   });
 
+  // Detecteer recovery hash in URL (Supabase voegt #access_token=...&type=recovery toe)
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+  if (hashParams.get('type') === 'recovery') {
+    // Supabase's onAuthStateChange pikt dit op — wacht even zodat die kan vuren
+    // Verwijder hash uit URL zonder pagina te herladen
+    history.replaceState(null, '', window.location.pathname);
+    // onAuthStateChange doet de rest — stop boot hier
+    show('auth');
+    applyTranslations && applyTranslations();
+    return;
+  }
+
   // Testmodus: alleen voor beheerder (Paul)
   const ADMIN_USER_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
 
@@ -9774,6 +10593,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <button class="btn-white" onclick="goScreen('checkin')">Stem →</button>
   </div>
   <div id="no-members-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x1F468;&#x200D;&#x1F467;</span> <strong>Je bent nog alleen in het gezin.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('invite');return false" style="color:var(--green);font-weight:700">Gezin uitnodigen</a> om gezinsleden toe te voegen.</span></div>
+  <div id="pending-shares-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#EEF0FF;border:1.5px solid #7C6FF7;border-radius:12px;font-size:13px;color:#3D2E8C;line-height:1.5;cursor:pointer" onclick="goFriendsScreen()"><span style="font-size:16px">&#x1F381;</span> <strong>Gerecht gedeeld!</strong><br><span id="pending-shares-text" style="color:var(--muted)"></span> <span style="color:#7C6FF7;font-weight:700">Bekijk &rarr;</span></div>
   <div id="no-menu-banner" class="hidden" style="margin:0 16px 12px;padding:12px 14px;background:#FFF8EC;border:1.5px solid #F5A623;border-radius:12px;font-size:13px;color:#7A5000;line-height:1.5"><span style="font-size:16px">&#x26A0;&#xFE0F;</span> <strong>Nog geen weekmenu vastgesteld.</strong><br><span style="color:var(--muted)">Ga naar <a href="#" onclick="goScreen('menu');return false" style="color:var(--green);font-weight:700">Menu</a> om het weekmenu in te stellen en te publiceren.</span></div>
   <div class="section-title">Deze week</div>
   <div class="week-row" id="week-row"></div>
@@ -10400,13 +11220,20 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Notitie</label>
       <textarea id="edit-meal-note" maxlength="200" style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:60px"></textarea>
     </div>
+    <div id="edit-meal-ai-suggest-wrap" style="display:none;margin-bottom:12px;padding:12px 14px;background:var(--green-bg);border:1.5px solid var(--green);border-radius:12px;display:flex;align-items:center;gap:10px;justify-content:space-between">
+      <div style="font-size:13px;color:var(--green);line-height:1.4">
+        <strong>Ingrediënten en bereidingswijze ontbreken.</strong><br>
+        <span style="font-weight:400;color:var(--muted)">Zal ik een voorstel genereren op basis van de naam en notities?</span>
+      </div>
+      <button id="edit-meal-ai-suggest-btn" onclick="generateEditMealRecipe()" style="flex-shrink:0;padding:8px 14px;border-radius:99px;border:1.5px solid var(--green);background:white;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap">&#x2728; Ja, genereer</button>
+    </div>
     <div style="margin-bottom:10px">
-      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Ingrediënten <span style="font-weight:400;text-transform:none">(eigen aanpassingen)</span></label>
-      <textarea id="edit-meal-ingredients" maxlength="500" placeholder="bijv. extra knoflook, zonder ui..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Ingrediënten</label>
+      <textarea id="edit-meal-ingredients" maxlength="500" placeholder="bijv. 200g gehakt, 1 ui, 2 teentjes knoflook..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:80px"></textarea>
     </div>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Bereidingswijze</label>
-      <textarea id="edit-meal-instructions" maxlength="2000" placeholder="bijv. 1. ui fruiten, 2. ..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:100px"></textarea>
+      <textarea id="edit-meal-instructions" maxlength="2000" placeholder="bijv. 1. Ui snipperen en fruiten..." style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:15px;outline:none;resize:vertical;min-height:100px"></textarea>
     </div>
     <div style="margin-bottom:10px">
       <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7B7A8E;display:block;margin-bottom:6px">Bijgerecht</label>
@@ -10488,63 +11315,67 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 
 <div id="s-feedback" class="screen">
   <div class="topbar">
-    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">Feedback</div>
-    <div style="width:38px"></div>
+    <button class="back-btn" onclick="goScreen('home')">&larr;</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">
+      Feedback
+      <span id="feedback-unread-badge" style="display:none;background:var(--coral);color:white;font-size:11px;font-weight:700;border-radius:99px;padding:2px 7px;margin-left:6px;vertical-align:middle"></span>
+    </div>
+    <button onclick="openNewFeedbackForm()" style="background:var(--green);color:white;border:none;border-radius:99px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ Nieuw</button>
   </div>
-  <div style="padding:24px 16px 100px;max-width:480px;margin:0 auto">
-
-    <p style="font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.6">
-      We zijn nog in beta en jouw feedback helpt enorm. Wat werkt goed? Wat mist er? Alles is welkom.
-    </p>
-
-    <!-- Algemene beoordeling -->
-    <div style="margin-bottom:20px">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Hoe bevalt de app?</div>
-      <div style="display:flex;gap:8px" id="feedback-rating-btns">
-        <button type="button" onclick="setFeedbackRating(1)" data-rating="1"
-          style="flex:1;padding:12px 6px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:22px;cursor:pointer">😞</button>
-        <button type="button" onclick="setFeedbackRating(2)" data-rating="2"
-          style="flex:1;padding:12px 6px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:22px;cursor:pointer">😐</button>
-        <button type="button" onclick="setFeedbackRating(3)" data-rating="3"
-          style="flex:1;padding:12px 6px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:22px;cursor:pointer">🙂</button>
-        <button type="button" onclick="setFeedbackRating(4)" data-rating="4"
-          style="flex:1;padding:12px 6px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:22px;cursor:pointer">😄</button>
-        <button type="button" onclick="setFeedbackRating(5)" data-rating="5"
-          style="flex:1;padding:12px 6px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:22px;cursor:pointer">🤩</button>
+  <div style="flex:1;overflow-y:auto;padding:0 0 100px">
+    <div id="feedback-threads-list" style="padding:0 16px"></div>
+    <div id="feedback-empty" style="display:none;text-align:center;padding:48px 24px;color:var(--muted)">
+      <div style="font-size:40px;margin-bottom:12px">&#x1F4AC;</div>
+      <div style="font-weight:700;margin-bottom:6px">Nog geen berichten</div>
+      <div style="font-size:13px">Stuur een bericht via de + Nieuw knop.</div>
+    </div>
+    <div id="feedback-thread-detail" style="display:none;padding:0 16px">
+      <button onclick="closeFeedbackThread()" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--green);font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;padding:14px 0">&larr; Alle berichten</button>
+      <div id="feedback-thread-subject" style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:16px"></div>
+      <div id="feedback-thread-messages" style="margin-bottom:16px"></div>
+      <div style="background:white;border:1.5px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:16px">
+        <textarea id="feedback-reply-input" rows="3" placeholder="Schrijf een bericht..."
+          style="width:100%;border:none;font-size:14px;font-family:inherit;resize:none;outline:none;box-sizing:border-box"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button onclick="submitFeedbackReply()" id="feedback-reply-btn"
+            style="padding:8px 20px;border-radius:99px;border:none;background:var(--green);color:white;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Versturen &rarr;</button>
+        </div>
       </div>
     </div>
-
-    <!-- Wat werkt goed -->
-    <div style="margin-bottom:16px">
-      <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Wat werkt goed?</label>
-      <textarea id="feedback-positive" rows="3" placeholder="bijv. het stemmen werkt intuïtief..."
-        style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+  </div>
+  <div id="feedback-new-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:flex-end">
+    <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding:20px 16px 40px">
+      <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:4px">Nieuw bericht</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Stuur een vraag, idee of opmerking.</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Onderwerp</label>
+        <input type="text" id="feedback-new-subject" maxlength="80" placeholder="bijv. Bug bij het stemmen, Idee voor menu..."
+          style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;box-sizing:border-box;outline:none" />
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Hoe bevalt de app? (optioneel)</label>
+        <div style="display:flex;gap:8px" id="feedback-rating-btns">
+          <button type="button" onclick="setFeedbackRating(1)" data-rating="1" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F61E;</button>
+          <button type="button" onclick="setFeedbackRating(2)" data-rating="2" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F610;</button>
+          <button type="button" onclick="setFeedbackRating(3)" data-rating="3" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F642;</button>
+          <button type="button" onclick="setFeedbackRating(4)" data-rating="4" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F604;</button>
+          <button type="button" onclick="setFeedbackRating(5)" data-rating="5" style="flex:1;padding:10px 4px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:20px;cursor:pointer">&#x1F929;</button>
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Bericht</label>
+        <textarea id="feedback-new-message" rows="5" placeholder="Beschrijf je vraag, idee of opmerking..."
+          style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+      </div>
+      <div id="feedback-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeFeedbackModal()" style="flex:1;padding:14px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitFeedback()" id="feedback-submit-btn" style="flex:2">Versturen &rarr;</button>
+      </div>
     </div>
-
-    <!-- Wat kan beter -->
-    <div style="margin-bottom:16px">
-      <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Wat kan beter of mist er?</label>
-      <textarea id="feedback-improve" rows="3" placeholder="bijv. ik mis een notificatie als het menu klaar is..."
-        style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
-    </div>
-
-    <!-- Overig -->
-    <div style="margin-bottom:24px">
-      <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:6px">Overige opmerkingen</label>
-      <textarea id="feedback-other" rows="2" placeholder="Alles wat je nog kwijt wilt..."
-        style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
-    </div>
-
-    <div id="feedback-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:12px"></div>
-    <div id="feedback-success" style="display:none;background:var(--green-bg);color:var(--green);border-radius:var(--r);padding:14px;text-align:center;font-weight:700;margin-bottom:12px">
-      ✓ Bedankt voor je feedback! 🙏
-    </div>
-
-    <button class="btn btn-primary" onclick="submitFeedback()" id="feedback-submit-btn" style="width:100%">
-      Versturen →
-    </button>
   </div>
 </div>
+
 
 <div id="s-profile" class="screen">
   <div class="topbar">
@@ -10706,11 +11537,65 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
       <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
       <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
+      <button class="nav-btn" onclick="goFriendsScreen();toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#x1F465;</span><span class="nav-label">Vrienden</span></button>
       <button class="nav-btn" onclick="goScreen('feedback');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128172;</span><span class="nav-label">Feedback</span></button>
       <button class="nav-btn" onclick="goScreen('profile');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128100;</span><span class="nav-label">Profiel</span></button>
     </div>
   </div>
   </nav>
+
+<div id="s-friends" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="show('home');refreshHome()">&larr;</button>
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">&#x1F465; Vrienden</div>
+    <div style="width:38px"></div>
+  </div>
+  <div style="flex:1;padding:0 16px 100px;overflow-y:auto">
+
+    <div id="friends-incoming-section" style="display:none;margin-bottom:20px">
+      <div class="section-title">Gedeeld met jou</div>
+      <div id="friends-incoming-list"></div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div class="section-title">Gekoppelde gezinnen</div>
+      <div id="friends-list"><div style="color:var(--muted);font-size:14px;padding:12px 0">Nog geen gekoppelde gezinnen.</div></div>
+    </div>
+
+    <div id="friends-generate-section" style="margin-bottom:20px">
+      <div class="section-title">Nieuw gezin uitnodigen</div>
+      <div class="card" style="margin:0">
+        <p style="font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.5">Genereer een code en deel die buiten de app. Het andere gezin voert hem in bij aanmelding of hieronder.</p>
+        <button onclick="generateFriendCode()" class="btn btn-primary" id="generate-friend-code-btn">Code genereren &rarr;</button>
+        <div id="friend-code-result" style="display:none;margin-top:14px;padding:14px;background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--green);text-align:center">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:6px">Jouw vriendschapscode</div>
+          <div id="friend-code-display" style="font-size:28px;font-weight:900;font-family:'Fraunces',serif;letter-spacing:3px;color:var(--green)"></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Geldig 30 dagen &middot; Eenmalig gebruik</div>
+          <button onclick="copyFriendCode()" style="margin-top:10px;padding:6px 16px;border-radius:99px;border:1.5px solid var(--green);background:white;color:var(--green);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">Kopi&euml;ren &#x1F4CB;</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div class="section-title">Code van een vriend invoeren</div>
+      <div class="card" style="margin:0">
+        <p style="font-size:14px;color:var(--muted);margin-bottom:12px">Heb je een code ontvangen van een bevriend gezin?</p>
+        <input type="text" id="friend-code-input" placeholder="F-123456"
+          style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:'Fraunces',serif;margin-bottom:10px"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')claimFriendCode()" />
+        <div id="friend-code-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:8px"></div>
+        <button onclick="claimFriendCode()" class="btn btn-primary">Koppelen &rarr;</button>
+      </div>
+    </div>
+
+    <div id="friends-outgoing-section" style="display:none;margin-bottom:20px">
+      <div class="section-title">Door jou gedeeld</div>
+      <div id="friends-outgoing-list"></div>
+    </div>
+
+  </div>
+</div>
 
 <div id="s-cook" class="screen">
   <div class="topbar">
