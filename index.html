@@ -2764,8 +2764,8 @@ async function loadAdminDashboard() {
   ] = await Promise.all([
     sb.from('families').select('id,name,created_at'),
     sb.from('profiles').select('id,family_id,name,role,emoji,created_at').order('created_at',{ascending:false}),
-    sb.from('checkins').select('id,profile_id,meal_type,score,created_at').order('created_at',{ascending:false}).limit(500),
-    sb.from('feedback').select('id,profile_name,family_name,subject,message,positive,improve,other,status,rating,created_at').order('created_at',{ascending:false}),
+    sb.from('checkins').select('id,profile_id,score,created_at').order('created_at',{ascending:false}).limit(500),
+    sb.from('feedback').select('*').order('created_at',{ascending:false}),
     sb.from('meal_shares').select('id,from_family_name,meal_name,status,created_at').order('created_at',{ascending:false}).limit(50),
     sb.from('family_friends').select('family_id,friend_family_id'),
     sb.from('friend_invites').select('family_id,used_by_family').not('used_by_family','is',null),
@@ -2778,8 +2778,7 @@ async function loadAdminDashboard() {
   const shares    = sharesRes.data    || [];
   const friendLinks = friendsRes.data || [];
   const usedInvites = invitesRes.data || [];
-  console.log('[Admin] feedback records:', feedbacks.length, 'error:', feedbackRes.error?.message);
-  console.log('[Admin] feedback data:', JSON.stringify(feedbacks.map(f=>({id:f.id,status:f.status,profile_id:f.profile_id}))));
+
 
   // Actief in afgelopen 7 dagen: unieke families met een check-in
   const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
@@ -2943,7 +2942,7 @@ function renderAdminActivity(checkins, shares, profiles) {
     events.push({
       ts: c.created_at,
       icon: scoreEmoji || '&#x1F37D;',
-      text: (prof ? (prof.emoji||'') + ' ' + prof.name : 'Iemand') + ' beoordeelde ' + (c.meal_type||'een gerecht'),
+      text: (prof ? (prof.emoji||'') + ' ' + prof.name : 'Iemand') + ' beoordeelde een gerecht',
       color: '#888',
     });
   });
