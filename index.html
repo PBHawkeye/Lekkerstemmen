@@ -1186,7 +1186,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="vote-options"></div>
     <div class="suggestion-box">
       <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">Vrije suggestie <span style="font-weight:400;color:var(--muted)">(optioneel)</span></div>
-      <textarea class="suggestion-textarea" id="vote-suggestion" placeholder="Ik wil graag ook... (bijv. lasagne, surinaams, sushi)"></textarea>
+      <textarea class="suggestion-textarea" id="vote-suggestion" placeholder="Ik wil graag ook... (bijv. lasagne, surinaams, sushi)" oninput="updateVoteStatus()"></textarea>
     </div>
     <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px" id="vote-status">Kies nog <span id="vote-remaining" style="color:var(--amber);font-weight:800">2</span> gerechten</div>
     <button class="btn btn-primary" onclick="doVote()" id="vote-btn" disabled>Voorkeur versturen →</button>
@@ -1778,6 +1778,15 @@ function testMondayOfWeek() {
   return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
 }
 
+function nextMondayOfWeek() {
+  // Geeft de maandag van VOLGENDE week (voor stemmen die voor volgende week zijn)
+  const d = new Date();
+  d.setDate(d.getDate() + testDayOffset);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day===0?-6:1) + 7;
+  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
+}
+
 function initials(name) { return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
 function getAllMeals(includeDisabled=false) {
   const disabled = getDisabledMeals();
@@ -2001,7 +2010,7 @@ async function simulateWeek() {
   }
 
   // ── Huidige week: weekmenu ────────────────────────────────
-  const nextMon = testMondayOfWeek();
+  const nextMon = nextMondayOfWeek();
   const menuItems = [
     {offset:0, meal_id:'pasta',  name:'Pasta carbonara',   emoji:'\uD83C\uDF5D', cook:'paul',   corvee:['tjeerd']},
     {offset:1, meal_id:'soep',   name:'Tomatensoep',        emoji:'\uD83C\uDF72', cook:'dorres', corvee:['faas']},
@@ -5067,7 +5076,7 @@ async function doCheckin() {
       meal_choice_1:choices[0], meal_choice_2:choices[1],
     },{onConflict:'profile_id,week_of'});
   }
-  // Update lokale checkins direct zodat week-cellen meteen de score tonen
+  // Update lokale checkins + todayMeal direct zodat home-kaart klopt
   const todayDateForCheckin = todayStr();
   const existingIdx = checkins.findIndex(c => c.eaten_at === todayDateForCheckin && c.profile_id === currentProfile.id);
   const newCheckin = {
@@ -5082,6 +5091,12 @@ async function doCheckin() {
   };
   if (existingIdx >= 0) checkins[existingIdx] = newCheckin;
   else checkins.unshift(newCheckin);
+  // Zorg dat todayMeal de juiste staat heeft
+  if (todayMeal && todayMeal.id === mealId) {
+    // Ongewijzigd
+  } else {
+    todayMeal = { id: mealId, eaten_at: todayDateForCheckin, meal_type: menuEntry?.meal_id || 'anders', family_id: currentProfile.family_id };
+  }
 
   // Reset naar vandaag
   homeDayOffset = 0;
@@ -5211,9 +5226,11 @@ function updateVoteStatus() {
     }
   }
   if (btnEl) {
-    btnEl.disabled = voteChoices.length === 0;
-    btnEl.style.opacity = voteChoices.length > 0 ? '1' : '0.5';
-    btnEl.style.cursor = voteChoices.length > 0 ? 'pointer' : 'not-allowed';
+    const suggestion = (document.getElementById('vote-suggestion')?.value || '').trim();
+    const canVote = voteChoices.length > 0 || suggestion.length > 0;
+    btnEl.disabled = !canVote;
+    btnEl.style.opacity = canVote ? '1' : '0.5';
+    btnEl.style.cursor = canVote ? 'pointer' : 'not-allowed';
   }
 }
 
@@ -5248,11 +5265,19 @@ function toggleVote(id) {
 }
 
 async function doVote() {
-  if (voteChoices.length!==2) return;
+  const suggestion = (document.getElementById('vote-suggestion')?.value || '').trim();
+  // Minimaal 1 keuze vereist, of een eigen suggestie
+  if (voteChoices.length === 0 && !suggestion) return;
   const _el_vote_btn = document.getElementById('vote-btn'); if (_el_vote_btn) _el_vote_btn.textContent = 'Opslaan...';
+
+  // Als er een eigen gerecht is ingetypt maar maar 1 keuze, gebruik suggestie als 2e keuze-ID
+  let choice1 = voteChoices[0] || ('custom-' + suggestion.toLowerCase().replace(/\s+/g,'-'));
+  let choice2 = voteChoices[1] || (suggestion ? 'custom-' + suggestion.toLowerCase().replace(/\s+/g,'-') : choice1);
+
   await sb.from('votes').upsert({
     profile_id:currentProfile.id, family_id:currentProfile.family_id,
-    week_of:testMondayOfWeek(), meal_choice_1:voteChoices[0], meal_choice_2:voteChoices[1],
+    week_of:nextMondayOfWeek(), meal_choice_1:choice1, meal_choice_2:choice2,
+    suggestion: suggestion || null,
   },{onConflict:'profile_id,week_of'});
   const _el_success_emoji = document.getElementById('success-emoji'); if (_el_success_emoji) _el_success_emoji.textContent = '\uD83D\uDDF3';
   const _el_success_title = document.getElementById('success-title'); if (_el_success_title) _el_success_title.textContent = 'Stem uitgebracht!';
