@@ -3657,10 +3657,9 @@ function refreshHome() {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Toon: Voorkeur + Sport
+    // Toon: Voorkeur + Sport (geen Meer voor kinderen)
     document.getElementById('nav-vote-btn') && (document.getElementById('nav-vote-btn').style.display='');
     document.getElementById('nav-sport') && (document.getElementById('nav-sport').style.display='');
-    document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
   }
 
   ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
@@ -6363,6 +6362,7 @@ async function deleteProfileSport(index) {
 
 
 function toggleMoreMenu() {
+  if (currentProfile && currentProfile.role !== 'parent') return;
   const menu = document.getElementById('nav-more-menu');
   if (!menu) return;
   menu.style.display = menu.style.display === 'none' ? '' : 'none';
@@ -6428,13 +6428,13 @@ async function openCookScreen(menuEntry) {
   const ingrSec = document.getElementById('cook-ingredients-section');
   const ingrTxt = document.getElementById('cook-ingredients-text');
   if (ingrSec && ingrTxt) {
-    if (meal.ingredients) { ingrTxt.textContent = meal.ingredients; ingrSec.style.display = ''; }
+    if (meal?.ingredients) { ingrTxt.textContent = meal.ingredients; ingrSec.style.display = ''; }
     else ingrSec.style.display = 'none';
   }
   const instSec = document.getElementById('cook-instructions-section');
   const instTxt = document.getElementById('cook-instructions-text');
   if (instSec && instTxt) {
-    if (meal.instructions) { instTxt.textContent = meal.instructions; instSec.style.display = ''; }
+    if (meal?.instructions) { instTxt.textContent = meal.instructions; instSec.style.display = ''; }
     else instSec.style.display = 'none';
   }
   const changeWrap = document.getElementById('cook-change-btn-wrap');
