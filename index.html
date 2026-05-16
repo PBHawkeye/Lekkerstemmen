@@ -2752,20 +2752,23 @@ async function openAdminDashboard() {
 async function loadAdminDashboard() {
   // Reset
   ['admin-stat-families','admin-stat-users','admin-stat-checkins',
-   'admin-stat-active7','admin-stat-feedback','admin-stat-handled'].forEach(id => {
+   'admin-stat-active7','admin-stat-feedback','admin-stat-handled',
+   'admin-stat-coupled','admin-stat-self-signup','admin-stat-via-friend'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = '...';
   });
 
   // Parallel laden
   const [
-    familiesRes, profilesRes, checkinsRes, feedbackRes, sharesRes
+    familiesRes, profilesRes, checkinsRes, feedbackRes, sharesRes, friendsRes, invitesRes
   ] = await Promise.all([
     sb.from('families').select('id,name,created_at'),
     sb.from('profiles').select('id,family_id,name,role,emoji,created_at').order('created_at',{ascending:false}),
     sb.from('checkins').select('id,profile_id,meal_type,score,created_at').order('created_at',{ascending:false}).limit(500),
     sb.from('feedback').select('id,profile_name,family_name,subject,message,positive,improve,other,status,rating,created_at').order('created_at',{ascending:false}),
     sb.from('meal_shares').select('id,from_family_name,meal_name,status,created_at').order('created_at',{ascending:false}).limit(50),
+    sb.from('family_friends').select('family_id,friend_family_id'),
+    sb.from('friend_invites').select('family_id,used_by_family').not('used_by_family','is',null),
   ]);
 
   const families  = familiesRes.data  || [];
@@ -2773,6 +2776,8 @@ async function loadAdminDashboard() {
   const checkins  = checkinsRes.data  || [];
   const feedbacks = feedbackRes.data  || [];
   const shares    = sharesRes.data    || [];
+  const friendLinks = friendsRes.data || [];
+  const usedInvites = invitesRes.data || [];
 
   // Actief in afgelopen 7 dagen: unieke families met een check-in
   const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
@@ -2780,6 +2785,18 @@ async function loadAdminDashboard() {
   const activeFamilyIds  = new Set(profiles.filter(p => activeProfileIds.has(p.id)).map(p => p.family_id));
   const openFeedback    = feedbacks.filter(f => !f.status || f.status === 'open');
   const handledFeedback = feedbacks.filter(f => f.status === 'answered' || f.status === 'closed');
+
+  // Gezinnen met minstens 1 koppeling
+  const familiesWithFriends = new Set([
+    ...friendLinks.map(f => f.family_id),
+    ...friendLinks.map(f => f.friend_family_id),
+  ]);
+
+  // Via vriend aangemeld: gezinnen waarvan het hoofd via een friend_invite is binnengekomen
+  const viaFriendFamilyIds = new Set(usedInvites.map(i => i.used_by_family));
+
+  // Zelf aangemeld: families die NIET via een friend invite zijn binnengekomen
+  const selfSignupCount = families.filter(f => !viaFriendFamilyIds.has(f.id)).length;
 
   // Stats
   document.getElementById('admin-stat-families').textContent = families.length;
@@ -2789,6 +2806,12 @@ async function loadAdminDashboard() {
   document.getElementById('admin-stat-feedback').textContent = openFeedback.length;
   const handledEl = document.getElementById('admin-stat-handled');
   if (handledEl) handledEl.textContent = handledFeedback.length;
+  const coupledEl = document.getElementById('admin-stat-coupled');
+  if (coupledEl) coupledEl.textContent = familiesWithFriends.size;
+  const selfEl = document.getElementById('admin-stat-self-signup');
+  if (selfEl) selfEl.textContent = selfSignupCount;
+  const viaEl = document.getElementById('admin-stat-via-friend');
+  if (viaEl) viaEl.textContent = viaFriendFamilyIds.size;
 
   // Feedback lijst: open bovenaan, daarna afgehandeld
   renderAdminFeedback(openFeedback, handledFeedback);
@@ -9428,16 +9451,32 @@ async function renderMenuScreen() {
         if (existing.message) detailHtml += '<span class="detail-pill" style="background:#FFF4DC;border-color:#FFD97A;color:#8A5E00">\uD83D\uDCAC '+existing.message+'</span>';
       }
 
-      // Sport/afwezigheid pills — altijd tonen, ook als dag nog leeg is
+      // Sport/afwezigheid pills — geplande events + vaste sporten van kinderen
       const daySchedule = sportScheduleData[dateStr] || {};
       const members = getFamilyMembers();
+      const dayOfWeek = new Date(dateStr+'T12:00:00').getDay(); // 0=zo,1=ma,...
+      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=ma,...,6=zo
+
       members.forEach(member => {
+        // Geplande event (sport-rooster)
         const eventType = daySchedule[member.id] || null;
-        if (!eventType) return;
-        const ev = EVENT_TYPES[eventType];
-        if (!ev) return;
-        detailHtml += '<span class="detail-pill" style="background:'+ev.bg+';border-color:'+ev.border+';color:var(--text);">'+
-          ev.emoji+' '+member.name+(ev.eetsNiet?' eet niet':'')+'</span>';
+        if (eventType) {
+          const ev = resolveSportInfo(eventType, member.id);
+          if (ev) {
+            detailHtml += '<span class="detail-pill" style="background:'+ev.bg+';border-color:'+ev.border+';color:var(--text);">'+
+              ev.emoji+' '+member.name+(ev.eetsNiet?' eet niet':'')+'</span>';
+            return; // niet ook nog vaste sport tonen als er al een event is
+          }
+        }
+        // Vaste wekelijkse sport (profiles.sports met day === dayIndex)
+        if (member.role === 'child') {
+          const memberSports = getSportsForProfile(member.id);
+          const todaySport = memberSports.find(s => s.day === dayIndex);
+          if (todaySport) {
+            detailHtml += '<span class="detail-pill" style="background:var(--green-bg);border-color:var(--green);color:var(--text)">'+
+              (todaySport.emoji||'\u26BD')+' '+member.name+' heeft '+todaySport.label+'</span>';
+          }
+        }
       });
       row.innerHTML=
         '<div class="menu-day-date"><div style="font-size:10px;font-weight:700;color:var(--muted)">'+WEEK_DAYS_SHORT[i]+'</div><div class="menu-day-date-num">'+dayNum+'</div><div style="font-size:9px;color:var(--muted)">'+monthName+'</div></div>'+
@@ -11084,7 +11123,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         <div style="font-size:11px;color:#888;margin-top:2px">Check-ins</div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
       <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
         <div id="admin-stat-active7" style="font-size:24px;font-weight:900;color:#22C9A0;font-family:'Fraunces',serif">—</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Actief (7d)</div>
@@ -11096,6 +11135,20 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
         <div id="admin-stat-handled" style="font-size:24px;font-weight:900;color:#22C9A0;font-family:'Fraunces',serif">—</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Afgehandeld</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
+        <div id="admin-stat-coupled" style="font-size:24px;font-weight:900;color:#9F8FF7;font-family:'Fraunces',serif">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Gekoppeld</div>
+      </div>
+      <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
+        <div id="admin-stat-self-signup" style="font-size:24px;font-weight:900;color:#9F8FF7;font-family:'Fraunces',serif">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Zelf aangemeld</div>
+      </div>
+      <div style="background:#1A1A2E;border-radius:12px;padding:14px;text-align:center">
+        <div id="admin-stat-via-friend" style="font-size:24px;font-weight:900;color:#9F8FF7;font-family:'Fraunces',serif">—</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Via vriend</div>
       </div>
     </div>
 
