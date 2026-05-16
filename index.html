@@ -2531,13 +2531,19 @@ async function acceptMealShare(shareId) {
   const share = allShares || pendingShares.find(s => s.id === shareId);
   if (!share) return;
 
+  // Voeg "overgenomen van" toe aan de notitie
+  const fromNote = 'Overgenomen van ' + (share.from_family_name || 'een bevriend gezin');
+  const combinedNote = share.note
+    ? share.note + ' • ' + fromNote
+    : fromNote;
+
   const { error } = await sb.from('custom_meals').insert({
     family_id: currentProfile.family_id,
     name: share.meal_name,
     emoji: share.meal_emoji,
     ingredients: share.ingredients,
     instructions: share.instructions,
-    note: share.note,
+    note: combinedNote,
   });
   if (error) { console.error('Overnemen mislukt:', error); return; }
 
