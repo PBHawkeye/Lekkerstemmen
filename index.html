@@ -17,6 +17,16 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    #ptr-indicator {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+      display: flex; align-items: center; justify-content: center;
+      height: 0; overflow: hidden; background: var(--green-bg);
+      transition: height 0.2s; color: var(--green); font-size: 13px; font-weight: 700;
+    }
+    #ptr-indicator.visible { height: 52px; }
+    #ptr-indicator.refreshing { height: 52px; }
+    @keyframes ptr-spin { to { transform: rotate(360deg); } }
+    .ptr-spinner { display: inline-block; margin-right: 8px; animation: ptr-spin 0.8s linear infinite; }
     :root {
       /* Lekkerstemmen huisstijl */
       --green:       #1D9E75;
@@ -327,6 +337,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 
 <!-- test-bar wordt dynamisch ingevoegd door initTestBar() -->
 
+<div id="ptr-indicator"><span class="ptr-spinner">&#x21BB;</span><span id="ptr-label">Loslaten om te verversen</span></div>
 <div id="s-loading" class="screen active">
   <div class="loading-wrap"><div class="spinner"></div><div class="loading-text">Laden...</div></div>
 </div>
@@ -2689,6 +2700,80 @@ async function saveManageSport(profileId) {
 
   document.getElementById('manage-sport-modal')?.remove();
 }
+
+// ── PULL TO REFRESH ──────────────────────────────────────────
+(function() {
+  let startY = 0, pulling = false, triggered = false;
+  const THRESHOLD = 80;
+
+  function getScrollEl() {
+    // Zoek het actieve scherm zijn scrollable container
+    const active = document.querySelector('.screen.active');
+    if (!active) return document.documentElement;
+    const scrollable = active.querySelector('[style*="overflow-y"]');
+    return scrollable || active;
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    const el = getScrollEl();
+    if (el.scrollTop > 0) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+    triggered = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!pulling) return;
+    const el = getScrollEl();
+    if (el.scrollTop > 0) { pulling = false; return; }
+    const dy = e.touches[0].clientY - startY;
+    if (dy < 0) { pulling = false; return; }
+    const indicator = document.getElementById('ptr-indicator');
+    const label = document.getElementById('ptr-label');
+    if (!indicator) return;
+    if (dy > 20) {
+      indicator.classList.add('visible');
+      if (dy > THRESHOLD && !triggered) {
+        triggered = true;
+        if (label) label.textContent = 'Loslaten om te verversen';
+        indicator.style.background = 'var(--green-bg)';
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async function() {
+    if (!pulling) return;
+    pulling = false;
+    const indicator = document.getElementById('ptr-indicator');
+    const label = document.getElementById('ptr-label');
+    if (!triggered) {
+      if (indicator) indicator.classList.remove('visible');
+      return;
+    }
+    // Ververs
+    if (indicator) indicator.classList.add('refreshing');
+    if (label) { label.innerHTML = '<span class="ptr-spinner">&#x21BB;</span> Verversen...'; }
+    try {
+      await loadData();
+      // Herrender huidig scherm
+      const active = document.querySelector('.screen.active');
+      const screenId = active?.id?.replace('s-', '');
+      if (screenId === 'home') refreshHome();
+      else if (screenId === 'sport') renderSportSchedule();
+      else if (screenId === 'status') renderStatus().then(() => {});
+      else if (screenId === 'menu') renderMenuScreen().then(() => {});
+      else if (screenId === 'meals') renderMealsScreen();
+      else if (screenId === 'friends') loadFriendsData();
+      else if (screenId === 'feedback') loadFeedbackThreads();
+    } catch(e) { console.warn('PTR refresh error:', e); }
+    setTimeout(() => {
+      if (indicator) { indicator.classList.remove('visible','refreshing'); }
+      if (label) label.textContent = 'Loslaten om te verversen';
+    }, 600);
+    triggered = false;
+  });
+})();
+
 
 async function doSignOut() {
   await sb.auth.signOut();
@@ -5660,6 +5745,13 @@ function getSportWeekDates(offset) {
 }
 
 async function renderSportSchedule() {
+  // Zorg altijd voor verse gezinsleden (kritiek op iOS)
+  if (familyProfiles.length === 0 && currentProfile?.family_id) {
+    const {data:freshMembers} = await sb.from('profiles')
+      .select('id,family_id,name,role,emoji,sports')
+      .eq('family_id', currentProfile.family_id);
+    if (freshMembers) familyProfiles = freshMembers;
+  }
   const allMembers = getFamilyMembers();
   const parents = allMembers.filter(p=>p.role==='parent');
   const kids = allMembers.filter(p=>p.role==='child');
