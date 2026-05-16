@@ -2749,6 +2749,67 @@ async function openAdminDashboard() {
   await loadAdminDashboard();
 }
 
+let _adminRawData = null;
+let _adminFilter = 'all';
+
+function setAdminFilter(filter) {
+  _adminFilter = filter;
+  const allBtn = document.getElementById('admin-filter-all');
+  const d7Btn  = document.getElementById('admin-filter-7d');
+  if (allBtn) {
+    allBtn.style.background    = filter === 'all' ? '#22C9A0' : 'transparent';
+    allBtn.style.color         = filter === 'all' ? '#0D0D1A' : '#aaa';
+    allBtn.style.borderColor   = filter === 'all' ? '#22C9A0' : '#444';
+  }
+  if (d7Btn) {
+    d7Btn.style.background   = filter === '7d' ? '#22C9A0' : 'transparent';
+    d7Btn.style.color        = filter === '7d' ? '#0D0D1A' : '#aaa';
+    d7Btn.style.borderColor  = filter === '7d' ? '#22C9A0' : '#444';
+  }
+  if (_adminRawData) applyAdminFilter(_adminRawData);
+}
+
+function applyAdminFilter(raw) {
+  const { families, profiles, checkins, feedbacks, shares, friendLinks, usedInvites } = raw;
+  const cutoff = _adminFilter === '7d'
+    ? new Date(Date.now() - 7*24*60*60*1000).toISOString()
+    : null;
+
+  const filtCheckins  = cutoff ? checkins.filter(c  => (c.eaten_at||c.created_at) > cutoff) : checkins;
+  const filtFamilies  = cutoff ? families.filter(f  => f.created_at > cutoff) : families;
+  const filtProfiles  = cutoff ? profiles.filter(p  => p.created_at > cutoff) : profiles;
+  const filtFeedbacks = cutoff ? feedbacks.filter(f => f.created_at > cutoff) : feedbacks;
+
+  const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+  const activeProfileIds = new Set(checkins.filter(c => (c.eaten_at||c.created_at) > cutoff7).map(c => c.profile_id));
+  const activeFamilyIds  = new Set(profiles.filter(p => activeProfileIds.has(p.id)).map(p => p.family_id));
+
+  const openFeedback    = filtFeedbacks.filter(f => !f.status || f.status === 'open');
+  const handledFeedback = filtFeedbacks.filter(f => f.status === 'answered' || f.status === 'closed');
+
+  const familiesWithFriends = new Set([
+    ...friendLinks.map(f => f.family_id),
+    ...friendLinks.map(f => f.friend_family_id),
+  ]);
+  const viaFriendFamilyIds = new Set(usedInvites.map(i => i.used_by_family));
+  const selfSignupCount = families.filter(f => !viaFriendFamilyIds.has(f.id)).length;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('admin-stat-families',    _adminFilter === '7d' ? filtFamilies.length  : families.length);
+  set('admin-stat-users',       _adminFilter === '7d' ? filtProfiles.length  : profiles.length);
+  set('admin-stat-checkins',    filtCheckins.length);
+  set('admin-stat-active7',     activeFamilyIds.size);
+  set('admin-stat-feedback',    openFeedback.length);
+  set('admin-stat-handled',     handledFeedback.length);
+  set('admin-stat-coupled',     familiesWithFriends.size);
+  set('admin-stat-self-signup', selfSignupCount);
+  set('admin-stat-via-friend',  viaFriendFamilyIds.size);
+
+  renderAdminFeedback(openFeedback, handledFeedback);
+  renderAdminFamilies(families, profiles, checkins, activeFamilyIds);
+  renderAdminActivity(filtCheckins, shares, profiles);
+}
+
 async function loadAdminDashboard() {
   // Reset
   ['admin-stat-families','admin-stat-users','admin-stat-checkins',
@@ -2764,7 +2825,7 @@ async function loadAdminDashboard() {
   ] = await Promise.all([
     sb.from('families').select('id,name,created_at'),
     sb.from('profiles').select('id,family_id,name,role,emoji,created_at').order('created_at',{ascending:false}),
-    sb.from('checkins').select('id,profile_id,score,created_at').order('created_at',{ascending:false}).limit(500),
+    sb.from('checkins_with_context').select('id,profile_id,score,eaten_at,family_id').order('eaten_at',{ascending:false}).limit(1000),
     sb.from('feedback').select('*').order('created_at',{ascending:false}),
     sb.from('meal_shares').select('id,from_family_name,meal_name,status,created_at').order('created_at',{ascending:false}).limit(50),
     sb.from('family_friends').select('family_id,friend_family_id'),
@@ -2780,52 +2841,12 @@ async function loadAdminDashboard() {
   const usedInvites = invitesRes.data || [];
 
 
-  // Actief in afgelopen 7 dagen: unieke families met een check-in
-  const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const activeProfileIds = new Set(checkins.filter(c => c.created_at > cutoff7).map(c => c.profile_id));
-  const activeFamilyIds  = new Set(profiles.filter(p => activeProfileIds.has(p.id)).map(p => p.family_id));
+  // Filter en stats worden berekend in applyAdminFilter
   // Open = geen status, of status='open', of laatste reply was van gebruiker
   // Afgehandeld = status='answered'/'closed'
-  const openFeedback    = feedbacks.filter(f => !f.status || f.status === 'open');
-  const handledFeedback = feedbacks.filter(f => f.status === 'answered' || f.status === 'closed');
-  // Fallback: als status kolom nog niet bestaat, tel op basis van replies
-  // (replies zijn al geladen via feedback_replies policy - zie fix_admin_rls.sql)
-
-  // Gezinnen met minstens 1 koppeling
-  const familiesWithFriends = new Set([
-    ...friendLinks.map(f => f.family_id),
-    ...friendLinks.map(f => f.friend_family_id),
-  ]);
-
-  // Via vriend aangemeld: gezinnen waarvan het hoofd via een friend_invite is binnengekomen
-  const viaFriendFamilyIds = new Set(usedInvites.map(i => i.used_by_family));
-
-  // Zelf aangemeld: families die NIET via een friend invite zijn binnengekomen
-  const selfSignupCount = families.filter(f => !viaFriendFamilyIds.has(f.id)).length;
-
-  // Stats
-  document.getElementById('admin-stat-families').textContent = families.length;
-  document.getElementById('admin-stat-users').textContent    = profiles.length;
-  document.getElementById('admin-stat-checkins').textContent = checkins.length;
-  document.getElementById('admin-stat-active7').textContent  = activeFamilyIds.size;
-  document.getElementById('admin-stat-feedback').textContent = openFeedback.length;
-  const handledEl = document.getElementById('admin-stat-handled');
-  if (handledEl) handledEl.textContent = handledFeedback.length;
-  const coupledEl = document.getElementById('admin-stat-coupled');
-  if (coupledEl) coupledEl.textContent = familiesWithFriends.size;
-  const selfEl = document.getElementById('admin-stat-self-signup');
-  if (selfEl) selfEl.textContent = selfSignupCount;
-  const viaEl = document.getElementById('admin-stat-via-friend');
-  if (viaEl) viaEl.textContent = viaFriendFamilyIds.size;
-
-  // Feedback lijst: open bovenaan, daarna afgehandeld
-  renderAdminFeedback(openFeedback, handledFeedback);
-
-  // Gezinnen lijst
-  renderAdminFamilies(families, profiles, checkins, activeFamilyIds);
-
-  // Recente activiteit (merge checkins + shares + nieuwe profielen)
-  renderAdminActivity(checkins, shares, profiles);
+  // Sla raw data op voor herfilteren
+  _adminRawData = { families, profiles, checkins, feedbacks, shares, friendLinks, usedInvites };
+  applyAdminFilter(_adminRawData);
 }
 
 function renderAdminFeedback(openItems, handledItems) {
@@ -11141,6 +11162,18 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <button onclick="loadAdminDashboard()" style="background:none;border:none;color:#FFB830;font-size:18px;cursor:pointer" title="Verversen">&#x21BB;</button>
   </div>
   <div style="flex:1;overflow-y:auto;padding:16px 16px 100px">
+
+    <!-- Periode filter -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="admin-filter-all" onclick="setAdminFilter('all')"
+        style="flex:1;padding:8px;border-radius:99px;border:1.5px solid #22C9A0;background:#22C9A0;color:#0D0D1A;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+        Alles
+      </button>
+      <button id="admin-filter-7d" onclick="setAdminFilter('7d')"
+        style="flex:1;padding:8px;border-radius:99px;border:1.5px solid #444;background:transparent;color:#aaa;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+        Laatste 7 dagen
+      </button>
+    </div>
 
     <!-- Stats row -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
