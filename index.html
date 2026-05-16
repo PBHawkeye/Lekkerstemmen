@@ -2778,6 +2778,8 @@ async function loadAdminDashboard() {
   const shares    = sharesRes.data    || [];
   const friendLinks = friendsRes.data || [];
   const usedInvites = invitesRes.data || [];
+  console.log('[Admin] feedback records:', feedbacks.length, 'error:', feedbackRes.error?.message);
+  console.log('[Admin] feedback data:', JSON.stringify(feedbacks.map(f=>({id:f.id,status:f.status,profile_id:f.profile_id}))));
 
   // Actief in afgelopen 7 dagen: unieke families met een check-in
   const cutoff7 = new Date(Date.now() - 7*24*60*60*1000).toISOString();
