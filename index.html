@@ -5659,11 +5659,11 @@ async function renderStatus() {
   const twoWeeksStart = tw.toISOString().split('T')[0];
 
   const [votesRes, menuRes, availRes, cisRes, avail2Res, avail3Res] = await Promise.all([
-    sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('votes').select('*').eq('family_id',familyId).eq('week_of',nextWeekStart),
     sb.from('weekly_menu').select('*').eq('family_id',familyId)
       .gte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset-7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })())
       .lte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset+7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })()),
-    sb.from('vote_available_meals').select('id,meal_id').eq('family_id',familyId).eq('week_of',weekStart),
+    sb.from('vote_available_meals').select('id,meal_id').eq('family_id',familyId).eq('week_of',nextWeekStart),
     sb.from('checkins_with_context').select('*').eq('family_id',familyId).in('eaten_at',weekDates),
     sb.from('vote_available_meals').select('id').eq('family_id',familyId).eq('week_of',nextWeekStart).limit(1),
     sb.from('vote_available_meals').select('id').eq('family_id',familyId).eq('week_of',twoWeeksStart).limit(1),
