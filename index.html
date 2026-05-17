@@ -7359,9 +7359,9 @@ function generateCookRecipe() {
     const recipeEl = document.getElementById('cook-ai-recipe');
     const textEl = document.getElementById('cook-ai-recipe-text');
 
-    if (btn) { btn.textContent = '\u23F3 Bezig...'; btn.disabled = true; }
     if (recipeEl) recipeEl.style.display = '';
     if (textEl) textEl.textContent = 'AI genereert recept...';
+    if (btn) { btn.textContent = '\u23F3 Bezig...'; btn.disabled = true; }
 
     try {
       const res = await anthropicFetch({
@@ -7474,6 +7474,13 @@ function closePromptModal() {
   const modal = document.getElementById('ai-prompt-modal');
   if (modal) modal.style.display = 'none';
   promptModalCallback = null;
+  // Reset cook AI knop als die op Bezig staat
+  const cookBtn = document.getElementById('cook-ai-recipe-btn');
+  if (cookBtn && cookBtn.textContent.includes('Bezig')) {
+    cookBtn.textContent = t('cook_ai_recipe') || '✨ AI recept genereren';
+    cookBtn.disabled = false;
+    cookBtn.style.display = '';
+  }
   // Zorg dat cook scherm zichtbaar blijft als we daar vandaan kwamen
   if (document.getElementById('s-cook') &&
       !document.getElementById('s-cook').classList.contains('active')) {
@@ -9992,9 +9999,32 @@ async function confirmMealPick() {
 
   let mealId, mealName, mealEmoji;
   if (customVal) {
-    mealId = 'custom-'+customVal.toLowerCase().split(' ').join('-');
-    mealName = customVal;
-    mealEmoji = '\uD83C\uDF7D';
+    // Sla het eigen gerecht op in custom_meals zodat kookscherm + ingrediënten werken
+    const existingCustom = customMeals.find(m => m.name.toLowerCase() === customVal.toLowerCase());
+    if (existingCustom) {
+      // Gerecht bestaat al
+      mealId = existingCustom.id;
+      mealName = existingCustom.name;
+      mealEmoji = existingCustom.emoji || '\uD83C\uDF7D';
+    } else {
+      // Nieuw gerecht aanmaken in custom_meals
+      const {data: newMeal, error: newMealErr} = await sb.from('custom_meals').insert({
+        family_id: currentProfile.family_id,
+        name: customVal,
+        emoji: '\uD83C\uDF7D',
+      }).select().maybeSingle();
+      if (!newMealErr && newMeal) {
+        mealId = newMeal.id;
+        mealName = newMeal.name;
+        mealEmoji = newMeal.emoji;
+        customMeals.push(newMeal);
+      } else {
+        // Fallback als insert mislukt
+        mealId = 'custom-'+customVal.toLowerCase().split(' ').join('-');
+        mealName = customVal;
+        mealEmoji = '\uD83C\uDF7D';
+      }
+    }
   } else if (selectedBtn) {
     mealId = selectedBtn.dataset.meal;
     mealEmoji = selectedBtn.dataset.emoji;
