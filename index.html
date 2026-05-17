@@ -4809,6 +4809,7 @@ function renderCustomMealsList() {
     editBtn.onclick = () => {
       // Haal volledig object op uit customMeals (bevat ook ingredients/instructions)
       const full = customMeals.find(cm => cm.id === m.id) || m;
+      console.log('[EditBtn] m.id:', m.id, 'full.ingredients:', full.ingredients?.substring(0,50), 'full.instructions:', full.instructions?.substring(0,50));
       openEditMeal({
         id: full.id || '',
         name: full.name || full.label || '',
@@ -5813,6 +5814,7 @@ function showAIProposal() {
 let editSelectedEmoji = '\uD83C\uDF7D';
 
 function openEditMeal(meal) {
+  console.log('[EditMeal] meal object:', JSON.stringify({id:meal.id,name:meal.name,ingredients:meal.ingredients?.substring(0,50),instructions:meal.instructions?.substring(0,50)}));
   const _el_edit_meal_id = document.getElementById('edit-meal-id'); if (_el_edit_meal_id) _el_edit_meal_id.value = meal.id || '';
   const _el_edit_meal_name = document.getElementById('edit-meal-name'); if (_el_edit_meal_name) _el_edit_meal_name.value = meal.name || meal.label || '';
   const _el_edit_meal_note = document.getElementById('edit-meal-note'); if (_el_edit_meal_note) _el_edit_meal_note.value = meal.note || '';
