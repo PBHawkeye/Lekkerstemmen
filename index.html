@@ -4806,17 +4806,21 @@ function renderCustomMealsList() {
     editBtn.style.cssText = "font-size:14px;background:var(--green-bg);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
     editBtn.textContent = "✏️";
     editBtn.title = "Bewerken";
-    editBtn.onclick = () => openEditMeal({
-      id: m.id || '',
-      name: m.label || '',
-      label: m.label || '',
-      emoji: m.emoji || '\uD83C\uDF7D',
-      note: m.note || '',
-      recipe_url: m.recipe_url || '',
-      side_dish: m.side_dish || '',
-      ingredients: m.ingredients || '',
-      instructions: m.instructions || '',
-    });
+    editBtn.onclick = () => {
+      // Haal volledig object op uit customMeals (bevat ook ingredients/instructions)
+      const full = customMeals.find(cm => cm.id === m.id) || m;
+      openEditMeal({
+        id: full.id || '',
+        name: full.name || full.label || '',
+        label: full.name || full.label || '',
+        emoji: full.emoji || '\uD83C\uDF7D',
+        note: full.note || '',
+        recipe_url: full.recipe_url || '',
+        side_dish: full.side_dish || '',
+        ingredients: full.ingredients || '',
+        instructions: full.instructions || '',
+      });
+    };
     item.appendChild(editBtn);
 
     if (disabled) {
@@ -4829,7 +4833,7 @@ function renderCustomMealsList() {
     } else {
       const disableBtn = document.createElement("button");
       disableBtn.style.cssText = "font-size:13px;background:var(--amber-light);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
-      disableBtn.textContent = "⊘";
+      disableBtn.textContent = "\uD83D\uDEAB";
       disableBtn.title = "Uitschakelen";
       disableBtn.onclick = () => disableDefaultMeal(m.id);
       item.appendChild(disableBtn);
