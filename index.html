@@ -7117,6 +7117,32 @@ function renderCookPicker() {
     (selectedCook==='afhaal' || selectedCook==='uiteten') ? 'none' : '';
 }
 
+
+// ── Wissel twee menudagen ─────────────────────────────────────
+async function swapMenuDays(dateA, dateB) {
+  const fid = currentProfile.family_id;
+
+  // Haal beide dag-entries op
+  const entriesA = weeklyMenu.filter(m => m.day_date === dateA);
+  const entriesB = weeklyMenu.filter(m => m.day_date === dateB);
+
+  if (entriesA.length === 0 && entriesB.length === 0) return;
+
+  // Bouw update-payload: verwissel day_date
+  const updates = [];
+  entriesA.forEach(e => updates.push({ id: e.id, day_date: dateB }));
+  entriesB.forEach(e => updates.push({ id: e.id, day_date: dateA }));
+
+  // Voer alle updates parallel uit
+  await Promise.all(updates.map(u =>
+    sb.from('weekly_menu').update({ day_date: u.day_date }).eq('id', u.id)
+  ));
+
+  // Herlaad en render
+  await loadData();
+  renderMenuScreen();
+}
+
 async function openChangeMeal() {
   if (!currentCookEntry) return;
   const dateStr = currentCookEntry.day_date;
@@ -9578,6 +9604,29 @@ async function renderMenuScreen() {
         (existing&&existing.published?'<span class="menu-day-badge badge-published" style="margin-left:4px" title="Zichtbaar voor kinderen">✓ gepubliceerd</span>':'');
       // Rechter-klik of long-press toont statistieken (hier: apart info knop)
       row.onclick=()=>openMealPicker(dateStr,i,existing);
+
+      // Verplaats-knoppen (swap met vorige/volgende dag)
+      const moveWrap = document.createElement('div');
+      moveWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex-shrink:0;margin-left:4px';
+
+      const upBtn = document.createElement('button');
+      upBtn.textContent = '↑';
+      upBtn.title = 'Wissel met dag hierboven';
+      upBtn.disabled = i === 0 || !existing;
+      upBtn.style.cssText = 'font-size:12px;width:22px;height:20px;border-radius:4px;border:1px solid var(--border);background:white;cursor:pointer;line-height:1;padding:0;color:'+(i===0||!existing?'var(--muted)':'var(--text)');
+      upBtn.onclick = (e) => { e.stopPropagation(); swapMenuDays(dates[i-1], dateStr); };
+
+      const downBtn = document.createElement('button');
+      downBtn.textContent = '↓';
+      downBtn.title = 'Wissel met dag hieronder';
+      downBtn.disabled = i === dates.length - 1 || !existing;
+      downBtn.style.cssText = 'font-size:12px;width:22px;height:20px;border-radius:4px;border:1px solid var(--border);background:white;cursor:pointer;line-height:1;padding:0;color:'+(i===dates.length-1||!existing?'var(--muted)':'var(--text)');
+      downBtn.onclick = (e) => { e.stopPropagation(); swapMenuDays(dateStr, dates[i+1]); };
+
+      moveWrap.appendChild(upBtn);
+      moveWrap.appendChild(downBtn);
+      row.appendChild(moveWrap);
+
       if (existing) {
         const statsBtn = document.createElement('button');
         statsBtn.style.cssText = 'font-size:13px;background:var(--green-bg);border:none;border-radius:6px;padding:3px 7px;cursor:pointer;flex-shrink:0;margin-left:4px';
