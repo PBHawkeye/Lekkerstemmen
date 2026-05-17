@@ -6968,9 +6968,10 @@ async function openCookScreen(menuEntry) {
   const _el_cook_meal_name = document.getElementById('cook-meal-name'); if (_el_cook_meal_name) _el_cook_meal_name.textContent = menuEntry.meal_name;
 
   // Haal custom meal op voor bijgerecht/recept/notitie
-  // Zoek eerst op meal_id, dan op naam
+  // Zoek eerst op meal_id (alleen als het een geldig UUID is), dan op naam
   let meal = null;
-  if (menuEntry.meal_id) {
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (menuEntry.meal_id && isValidUUID.test(menuEntry.meal_id)) {
     const {data: byId} = await sb.from('custom_meals')
       .select('*').eq('id', menuEntry.meal_id).maybeSingle();
     meal = byId;
