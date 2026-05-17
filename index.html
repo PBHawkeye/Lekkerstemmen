@@ -5819,10 +5819,20 @@ function openEditMeal(meal) {
   const _el_edit_meal_url = document.getElementById('edit-meal-url'); if (_el_edit_meal_url) _el_edit_meal_url.value = meal.recipe_url || '';
   const sideEl = document.getElementById('edit-meal-side');
   if (sideEl) sideEl.value = meal.side_dish || '';
+  // Als bereidingswijze in ingrediënten-blob zit, splits ze
+  let ingredients = meal.ingredients || '';
+  let instructions = meal.instructions || '';
+  if (ingredients && !instructions) {
+    const splitMatch = ingredients.split(/\n#{1,3}\s*(?:bereidingswijze|bereiding|stappen|instructies)/i);
+    if (splitMatch.length > 1) {
+      ingredients = splitMatch[0].trim();
+      instructions = splitMatch[1].trim();
+    }
+  }
   const ingrEl = document.getElementById('edit-meal-ingredients');
-  if (ingrEl) ingrEl.value = meal.ingredients || '';
+  if (ingrEl) ingrEl.value = ingredients;
   const instEl = document.getElementById('edit-meal-instructions');
-  if (instEl) instEl.value = meal.instructions || '';
+  if (instEl) instEl.value = instructions;
   editSelectedEmoji = meal.emoji || '\uD83C\uDF7D';
   const _el_edit_meal_emoji_val = document.getElementById('edit-meal-emoji-val'); if (_el_edit_meal_emoji_val) _el_edit_meal_emoji_val.value = editSelectedEmoji;
 
@@ -6955,13 +6965,13 @@ async function openCookScreen(menuEntry) {
   const ingrSec = document.getElementById('cook-ingredients-section');
   const ingrTxt = document.getElementById('cook-ingredients-text');
   if (ingrSec && ingrTxt) {
-    if (meal?.ingredients) { ingrTxt.textContent = meal.ingredients; ingrSec.style.display = ''; }
+    if (meal?.ingredients) { ingrTxt.innerHTML = meal.ingredients.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/^#{1,3}\s+(.+)$/gm,"<strong>$1</strong>").replace(/\n/g,"<br>"); ingrSec.style.display = ''; }
     else ingrSec.style.display = 'none';
   }
   const instSec = document.getElementById('cook-instructions-section');
   const instTxt = document.getElementById('cook-instructions-text');
   if (instSec && instTxt) {
-    if (meal?.instructions) { instTxt.textContent = meal.instructions; instSec.style.display = ''; }
+    if (meal?.instructions) { instTxt.innerHTML = meal.instructions.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>").replace(/^#{1,3}\s+(.+)$/gm,"<strong>$1</strong>").replace(/\n/g,"<br>"); instSec.style.display = ''; }
     else instSec.style.display = 'none';
   }
   const changeWrap = document.getElementById('cook-change-btn-wrap');
