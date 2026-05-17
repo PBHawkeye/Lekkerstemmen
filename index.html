@@ -5834,10 +5834,10 @@ function openEditMeal(meal) {
   let ingredients = meal.ingredients || '';
   let instructions = meal.instructions || '';
   if (ingredients && !instructions) {
-    const splitMatch = ingredients.split(/\n#{1,3}\s*(?:bereidingswijze|bereiding|stappen|instructies)/i);
-    if (splitMatch.length > 1) {
-      ingredients = splitMatch[0].trim();
-      instructions = splitMatch[1].trim();
+    const [splitIngr, splitInst] = splitRecipeText(ingredients || '');
+    if (splitInst) {
+      ingredients = splitIngr;
+      instructions = splitInst;
     }
   }
   const ingrEl = document.getElementById('edit-meal-ingredients');
@@ -7152,6 +7152,40 @@ function getAteTogetherOptions() {
   ];
 }
 
+
+// ── Splits recept-tekst in ingrediënten + bereidingswijze ────
+function splitRecipeText(text) {
+  if (!text) return ['', ''];
+  // Probeer op "Bereidingswijze" kop te splitsen (met of zonder ##, : enz.)
+  const kopRe = /(?:^|\n)\s*#{0,3}\s*(?:bereidingswijze|bereiding|bereidingswijze:|instructies|stappen|preparation|method)\s*:?\s*(?:\n|$)/im;
+  const match = text.match(kopRe);
+  if (match) {
+    const idx = match.index;
+    const afterKop = idx + match[0].length;
+    return [text.slice(0, idx).trim(), text.slice(afterKop).trim()];
+  }
+  // Fallback: splits op "Ingrediënten" kop
+  const ingrRe = /(?:^|\n)\s*#{0,3}\s*(?:ingredi.nten|ingredients)\s*:?\s*(?:\n|$)/im;
+  const ingrMatch = text.match(ingrRe);
+  if (ingrMatch) {
+    const afterIngr = ingrMatch.index + ingrMatch[0].length;
+    const rest = text.slice(afterIngr);
+    // Dan zoek bereidingswijze in de rest
+    const bMatch = rest.match(kopRe);
+    if (bMatch) {
+      return [rest.slice(0, bMatch.index).trim(), rest.slice(bMatch.index + bMatch[0].length).trim()];
+    }
+    return [rest.trim(), ''];
+  }
+  // Fallback: twee blokken gescheiden door lege regel waarbij 2e blok met cijfer begint
+  const blokken = text.split(/\n\n+/);
+  const lastBlok = blokken[blokken.length - 1].trim();
+  if (blokken.length >= 2 && /^(?:\d+[.)]|stap)/i.test(lastBlok)) {
+    return [blokken.slice(0, -1).join('\n\n').trim(), lastBlok];
+  }
+  return [text, ''];
+}
+
 function renderCookPicker() {
   // Render de kok-kiezer in het meal-picker scherm
   renderPersonGrid('cook-person-grid', selectedCook, selectCookPerson);
@@ -7451,16 +7485,12 @@ async function saveCookRecipeToMeal(recipeText) {
   if (!currentCookEntry?.meal_name) return;
   btn.textContent = 'Bezig...'; btn.disabled = true;
 
-  // Splits recept in ingredienten en instructies op basis van koppen
-  let ingredients = null, instructions = null;
-  const ingrMatch = recipeText.split(/ingredi.nten/i);
-  const instMatch = recipeText.split(/(?:bereiding|stappen|instructies|bereidingswijze)/i);
-  if (ingrMatch.length > 1) ingredients = ingrMatch[1].split(/(?:bereiding|stappen|instructies|bereidingswijze)/i)[0].trim();
-  if (instMatch.length > 1) instructions = instMatch[1].trim();
-  if (ingrMatch) ingredients = ingrMatch[1].trim();
-  if (instMatch) instructions = instMatch[1].trim();
-  // Fallback: sla het hele recept op als instructions
+  // Splits recept in ingrediënten en bereidingswijze
+  const [splitIngr, splitInst] = splitRecipeText(recipeText);
+  let ingredients = splitIngr || null;
+  let instructions = splitInst || null;
   if (!ingredients && !instructions) instructions = recipeText;
+
 
   const { error } = await sb.from('custom_meals')
     .update({ ingredients, instructions })
