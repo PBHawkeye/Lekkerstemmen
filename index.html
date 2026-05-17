@@ -6968,8 +6968,36 @@ async function openCookScreen(menuEntry) {
   const _el_cook_meal_name = document.getElementById('cook-meal-name'); if (_el_cook_meal_name) _el_cook_meal_name.textContent = menuEntry.meal_name;
 
   // Haal custom meal op voor bijgerecht/recept/notitie
-  const {data:meal} = await sb.from('custom_meals')
-    .select('*').eq('family_id', familyId).eq('name', menuEntry.meal_name).maybeSingle();
+  // Zoek eerst op meal_id, dan op naam
+  let meal = null;
+  if (menuEntry.meal_id) {
+    const {data: byId} = await sb.from('custom_meals')
+      .select('*').eq('id', menuEntry.meal_id).maybeSingle();
+    meal = byId;
+  }
+  if (!meal && menuEntry.meal_name) {
+    const {data: byName} = await sb.from('custom_meals')
+      .select('*').eq('family_id', familyId).eq('name', menuEntry.meal_name).maybeSingle();
+    meal = byName;
+  }
+  // Gerecht bestaat nog niet in custom_meals — maak aan zodat AI-recept opgeslagen kan worden
+  if (!meal && menuEntry.meal_name) {
+    const {data: created} = await sb.from('custom_meals').insert({
+      family_id: familyId,
+      name: menuEntry.meal_name,
+      emoji: menuEntry.meal_emoji || '\uD83C\uDF7D',
+    }).select().maybeSingle();
+    if (created) {
+      meal = created;
+      customMeals.push(created);
+      // Update het weekmenu-record met het nieuwe meal_id
+      if (menuEntry.id) {
+        await sb.from('weekly_menu').update({ meal_id: created.id }).eq('id', menuEntry.id);
+        menuEntry.meal_id = created.id;
+        currentCookEntry.meal_id = created.id;
+      }
+    }
+  }
 
   const sideEl = document.getElementById('cook-side-dish');
   const noteEl = document.getElementById('cook-note');
@@ -7000,6 +7028,14 @@ async function openCookScreen(menuEntry) {
   } else {
     recipeLink.style.display = 'none';
     aiBtn.style.display = '';
+  }
+
+  // Reset AI-knop altijd (voorkomt vasthangen op "Bezig")
+  const aiBtnReset = document.getElementById('cook-ai-recipe-btn');
+  if (aiBtnReset) {
+    aiBtnReset.textContent = '✨ AI recept genereren';
+    aiBtnReset.disabled = false;
+    aiBtnReset.style.display = '';
   }
 
   // Herstel gecached AI recept als aanwezig (persistentie over sessies)
