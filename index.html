@@ -4805,19 +4805,32 @@ function renderCustomMealsList() {
     const editBtn = document.createElement("button");
     editBtn.style.cssText = "font-size:14px;background:var(--green-bg);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
     editBtn.textContent = "✏️";
-    editBtn.dataset.mealId = "";
-    editBtn.dataset.mealLabel = m.label;
-    editBtn.dataset.mealEmoji = m.emoji;
-    editBtn.onclick = () => openEditFromBtn(editBtn);
+    editBtn.title = "Bewerken";
+    editBtn.onclick = () => openEditMeal({
+      id: m.id || '',
+      name: m.label || '',
+      label: m.label || '',
+      emoji: m.emoji || '\uD83C\uDF7D',
+      note: m.note || '',
+      recipe_url: m.recipe_url || '',
+      side_dish: m.side_dish || '',
+      ingredients: m.ingredients || '',
+      instructions: m.instructions || '',
+    });
     item.appendChild(editBtn);
 
     if (disabled) {
       const enableBtn = document.createElement("button");
       enableBtn.style.cssText = "font-size:13px;background:#E0FAF4;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
+      enableBtn.textContent = "✓";
+      enableBtn.title = "Weer inschakelen";
+      enableBtn.onclick = () => enableDefaultMeal(m.id);
       item.appendChild(enableBtn);
     } else {
       const disableBtn = document.createElement("button");
       disableBtn.style.cssText = "font-size:13px;background:var(--amber-light);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
+      disableBtn.textContent = "⊘";
+      disableBtn.title = "Uitschakelen";
       disableBtn.onclick = () => disableDefaultMeal(m.id);
       item.appendChild(disableBtn);
     }
@@ -4825,7 +4838,10 @@ function renderCustomMealsList() {
     if (!usedInMenu) {
       const delBtn = document.createElement("button");
       delBtn.style.cssText = "font-size:13px;background:#FFEEEE;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
-      delBtn.onclick = () => { if(confirm(m.label+" definitief verwijderen?")) disableDefaultMeal(m.id); };
+      delBtn.textContent = "🗑";
+      delBtn.title = "Verwijderen";
+      delBtn.onclick = () => { if(confirm(m.label+" definitief verwijderen?")) deleteCustomMeal(m.id); };
+      item.appendChild(delBtn);
     }
 
     div2.appendChild(item);
@@ -11484,6 +11500,58 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
   </div>
 </div>
   <div id="credit-toast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:8px 20px;border-radius:99px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.15)"></div>
+
+
+<!-- Edit meal modal -->
+<div id="edit-meal-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.4);align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:20px 20px 40px">
+    <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:14px">Gerecht bewerken</div>
+    <input type="hidden" id="edit-meal-id">
+    <input type="hidden" id="edit-meal-emoji-val">
+
+    <div class="emoji-picker" id="edit-emoji-picker" style="margin-bottom:12px"></div>
+
+    <div class="field">
+      <label class="label">Naam</label>
+      <input type="text" id="edit-meal-name" maxlength="60"
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <div class="field">
+      <label class="label">Notitie (optioneel)</label>
+      <input type="text" id="edit-meal-note"
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <div class="field">
+      <label class="label">Bijgerecht (optioneel)</label>
+      <input type="text" id="edit-meal-side" placeholder="bijv. salade, rijst..."
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <div class="field">
+      <label class="label">Ingredi&euml;nten (optioneel)</label>
+      <textarea id="edit-meal-ingredients" rows="3"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+    </div>
+    <div class="field">
+      <label class="label">Bereidingswijze (optioneel)</label>
+      <textarea id="edit-meal-instructions" rows="3"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;outline:none"></textarea>
+    </div>
+    <div id="edit-meal-ai-suggest-wrap" style="margin-bottom:12px">
+      <button id="edit-meal-ai-suggest-btn" onclick="generateEditMealRecipe()"
+        style="width:100%;padding:10px;border-radius:var(--r);border:1.5px dashed var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+        &#x2728; AI: stel recept voor
+      </button>
+    </div>
+    <div class="field">
+      <label class="label">Recept URL (optioneel)</label>
+      <input type="url" id="edit-meal-url" placeholder="https://..."
+        style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" />
+    </div>
+    <button class="btn btn-primary" onclick="saveEditMeal()" style="width:100%;margin-bottom:8px">Opslaan</button>
+    <button class="btn btn-ghost" onclick="closeEditMeal()" style="width:100%">Annuleren</button>
+  </div>
+</div>
+
 
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label"><span data-i18n="nav_home">Home</span></span></button>
