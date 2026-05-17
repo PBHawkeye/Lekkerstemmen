@@ -4755,8 +4755,8 @@ function renderCustomMealsList() {
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">\uD83D\uDCD6</button>':'') +
         '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>'+
-        '<button data-meal-id="'+m.id+'" data-meal-label="'+m.name+'" data-meal-emoji="'+m.emoji+'" data-meal-note="'+(m.note||'')+'" data-meal-url="'+(m.recipe_url||'')+'" data-meal-side="'+(m.side_dish||'')+'" onclick="openEditFromBtn(this)" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
-        '<button onclick="openShareMealModal(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Delen met vrienden">&#x1F91D;</button>'+
+        '<button onclick="openEditMeal(customMeals.find(x=>x.id===\''+m.id+'\')|| {})" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
+        
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">\uD83D\uDDD1</button>'+
         '</div>'+
         (lastComment?
@@ -4809,7 +4809,6 @@ function renderCustomMealsList() {
     editBtn.onclick = () => {
       // Haal volledig object op uit customMeals (bevat ook ingredients/instructions)
       const full = customMeals.find(cm => cm.id === m.id) || m;
-      console.log('[EditBtn] m.id:', m.id, 'full.ingredients:', full.ingredients?.substring(0,50), 'full.instructions:', full.instructions?.substring(0,50));
       openEditMeal({
         id: full.id || '',
         name: full.name || full.label || '',
@@ -5814,7 +5813,6 @@ function showAIProposal() {
 let editSelectedEmoji = '\uD83C\uDF7D';
 
 function openEditMeal(meal) {
-  console.log('[EditMeal] meal object:', JSON.stringify({id:meal.id,name:meal.name,ingredients:meal.ingredients?.substring(0,50),instructions:meal.instructions?.substring(0,50)}));
   const _el_edit_meal_id = document.getElementById('edit-meal-id'); if (_el_edit_meal_id) _el_edit_meal_id.value = meal.id || '';
   const _el_edit_meal_name = document.getElementById('edit-meal-name'); if (_el_edit_meal_name) _el_edit_meal_name.value = meal.name || meal.label || '';
   const _el_edit_meal_note = document.getElementById('edit-meal-note'); if (_el_edit_meal_note) _el_edit_meal_note.value = meal.note || '';
