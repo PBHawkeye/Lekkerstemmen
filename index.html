@@ -3620,8 +3620,8 @@ async function loadData() {
     sb.from('checkins_with_context').select('*').eq('profile_id',profileId).gte('eaten_at',sinceStr).order('eaten_at',{ascending:false}).limit(60),
     sb.from('custom_meals').select('*').eq('family_id',familyId).order('created_at',{ascending:true}),
     sb.from('weekly_menu').select('*').eq('family_id',familyId)
-      .gte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset-7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })())
-      .lte('week_of', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset+7); const day=d.getDay(); d.setDate(d.getDate()-day+(day===0?-6:1)); return d.toISOString().split('T')[0]; })()),
+      .gte('day_date', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset-7); return d.toISOString().split('T')[0]; })())
+      .lte('day_date', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset+21); return d.toISOString().split('T')[0]; })()),
     sb.from('family_settings').select('*').eq('family_id',familyId).maybeSingle(),
     sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart).order('sort_order'),
   ]);
@@ -4574,6 +4574,17 @@ function refreshHome() {
     if (published.length === 0) {
       previewList.innerHTML = '<div style="color:var(--muted);font-size:14px;font-style:italic;padding:4px 0">Menu voor komende dagen nog niet bepaald.</div>';
       unhide(menuPreview);
+      // Probeer alsnog te laden met bredere range
+      sb.from('weekly_menu')
+        .select('*').eq('family_id', currentProfile.family_id)
+        .eq('published', true).gte('day_date', today2)
+        .order('day_date').limit(21)
+        .then(({data: futureMenu}) => {
+          if (futureMenu && futureMenu.length > 0) {
+            weeklyMenu = [...weeklyMenu, ...futureMenu.filter(m => !weeklyMenu.find(w => w.id === m.id))];
+            refreshHome();
+          }
+        });
       return;
     }
     const previewDays = {};
