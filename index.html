@@ -10518,10 +10518,26 @@ async function confirmMealPick() {
       }
     }
   } else if (selectedCook === 'uiteten' || selectedCook === 'afhaal') {
-    // Uit eten / afhaal: geen gerecht nodig
-    mealId = null;
-    mealName = selectedCook === 'uiteten' ? 'Uit eten' : 'Afhaal';
-    mealEmoji = selectedCook === 'uiteten' ? '\uD83C\uDF7D' : '\uD83D\uDED2';
+    // Uit eten / afhaal: geen gerecht nodig — gebruik een vaste placeholder UUID
+    // die automatisch aangemaakt wordt als die nog niet bestaat
+    const uitEtenLabel = selectedCook === 'uiteten' ? 'Uit eten' : 'Afhaal';
+    const uitEtenEmoji = selectedCook === 'uiteten' ? '\uD83C\uDF7D' : '\uD83D\uDED2';
+    const existingPlaceholder = customMeals.find(m => m.name === uitEtenLabel);
+    if (existingPlaceholder) {
+      mealId = existingPlaceholder.id;
+    } else {
+      const { data: newPlaceholder } = await sb.from('custom_meals').insert({
+        family_id: currentProfile.family_id,
+        name: uitEtenLabel,
+        emoji: uitEtenEmoji,
+      }).select().maybeSingle();
+      if (newPlaceholder) {
+        mealId = newPlaceholder.id;
+        customMeals.push(newPlaceholder);
+      }
+    }
+    mealName = uitEtenLabel;
+    mealEmoji = uitEtenEmoji;
   } else return;
 
   const weekStart = getMenuWeekStart();
