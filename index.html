@@ -10683,7 +10683,8 @@ async function analyseWeekMenu() {
   const familySize = getFamilyMembers().length;
   const prompt = 'Analyseer dit weekmenu voor een gezin van ' + familySize + ' personen:\n\n'
     + menuText + '\n\n'
-    + 'Geef een korte, praktische analyse van:\n'
+    + 'Begin je antwoord ALTIJD met een score op het formaat: **X/10** gevolgd door een korte zin waarom.\n\n'
+    + 'Geef daarna een korte, praktische analyse van:\n'
     + '1. Voedingswaarde en gezondheid (vitamines, groenten, eiwitten, koolhydraten)\n'
     + '2. Afwisseling en variatie\n'
     + '3. Concrete suggesties voor verbetering\n'
