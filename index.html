@@ -5038,6 +5038,117 @@ function renderCustomMealsList() {
 }
 
 
+
+// ── Foto-analyse voor nieuw gerecht ──────────────────────────
+async function analyzeMealPhoto(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('meal-photo-status');
+  const msgEl = document.getElementById('meal-photo-msg');
+  const btn = document.getElementById('meal-photo-btn');
+
+  if (statusEl) statusEl.style.display = '';
+  if (btn) btn.style.opacity = '0.5';
+  if (msgEl) msgEl.textContent = ' Foto analyseren...';
+
+  try {
+    // Lees foto als base64
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+    const mediaType = file.type || 'image/jpeg';
+
+    // Stuur naar Anthropic API met vision
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 800,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64 }
+            },
+            {
+              type: 'text',
+              text: 'Dit is een foto van een gerecht. Analyseer wat je ziet en geef een JSON-object terug met deze velden:\n' +
+                '- naam: Nederlandse naam van het gerecht\n' +
+                '- emoji: 1 passende food emoji\n' +
+                '- ingredienten: lijst van ingrediënten (als tekst, met regeleinden)\n' +
+                '- bereidingswijze: stap-voor-stap bereiding (genummerd)\n' +
+                '- notitie: korte beschrijving (optioneel)\n\n' +
+                'Geef ALLEEN het JSON-object terug, geen uitleg.'
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content?.[0]?.text || '';
+
+    // Parse JSON uit response
+    let parsed;
+    try {
+      const clean = text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      // Probeer JSON uit de tekst te extraheren
+      const match = text.match(/\{[\s\S]+\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Kon gerecht niet herkennen');
+    }
+
+    // Vul velden in
+    if (parsed.naam) {
+      const nameEl = document.getElementById('new-meal-name');
+      if (nameEl) nameEl.value = parsed.naam;
+    }
+    if (parsed.emoji) {
+      selectedEmoji = parsed.emoji;
+      renderEmojiPicker();
+      const emojiVal = document.getElementById('new-meal-emoji-val');
+      // Update hidden emoji value if it exists
+      if (emojiVal) emojiVal.value = parsed.emoji;
+    }
+    if (parsed.notitie) {
+      const noteEl = document.getElementById('new-meal-note');
+      if (noteEl) noteEl.value = parsed.notitie;
+    }
+    if (parsed.ingredienten) {
+      const ingrEl = document.getElementById('new-meal-ingredients');
+      if (ingrEl) ingrEl.value = parsed.ingredienten;
+    }
+    if (parsed.bereidingswijze) {
+      const instEl = document.getElementById('new-meal-instructions');
+      if (instEl) instEl.value = parsed.bereidingswijze;
+    }
+
+    if (msgEl) msgEl.textContent = ' ✓ ' + (parsed.naam || 'Gerecht') + ' herkend!';
+    setTimeout(() => {
+      if (statusEl) statusEl.style.display = 'none';
+    }, 3000);
+
+  } catch(e) {
+    if (msgEl) msgEl.textContent = ' Kon gerecht niet herkennen: ' + e.message;
+    setTimeout(() => {
+      if (statusEl) statusEl.style.display = 'none';
+    }, 3000);
+  } finally {
+    if (btn) btn.style.opacity = '1';
+    // Reset file input voor volgende foto
+    input.value = '';
+  }
+}
+
 function openAddMealSheet() {
   recipePhotos = [];
   renderRecipePhotos();
@@ -10406,6 +10517,11 @@ async function confirmMealPick() {
         customMeals.push(saved);
       }
     }
+  } else if (selectedCook === 'uiteten' || selectedCook === 'afhaal') {
+    // Uit eten / afhaal: geen gerecht nodig
+    mealId = null;
+    mealName = selectedCook === 'uiteten' ? 'Uit eten' : 'Afhaal';
+    mealEmoji = selectedCook === 'uiteten' ? '\uD83C\uDF7D' : '\uD83D\uDED2';
   } else return;
 
   const weekStart = getMenuWeekStart();
@@ -11441,6 +11557,22 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 <div id="add-meal-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;align-items:flex-end;justify-content:center">
   <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px 40px;max-height:90vh;overflow-y:auto">
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:14px">Nieuw gerecht</div>
+
+    <!-- Foto-analyse -->
+    <div style="margin-bottom:14px">
+      <input type="file" id="meal-photo-input" accept="image/*" capture="environment"
+        style="display:none" onchange="analyzeMealPhoto(this)" />
+      <button type="button" onclick="document.getElementById('meal-photo-input').click()"
+        id="meal-photo-btn"
+        style="width:100%;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:var(--green-bg);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span style="font-size:20px">&#x1F4F7;</span> Foto maken &amp; AI herkent het gerecht
+      </button>
+      <div id="meal-photo-status" style="display:none;margin-top:8px;padding:10px 12px;background:var(--green-bg);border-radius:var(--r);font-size:13px;color:var(--green)">
+        <span id="meal-photo-spinner" style="display:inline-block;animation:ptr-spin 0.8s linear infinite">&#x21BB;</span>
+        <span id="meal-photo-msg"> Foto analyseren...</span>
+      </div>
+    </div>
+
     <div class="emoji-picker" id="emoji-picker"></div>
     <div class="field">
       <label class="label">Naam</label>
