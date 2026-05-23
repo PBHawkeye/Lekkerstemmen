@@ -764,7 +764,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
   </div>
   <div class="meals-wrap">
     <div style="padding:0 0 12px">
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <button onclick="openAddMealSheet()" class="btn btn-primary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
           <span style="font-size:18px">+</span> Toevoegen
         </button>
@@ -772,6 +772,11 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
           <span style="font-size:16px">✨</span> AI voorstellen
         </button>
       </div>
+      <button onclick="openMealChatAssistant()" class="btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:#F0EEFF;color:#7C6FF7;border:1.5px solid #C5BEFF;padding:10px">
+        <span style="font-size:18px">&#x1F4AC;</span>
+        <span>Chat: help me een gerecht kiezen</span>
+        <span style="font-size:11px;color:#9B8FF0;margin-left:2px">(1 credit)</span>
+      </button>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
     <div class="label" style="margin-bottom:8px">Onze gerechtenlijst</div>
@@ -5168,7 +5173,6 @@ REGELS (strikt):
 - Gebruik af en toe een emoji voor leesbaarheid maar overdrijf niet.`;
 
 function openMealChatAssistant() {
-  if (!useCredit()) return; // checkt en trekt credit af
   _mealChatHistory = [];
   _mealChatSuggestion = null;
 
@@ -5231,30 +5235,26 @@ async function sendMealChatMessage() {
   input.value = '';
   addChatMessage('user', text);
 
-  // Credit check
-  if (!useCredit()) {
-    addChatMessage('ai', '\u26A0\uFE0F Je hebt geen credits meer. Koop nieuwe credits via het profiel-scherm.');
-    return;
-  }
-
   _mealChatHistory.push({ role: 'user', content: text });
 
   if (sendBtn) sendBtn.disabled = true;
   const loadingBubble = addChatMessage('ai', '', true);
 
   try {
-    const response = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 600,
-        system: MEAL_CHAT_SYSTEM,
-        messages: _mealChatHistory,
-      })
-    });
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 600,
+      system: MEAL_CHAT_SYSTEM,
+      messages: _mealChatHistory,
+    }, 1, 'Gerecht-assistent chat');
 
-    if (!response?.ok) throw new Error('API fout');
+    if (!response) {
+      loadingBubble?.remove();
+      addChatMessage('ai', '\u26A0\uFE0F Geen credits meer. Koop nieuwe credits via Profiel.');
+      if (sendBtn) sendBtn.disabled = false;
+      return;
+    }
+    if (!response.ok) throw new Error('API fout');
     const data = await response.json();
     const reply = (data.content?.[0]?.text || '').trim();
 
@@ -5284,8 +5284,7 @@ async function sendMealChatMessage() {
   } catch(e) {
     loadingBubble?.remove();
     addChatMessage('ai', 'Sorry, er ging iets mis. Probeer het opnieuw.');
-    // Credit teruggeven bij fout
-    if (typeof addCredits === 'function') addCredits(1);
+
   } finally {
     if (sendBtn) sendBtn.disabled = false;
     document.getElementById('meal-chat-input')?.focus();
