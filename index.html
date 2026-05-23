@@ -4311,7 +4311,8 @@ function refreshHome() {
 
   // Check of er vandaag een check-in is (op datum of meal_id)
   const todayDateStr = todayStr();
-  const hasCheckedIn = checkins.some(c=>
+  // Check-in alleen geldig als het voor de getoonde datum is (niet door dag-navigatie)
+  const hasCheckedIn = isToday && checkins.some(c=>
     c.meal_id===todayMeal?.id ||
     c.eaten_at===todayDateStr
   );
