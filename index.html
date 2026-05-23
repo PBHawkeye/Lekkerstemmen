@@ -5160,17 +5160,20 @@ async function analyzeMealPhoto(input) {
 let _mealChatHistory = [];
 let _mealChatSuggestion = null; // huidig voorgesteld gerecht
 
-const MEAL_CHAT_SYSTEM = `Je bent een vriendelijke Nederlandse kookassistent die gezinnen helpt een nieuw gerecht te kiezen voor hun receptenlijst.
-
-REGELS (strikt):
-- Praat ALLEEN over eten, gerechten, recepten, ingrediënten en kooktechnieken.
-- Als iemand over iets anders begint, breng je het gesprek vriendelijk maar direct terug naar eten.
-- Stel maximaal 1 gerecht per keer voor.
-- Als je een gerecht voorstelt, sluit je af met exact dit formaat op een nieuwe regel:
-  VOORSTEL: {"naam": "...", "emoji": "...", "ingredienten": "...", "bereidingswijze": "...", "notitie": "..."}
-- De bereidingswijze geef je in genummerde stappen.
-- Wees concreet en praktisch. Denk aan gezinnen met kinderen.
-- Gebruik af en toe een emoji voor leesbaarheid maar overdrijf niet.`;
+function getMealChatSystem() {
+  const bestaand = customMeals.slice(0, 15).map(m => m.name).join(', ');
+  return 'Je bent een vriendelijke Nederlandse kookassistent die gezinnen helpt een nieuw gerecht te kiezen.'
+    + (bestaand ? '\nHet gezin heeft al: ' + bestaand + '. Stel iets nieuws voor.' : '')
+    + '\n\nREGELS (strikt):\n'
+    + '- Praat ALLEEN over eten, gerechten, recepten, ingrediënten en kooktechnieken.\n'
+    + '- Als iemand over iets anders begint, breng je het gesprek vriendelijk terug naar eten.\n'
+    + '- Stel maximaal 1 gerecht per keer voor.\n'
+    + '- Noem de bestaande gerechten NIET in de chat tenzij de gebruiker ernaar vraagt.\n'
+    + '- Als je een gerecht voorstelt, sluit je af met:\n'
+    + '  VOORSTEL: {"naam": "...", "emoji": "...", "ingredienten": "...", "bereidingswijze": "...", "notitie": "..."}\n'
+    + '- Bereidingswijze in genummerde stappen. Wees concreet, denk aan gezinnen met kinderen.\n'
+    + '- Gebruik spaarzaam emoji.';
+}
 
 function openMealChatAssistant() {
   _mealChatHistory = [];
@@ -5187,10 +5190,7 @@ function openMealChatAssistant() {
   modal.style.display = 'flex';
 
   // Openingsbericht van AI
-  const familyMeals = customMeals.slice(0, 10).map(m => m.name).join(', ');
-  const intro = 'Hoi! Ik help je een nieuw gerecht vinden. ' +
-    (familyMeals ? 'Jullie hebben al: ' + familyMeals + '. ' : '') +
-    'Wat voor soort gerecht zoek je? Denk aan: soort keuken, hoofdingredient, bereidingstijd, of wat de kinderen lekker vinden.';
+  const intro = 'Hoi! Wat voor soort gerecht zoek je? Denk aan: soort keuken, hoofdingrediënt, bereidingstijd, of wat de kinderen lekker vinden.';
   addChatMessage('ai', intro);
 }
 
@@ -5244,7 +5244,7 @@ async function sendMealChatMessage() {
     const response = await anthropicFetch({
       model: 'claude-sonnet-4-5',
       max_tokens: 600,
-      system: MEAL_CHAT_SYSTEM,
+      system: getMealChatSystem(),
       messages: _mealChatHistory,
     }, 1, 'Gerecht-assistent chat');
 
@@ -12380,8 +12380,8 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 
 
 <!-- Meal Chat Assistant Modal -->
-<div id="meal-chat-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.5);align-items:flex-end">
-  <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;height:75vh;display:flex;flex-direction:column;padding:0">
+<div id="meal-chat-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.5);align-items:flex-end">
+  <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;height:calc(75vh - 62px);max-height:calc(100vh - 130px);display:flex;flex-direction:column;padding:0;margin-bottom:62px">
 
     <!-- Header -->
     <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
