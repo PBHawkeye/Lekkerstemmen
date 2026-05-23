@@ -5150,6 +5150,184 @@ async function analyzeMealPhoto(input) {
   }
 }
 
+
+// ── Meal Chat Assistant ───────────────────────────────────────
+let _mealChatHistory = [];
+let _mealChatSuggestion = null; // huidig voorgesteld gerecht
+
+const MEAL_CHAT_SYSTEM = `Je bent een vriendelijke Nederlandse kookassistent die gezinnen helpt een nieuw gerecht te kiezen voor hun receptenlijst.
+
+REGELS (strikt):
+- Praat ALLEEN over eten, gerechten, recepten, ingrediënten en kooktechnieken.
+- Als iemand over iets anders begint, breng je het gesprek vriendelijk maar direct terug naar eten.
+- Stel maximaal 1 gerecht per keer voor.
+- Als je een gerecht voorstelt, sluit je af met exact dit formaat op een nieuwe regel:
+  VOORSTEL: {"naam": "...", "emoji": "...", "ingredienten": "...", "bereidingswijze": "...", "notitie": "..."}
+- De bereidingswijze geef je in genummerde stappen.
+- Wees concreet en praktisch. Denk aan gezinnen met kinderen.
+- Gebruik af en toe een emoji voor leesbaarheid maar overdrijf niet.`;
+
+function openMealChatAssistant() {
+  if (!useCredit()) return; // checkt en trekt credit af
+  _mealChatHistory = [];
+  _mealChatSuggestion = null;
+
+  const modal = document.getElementById('meal-chat-modal');
+  const msgs = document.getElementById('meal-chat-messages');
+  const acceptBar = document.getElementById('meal-chat-accept-bar');
+  if (!modal) return;
+
+  // Reset
+  if (msgs) msgs.innerHTML = '';
+  if (acceptBar) acceptBar.style.display = 'none';
+  modal.style.display = 'flex';
+
+  // Openingsbericht van AI
+  const familyMeals = customMeals.slice(0, 10).map(m => m.name).join(', ');
+  const intro = 'Hoi! Ik help je een nieuw gerecht vinden. ' +
+    (familyMeals ? 'Jullie hebben al: ' + familyMeals + '. ' : '') +
+    'Wat voor soort gerecht zoek je? Denk aan: soort keuken, hoofdingredient, bereidingstijd, of wat de kinderen lekker vinden.';
+  addChatMessage('ai', intro);
+}
+
+function closeMealChatAssistant() {
+  const modal = document.getElementById('meal-chat-modal');
+  if (modal) modal.style.display = 'none';
+  _mealChatHistory = [];
+  _mealChatSuggestion = null;
+}
+
+function addChatMessage(role, text, isLoading) {
+  const msgs = document.getElementById('meal-chat-messages');
+  if (!msgs) return;
+
+  const bubble = document.createElement('div');
+  const isUser = role === 'user';
+  bubble.style.cssText = 'max-width:85%;padding:10px 14px;border-radius:' +
+    (isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px') +
+    ';font-size:13px;line-height:1.5;' +
+    (isUser
+      ? 'background:var(--green);color:white;align-self:flex-end;margin-left:auto'
+      : 'background:#F4F4F8;color:var(--text);align-self:flex-start');
+
+  if (isLoading) {
+    bubble.id = 'meal-chat-loading';
+    bubble.innerHTML = '<span style="animation:ptr-spin 0.8s linear infinite;display:inline-block">&#x21BB;</span> Denkt na...';
+  } else {
+    bubble.innerHTML = text.replace(/\n/g, '<br>');
+  }
+
+  msgs.appendChild(bubble);
+  msgs.scrollTop = msgs.scrollHeight;
+  return bubble;
+}
+
+async function sendMealChatMessage() {
+  const input = document.getElementById('meal-chat-input');
+  const sendBtn = document.getElementById('meal-chat-send-btn');
+  const text = input?.value?.trim();
+  if (!text) return;
+
+  input.value = '';
+  addChatMessage('user', text);
+
+  // Credit check
+  if (!useCredit()) {
+    addChatMessage('ai', '\u26A0\uFE0F Je hebt geen credits meer. Koop nieuwe credits via het profiel-scherm.');
+    return;
+  }
+
+  _mealChatHistory.push({ role: 'user', content: text });
+
+  if (sendBtn) sendBtn.disabled = true;
+  const loadingBubble = addChatMessage('ai', '', true);
+
+  try {
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 600,
+        system: MEAL_CHAT_SYSTEM,
+        messages: _mealChatHistory,
+      })
+    });
+
+    if (!response?.ok) throw new Error('API fout');
+    const data = await response.json();
+    const reply = (data.content?.[0]?.text || '').trim();
+
+    // Verwijder loading bubble
+    loadingBubble?.remove();
+
+    // Check op voorstel
+    const proposalMatch = reply.match(/VOORSTEL:\s*(\{[\s\S]+\})/);
+    let displayText = reply;
+
+    if (proposalMatch) {
+      try {
+        _mealChatSuggestion = JSON.parse(proposalMatch[1]);
+        // Verberg VOORSTEL JSON uit de weergave
+        displayText = reply.replace(/VOORSTEL:[\s\S]+$/, '').trim();
+        // Toon overnemen-knop
+        const acceptBar = document.getElementById('meal-chat-accept-bar');
+        if (acceptBar) acceptBar.style.display = '';
+      } catch(e) { /* JSON parse mislukt, toon gewoon de tekst */ }
+    } else {
+      // Geen nieuw voorstel: verberg overnemen-knop als er geen actief voorstel is
+    }
+
+    _mealChatHistory.push({ role: 'assistant', content: reply });
+    addChatMessage('ai', displayText || '...');
+
+  } catch(e) {
+    loadingBubble?.remove();
+    addChatMessage('ai', 'Sorry, er ging iets mis. Probeer het opnieuw.');
+    // Credit teruggeven bij fout
+    if (typeof addCredits === 'function') addCredits(1);
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+    document.getElementById('meal-chat-input')?.focus();
+  }
+}
+
+async function acceptMealSuggestion() {
+  if (!_mealChatSuggestion) return;
+  const s = _mealChatSuggestion;
+
+  const btn = document.querySelector('#meal-chat-accept-bar button');
+  if (btn) { btn.textContent = 'Opslaan...'; btn.disabled = true; }
+
+  const { data: saved, error } = await sb.from('custom_meals').insert({
+    family_id: currentProfile.family_id,
+    name: s.naam,
+    emoji: s.emoji || '\uD83C\uDF7D',
+    note: s.notitie || null,
+    ingredients: s.ingredienten || null,
+    instructions: s.bereidingswijze || null,
+  }).select().maybeSingle();
+
+  if (!error && saved) {
+    customMeals.push(saved);
+    closeMealChatAssistant();
+    // Sluit ook het add-meal sheet
+    closeAddMealSheet();
+    // Herlaad gerechtenlijst
+    renderCustomMealsList();
+
+    // Toast
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap';
+    toast.textContent = '\u2713 ' + s.naam + ' toegevoegd!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  } else {
+    if (btn) { btn.textContent = '\u2713 Dit gerecht toevoegen aan mijn lijst'; btn.disabled = false; }
+    addChatMessage('ai', '\u26A0\uFE0F Kon het gerecht niet opslaan. Probeer het opnieuw.');
+  }
+}
+
 function openAddMealSheet() {
   recipePhotos = [];
   renderRecipePhotos();
@@ -11585,6 +11763,10 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         style="width:100%;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:var(--green-bg);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
         <span style="font-size:20px">&#x1F4F7;</span> Foto maken &amp; AI herkent het gerecht
       </button>
+      <button type="button" onclick="openMealChatAssistant()"
+        style="width:100%;margin-top:8px;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:#F0EEFF;color:#7C6FF7;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span style="font-size:20px">&#x1F4AC;</span> Chat: help me een gerecht kiezen <span style="font-size:11px;font-weight:500;margin-left:4px">(1 credit)</span>
+      </button>
       <div id="meal-photo-status" style="display:none;margin-top:8px;padding:10px 12px;background:var(--green-bg);border-radius:var(--r);font-size:13px;color:var(--green)">
         <span id="meal-photo-spinner" style="display:inline-block;animation:ptr-spin 0.8s linear infinite">&#x21BB;</span>
         <span id="meal-photo-msg"> Foto analyseren...</span>
@@ -12193,6 +12375,45 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
     <button class="btn btn-primary" onclick="saveEditMeal()" style="width:100%;margin-bottom:8px">Opslaan</button>
     <button class="btn btn-ghost" onclick="closeEditMeal()" style="width:100%">Annuleren</button>
+  </div>
+</div>
+
+
+
+<!-- Meal Chat Assistant Modal -->
+<div id="meal-chat-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.5);align-items:flex-end">
+  <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;height:75vh;display:flex;flex-direction:column;padding:0">
+
+    <!-- Header -->
+    <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-family:'Fraunces',serif;font-weight:800;font-size:17px">&#x1F4AC; Gerecht-assistent</div>
+        <div style="font-size:11px;color:var(--muted)">Iedere vraag kost 1 credit</div>
+      </div>
+      <button onclick="closeMealChatAssistant()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">&times;</button>
+    </div>
+
+    <!-- Berichten -->
+    <div id="meal-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+
+    <!-- Voorstel overnemen knop (verborgen totdat AI een gerecht voorstelt) -->
+    <div id="meal-chat-accept-bar" style="display:none;padding:8px 16px;background:var(--green-bg);border-top:1px solid var(--green);flex-shrink:0">
+      <button onclick="acceptMealSuggestion()" class="btn btn-primary" style="width:100%">
+        &#x2713; Dit gerecht toevoegen aan mijn lijst
+      </button>
+    </div>
+
+    <!-- Input -->
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
+      <input type="text" id="meal-chat-input"
+        placeholder="bijv. iets met kip, snel klaar, kinderen lusten het..."
+        style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:99px;font-size:14px;font-family:inherit;outline:none"
+        onkeydown="if(event.key==='Enter')sendMealChatMessage()" />
+      <button onclick="sendMealChatMessage()" id="meal-chat-send-btn"
+        style="width:40px;height:40px;border-radius:50%;background:var(--green);border:none;color:white;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        &#x2192;
+      </button>
+    </div>
   </div>
 </div>
 
