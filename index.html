@@ -359,22 +359,46 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <h1 class="auth-title">My Fav<span> Meal</span></h1>
     <p style="font-size:11px;font-weight:500;letter-spacing:4px;text-transform:uppercase;color:var(--green);text-align:center;margin-bottom:8px"><span data-i18n="auth_tagline_short">Samen kiezen</span></p>
     <p class="auth-sub"><span data-i18n="auth_tagline">Jij kiest wat er vanavond op tafel komt.</span></p>
-    <div class="tabs">
-      <button class="tab active" onclick="authTab('login')" id="tab-login"><span data-i18n="btn_login">Inloggen</span></button>
-      <button class="tab" onclick="authTab('signup')" id="tab-signup"><span data-i18n="btn_register">Aanmelden</span></button>
+    <div class="tabs" style="display:flex;gap:4px">
+      <button class="tab active" onclick="authTab('login')" id="tab-login" style="flex:1"><span data-i18n="btn_login">Inloggen</span></button>
+      <button class="tab" onclick="authTab('signup')" id="tab-signup" style="flex:1"><span data-i18n="btn_register">Aanmelden</span></button>
+      <button class="tab" onclick="authTab('username')" id="tab-username" style="flex:1">Gebruikersnaam</button>
     </div>
     <div id="auth-error" class="msg-error hidden"></div>
     <div id="auth-success" class="msg-success hidden"></div>
-    <div class="field"><label class="label"><span data-i18n="lbl_email">E-mailadres</span></label><input type="email" id="auth-email" placeholder="jouw@email.nl" /></div>
-    <div class="field" id="auth-password-field"><label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
-    <button class="btn btn-primary" onclick="doAuth()" id="auth-btn"><span data-i18n="btn_login">Inloggen</span> &#x2192;</button>
-    <div id="auth-forgot-wrap" style="text-align:center;margin-top:10px">
-      <button type="button" onclick="doForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit">Wachtwoord vergeten?</button>
+
+    <!-- Email login/signup velden -->
+    <div id="auth-email-fields">
+      <div class="field"><label class="label"><span data-i18n="lbl_email">E-mailadres</span></label><input type="email" id="auth-email" placeholder="jouw@email.nl" /></div>
+      <div class="field" id="auth-password-field"><label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
+      <button class="btn btn-primary" onclick="doAuth()" id="auth-btn" style="width:100%"><span data-i18n="btn_login">Inloggen</span> &#x2192;</button>
+      <div id="auth-forgot-wrap" style="text-align:center;margin-top:10px">
+        <button type="button" onclick="doForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit">Wachtwoord vergeten?</button>
+      </div>
+      <div id="auth-resend-wrap" style="display:none;text-align:center;margin-top:10px">
+        <span style="font-size:13px;color:var(--muted)">Geen mail ontvangen? </span>
+        <button type="button" onclick="doResendEmail()" style="background:none;border:none;color:var(--green);font-size:13px;cursor:pointer;font-weight:700;font-family:inherit;text-decoration:underline">Opnieuw sturen</button>
+      </div>
     </div>
-    <div id="auth-resend-wrap" style="display:none;text-align:center;margin-top:10px">
-      <span style="font-size:13px;color:var(--muted)">Geen mail ontvangen? </span>
-      <button type="button" onclick="doResendEmail()" style="background:none;border:none;color:var(--green);font-size:13px;cursor:pointer;font-weight:700;font-family:inherit;text-decoration:underline">Opnieuw sturen</button>
+
+    <!-- Gebruikersnaam login velden -->
+    <div id="auth-username-fields" style="display:none">
+      <div style="background:var(--green-bg);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--green);margin-bottom:14px;line-height:1.5">
+        Voor gezinsleden zonder e-mailadres. De ouder stelt de gebruikersnaam en het wachtwoord in bij Gezin → lid bewerken.
+      </div>
+      <div class="field">
+        <label class="label">Gebruikersnaam</label>
+        <input type="text" id="auth-username" placeholder="bijv. emma" autocomplete="username" autocapitalize="none"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-username-password').focus()" />
+      </div>
+      <div class="field">
+        <label class="label">Wachtwoord</label>
+        <input type="password" id="auth-username-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+          onkeydown="if(event.key==='Enter')doUsernameLogin()" />
+      </div>
+      <button class="btn btn-primary" onclick="doUsernameLogin()" style="width:100%">Inloggen &#x2192;</button>
     </div>
+
     <div id="auth-reset-success" style="display:none;background:var(--green-bg);color:var(--green);border-radius:var(--r);padding:12px 14px;font-size:13px;font-weight:600;text-align:center;margin-top:10px"></div>
   </div>
 </div>
@@ -1223,6 +1247,10 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <div class="stat-card-title">&#x1F4AC; Laatste opmerkingen</div>
       <div id="stats-comments"></div>
     </div>
+    <div class="stat-card" id="stats-cook-card">
+      <div class="stat-card-title">&#x1F373; Mijn kookbeurten</div>
+      <div id="stats-cook-sessions"></div>
+    </div>
   </div>
 </div>
 
@@ -1752,16 +1780,23 @@ function show(id) {
 function hide(el) { if(el) el.classList.add('hidden'); }
 function unhide(el) { if(el) el.classList.remove('hidden'); }
 
+function localDateStr(d) {
+  // Gebruik lokale datum (niet UTC) om timezone-verschuiving na middernacht te vermijden
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
 function testDateStr(offset) {
   if (offset === undefined) offset = testDayOffset;
   const d = new Date();
   d.setDate(d.getDate() + offset);
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 function todayStr() {
   const d = new Date();
   d.setDate(d.getDate() + testDayOffset + homeDayOffset);
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 
 function testDayOfWeek() {
@@ -1775,16 +1810,19 @@ function testMondayOfWeek() {
   d.setDate(d.getDate() + testDayOffset);
   const day = d.getDay();
   const diff = d.getDate() - day + (day===0?-6:1);
-  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
+  const mon = new Date(d);
+  mon.setDate(diff);
+  return localDateStr(mon);
 }
 
 function nextMondayOfWeek() {
-  // Geeft de maandag van VOLGENDE week (voor stemmen die voor volgende week zijn)
   const d = new Date();
   d.setDate(d.getDate() + testDayOffset);
   const day = d.getDay();
   const diff = d.getDate() - day + (day===0?-6:1) + 7;
-  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
+  const mon = new Date(d);
+  mon.setDate(diff);
+  return localDateStr(mon);
 }
 
 function initials(name) { return name ? name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '?'; }
@@ -2127,8 +2165,17 @@ function authTab(tab) {
   const resendWrap = document.getElementById('auth-resend-wrap');
   const resetSucc = document.getElementById('auth-reset-success');
   if (forgotWrap) forgotWrap.style.display = isLogin ? '' : 'none';
-  if (resendWrap) resendWrap.style.display = 'none'; // alleen na succesvolle registratie
+  if (resendWrap) resendWrap.style.display = 'none';
   if (resetSucc) resetSucc.style.display = 'none';
+
+  // Username tab
+  const isUsername = tab === 'username';
+  const tabUsername = document.getElementById('tab-username');
+  if (tabUsername) tabUsername.className = 'tab' + (isUsername ? ' active' : '');
+  const emailFields = document.getElementById('auth-email-fields');
+  const usernameFields = document.getElementById('auth-username-fields');
+  if (emailFields) emailFields.style.display = isUsername ? 'none' : '';
+  if (usernameFields) usernameFields.style.display = isUsername ? '' : 'none';
 }
 
 async function doAuth() {
@@ -3027,6 +3074,134 @@ function timeAgo(isoStr) {
   return new Date(isoStr).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
 }
 
+
+
+// ── Gebruikersnaam login ──────────────────────────────────────
+async function doUsernameLogin() {
+  const username = (document.getElementById('auth-username')?.value || '').trim().toLowerCase();
+  const password = document.getElementById('auth-username-password')?.value || '';
+  const errEl = document.getElementById('auth-error');
+  if (errEl) errEl.classList.add('hidden');
+
+  if (!username || !password) {
+    if (errEl) { errEl.textContent = 'Vul je gebruikersnaam en wachtwoord in.'; errEl.classList.remove('hidden'); }
+    return;
+  }
+
+  const btn = document.querySelector('#auth-username-fields .btn-primary');
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+
+  try {
+    // Zoek het profiel op basis van gebruikersnaam
+    const { data: profile } = await sb.from('profiles')
+      .select('id,family_id,username')
+      .eq('username', username)
+      .maybeSingle();
+
+    if (!profile) throw new Error('Gebruikersnaam niet gevonden.');
+
+    // Inloggen met de nep-email
+    const fakeEmail = username + '@' + profile.family_id + '.myfavmeal.app';
+    const { data, error } = await sb.auth.signInWithPassword({ email: fakeEmail, password });
+    if (error) throw new Error('Onjuist wachtwoord.');
+
+    currentUser = data.user;
+    await loadProfile();
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
+  } finally {
+    if (btn) { btn.textContent = 'Inloggen →'; btn.disabled = false; }
+  }
+}
+
+async function setMemberUsername(profileId, username, password) {
+  // Sla gebruikersnaam op in profiles tabel
+  username = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (!username || username.length < 2) throw new Error('Gebruikersnaam te kort (min. 2 tekens, a-z, 0-9, _)');
+  if (password.length < 6) throw new Error('Wachtwoord te kort (min. 6 tekens)');
+
+  // Check of gebruikersnaam al bestaat
+  const { data: existing } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
+  if (existing && existing.id !== profileId) throw new Error('Gebruikersnaam al in gebruik.');
+
+  // Haal het profiel op voor family_id
+  const { data: profile } = await sb.from('profiles').select('id,family_id').eq('id', profileId).maybeSingle();
+  if (!profile) throw new Error('Profiel niet gevonden.');
+
+  const fakeEmail = username + '@' + profile.family_id + '.myfavmeal.app';
+
+  // Sla gebruikersnaam op in profiel
+  await sb.from('profiles').update({ username }).eq('id', profileId);
+
+  // Maak Supabase auth account aan of update wachtwoord
+  // Gebruik admin-functie via RPC (zie SQL script)
+  const { error } = await sb.rpc('set_member_password', {
+    p_email: fakeEmail,
+    p_password: password,
+    p_profile_id: profileId,
+  });
+  if (error) throw new Error('Kon account niet aanmaken: ' + error.message);
+}
+
+
+function openSetUsernameModal(profileId, memberName, currentUsername) {
+  const existing = document.getElementById('set-username-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'set-username-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
+  modal.innerHTML =
+    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;padding:20px 16px 40px">' +
+      '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px;margin-bottom:4px">Login instellen</div>' +
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">' + memberName + ' kan hiermee zelfstandig inloggen zonder e-mailadres.</div>' +
+      '<div class="field">' +
+        '<label class="label">Gebruikersnaam</label>' +
+        '<input type="text" id="set-username-input" value="' + currentUsername + '" ' +
+          'placeholder="bijv. emma (alleen a-z, 0-9, _)" autocapitalize="none" ' +
+          'style="width:100%;box-sizing:border-box;-webkit-appearance:none" />' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:4px">Alleen kleine letters, cijfers en _</div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<label class="label">' + (currentUsername ? 'Nieuw wachtwoord' : 'Wachtwoord') + '</label>' +
+        '<input type="password" id="set-username-pw" placeholder="Minimaal 6 tekens" ' +
+          'style="width:100%;box-sizing:border-box;-webkit-appearance:none" />' +
+      '</div>' +
+      '<div id="set-username-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:12px"></div>' +
+      '<div style="display:flex;gap:10px">' +
+        '<button onclick="document.getElementById(\'set-username-modal\').remove()" ' +
+          'style="flex:1;padding:14px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">Annuleren</button>' +
+        '<button onclick="saveUsernameLogin(\''+profileId+'\')" class="btn btn-primary" id="set-username-save-btn" style="flex:2">Opslaan →</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('set-username-input')?.focus(), 100);
+}
+
+async function saveUsernameLogin(profileId) {
+  const username = (document.getElementById('set-username-input')?.value || '').trim();
+  const password = document.getElementById('set-username-pw')?.value || '';
+  const errEl = document.getElementById('set-username-error');
+  const btn = document.getElementById('set-username-save-btn');
+
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+
+  try {
+    await setMemberUsername(profileId, username, password);
+    document.getElementById('set-username-modal')?.remove();
+    await loadFamilyMembers(); // Herlaad lijst
+    // Toon bevestiging
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999';
+    toast.textContent = '✓ Login ingesteld voor ' + username;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
+    if (btn) { btn.textContent = 'Opslaan →'; btn.disabled = false; }
+  }
+}
 
 async function doSignOut() {
   await sb.auth.signOut();
@@ -4107,16 +4282,14 @@ function refreshHome() {
     document.getElementById('nav-log').style.display = 'none';
     document.getElementById('nav-vote-btn').style.display = 'none';
     document.getElementById('nav-sport').style.display = 'none';
-    document.getElementById('nav-meals').style.display = 'none';
+    document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='none');
     document.getElementById('nav-stats').style.display = 'none';
     document.getElementById('nav-invite').style.display = 'none';
     document.getElementById('nav-menu') && (document.getElementById('nav-menu').style.display='');
-    document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='');
+    document.getElementById('nav-meals').style.display = '';
     document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
     document.getElementById('nav-status') && (document.getElementById('nav-status').style.display='');
     document.getElementById('nav-shopping') && (document.getElementById('nav-shopping').style.display='');
-    document.getElementById('nav-sport-parent') && (document.getElementById('nav-sport-parent').style.display='');
-    document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
   } else {
     // Kind nav: Home · Voorkeur · Sport
     // Verberg nav-action (Stem knop) en alle ouder items
@@ -5475,6 +5648,57 @@ async function renderStats() {
     });
   }
 
+  // Kookbeurten — toon per kookbeurt de scores en opmerkingen
+  const cookEl = document.getElementById('stats-cook-sessions');
+  const cookCard = document.getElementById('stats-cook-card');
+  if (cookEl) {
+    // Zoek weekmenu items waar currentProfile de kok is
+    const { data: myCooked } = await sb.from('weekly_menu')
+      .select('day_date,meal_name,meal_emoji,cook_id,cook_name')
+      .eq('family_id', familyId)
+      .eq('cook_id', currentProfile.id)
+      .eq('published', true)
+      .order('day_date', { ascending: false })
+      .limit(20);
+
+    if (!myCooked || myCooked.length === 0) {
+      if (cookCard) cookCard.style.display = 'none';
+    } else {
+      if (cookCard) cookCard.style.display = '';
+      const SE = {1:'😕', 2:'😐', 3:'😋'};
+      const SL = {1:'Niet lekker', 2:'Oké', 3:'Lekker!'};
+
+      cookEl.innerHTML = myCooked.map(m => {
+        // Zoek de check-ins voor die dag
+        const dayCis = allCis.filter(c => c.eaten_at === m.day_date);
+        const d = new Date(m.day_date + 'T12:00:00');
+        const dateLabel = d.toLocaleDateString('nl-NL', {weekday:'short', day:'numeric', month:'short'});
+        const scored = dayCis.filter(c => c.score);
+        const avg = scored.length ? scored.reduce((s,c) => s+c.score, 0) / scored.length : null;
+        const avgEmoji = avg >= 2.5 ? '😋' : avg >= 1.5 ? '😐' : avg !== null ? '😕' : '–';
+
+        const rows = dayCis.map(c =>
+          '<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0">' +
+          '<span style="font-size:16px;width:22px">' + (SE[c.score] || '·') + '</span>' +
+          '<div><div style="font-size:13px;font-weight:600">' + (c.child_name||'?') + '</div>' +
+          (c.comment ? '<div style="font-size:12px;color:var(--muted);font-style:italic">"' + c.comment + '"</div>' : '') +
+          '</div></div>'
+        ).join('');
+
+        return '<div style="padding:12px 0;border-bottom:1px solid var(--border)">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+            '<div>' +
+              '<span style="font-size:13px;font-weight:700">' + (m.meal_emoji||'🍽') + ' ' + m.meal_name + '</span>' +
+              '<span style="font-size:11px;color:var(--muted);margin-left:6px">' + dateLabel + '</span>' +
+            '</div>' +
+            '<span style="font-size:20px">' + avgEmoji + '</span>' +
+          '</div>' +
+          (rows || '<div style="font-size:12px;color:var(--muted);font-style:italic">Nog geen beoordelingen</div>') +
+        '</div>';
+      }).join('');
+    }
+  }
+
   // AI tekst
   const aiEl = document.getElementById('stats-ai-text');
   if (cis.length>=5) {
@@ -6217,7 +6441,7 @@ const EVENT_TYPES = {
   sport:  { emoji:'⚽', label:'Sport',              bg:'var(--green-bg)',    border:'var(--green)',      eetsNiet: false, tip:'Kies snelle/lichte gerecht' },
   late:   { emoji:'\uD83D\uDD50', label:'Laat thuis',          bg:'var(--amber-light)', border:'var(--amber)',      eetsNiet: false, tip:'Kies snelle gerecht' },
   out:    { emoji:'\uD83C\uDF7D', label:'Zakelijk diner / weg', bg:'#FFEEEE',           border:'var(--coral)',      eetsNiet: true,  tip:'Eet niet mee thuis' },
-  travel: { emoji:'✈️', label:'Op reis / niet thuis', bg:'#F0EEFF',           border:'#9F8FF7',           eetsNiet: true,  tip:'Eet niet mee thuis' },
+  travel: { emoji:'\u2708', label:'Op reis / niet thuis', bg:'#F0EEFF',           border:'#9F8FF7',           eetsNiet: true,  tip:'Eet niet mee thuis' },
 };
 
 const SPORT_CYCLE = [null, 'sport', 'late', 'out', 'travel'];
@@ -7062,14 +7286,25 @@ async function openCookScreen(menuEntry) {
     if (meal?.instructions && aiBtn2) aiBtn2.style.display = 'none';
   }
 
-  // Haal geschiedenis op
-  const {data:history} = await sb.from('checkins_with_context')
-    .select('*').eq('family_id', familyId)
-    .eq('meal_type', menuEntry.meal_id)
-    .order('eaten_at', {ascending: false})
-    .limit(20);
+  // Haal geschiedenis op — op meal_id of meal_name
+  let history = [];
+  if (menuEntry.meal_id) {
+    const {data: h1} = await sb.from('checkins_with_context')
+      .select('*').eq('family_id', familyId)
+      .eq('meal_type', menuEntry.meal_id)
+      .order('eaten_at', {ascending: false}).limit(20);
+    history = h1 || [];
+  }
+  // Fallback op naam als geen resultaten
+  if (!history.length && menuEntry.meal_name) {
+    const {data: h2} = await sb.from('checkins_with_context')
+      .select('*').eq('family_id', familyId)
+      .ilike('meal_name', menuEntry.meal_name)
+      .order('eaten_at', {ascending: false}).limit(20);
+    history = h2 || [];
+  }
 
-  renderCookHistory(history || []);
+  renderCookHistory(history);
 
   show('cook');
 }
@@ -10602,6 +10837,14 @@ async function loadFamilyMembers() {
       '<div style="flex:1"><div style="font-weight:700;font-size:14px">'+m.name+(isMe?' <span style="font-size:11px;color:var(--muted)">(jij)</span>':'')+'</div>'+
       '<div style="font-size:11px;color:var(--muted)">'+m.role+'</div></div>';
     if (!isMe) {
+      // Gebruikersnaam knop (voor leden zonder email)
+      const unBtn = document.createElement('button');
+      unBtn.style.cssText = 'font-size:12px;background:var(--green-bg);border:1px solid var(--green);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--green);margin-right:4px';
+      unBtn.textContent = m.username ? '🔑 ' + m.username : '+ login';
+      unBtn.title = 'Gebruikersnaam & wachtwoord instellen';
+      unBtn.onclick = () => openSetUsernameModal(m.id, m.name, m.username || '');
+      row.appendChild(unBtn);
+
       const delBtn = document.createElement('button');
       delBtn.style.cssText = 'font-size:13px;background:#FFEEEE;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--coral)';
       delBtn.textContent = 'Verwijder';
@@ -11810,18 +12053,18 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
     <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Voorkeur</span></button>
     <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
+    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label"><span data-i18n="nav_menu">Menu</span></span></button>
     <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label"><span data-i18n="nav_shopping">Inkopen</span></span></button>
+    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label"><span data-i18n="nav_status">Status</span></span></button>
     <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
     <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
-    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label"><span data-i18n="nav_status">Status</span></span></button>
-    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label"><span data-i18n="nav_menu">Menu</span></span></button>
     <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
     <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
     <button class="nav-btn" id="nav-profile-child" onclick="goScreen('profile')" style="display:none"><span class="nav-icon">&#x1F464;</span><span class="nav-label">Profiel</span></button>
     <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label"><span data-i18n="nav_more">Meer</span></span></button>
   <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
     <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
-      <button class="nav-btn" onclick="goScreen('meals');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#127869;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
+      <button class="nav-btn" onclick="goScreen('sport');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
       <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
       <button class="nav-btn" onclick="goScreen('invite');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128106;</span><span class="nav-label">Gezin</span></button>
       <button class="nav-btn" onclick="goFriendsScreen();toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#x1F465;</span><span class="nav-label">Vrienden</span></button>
