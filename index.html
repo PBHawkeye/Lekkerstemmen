@@ -628,7 +628,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
   <div id="today-parent" class="today-card hidden">
     <div class="today-badge">Vandaag</div>
     <div class="today-q">Wat eten jullie vanavond?</div>
-    <button class="btn-white" onclick="goScreen('log')">Log gerecht →</button>
+    <button class="btn-white" onclick="openTodayMealPicker()">Gerecht kiezen →</button>
   </div>
   <div id="today-parent-done" class="today-card hidden">
     <div class="today-badge">Vandaag</div>
@@ -784,7 +784,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </div>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
-    <div class="label" style="margin-bottom:8px">Onze gerechtenlijst</div>
+    <div class="label" style="margin-bottom:8px">Onze gerechtenlijst <span id="meals-count" style="font-weight:500;color:var(--muted)"></span></div>
     <div id="custom-meals-list"></div>
   </div>
 </div>
@@ -4929,6 +4929,9 @@ function renderCustomMealsList() {
   const list = document.getElementById('custom-meals-list');
   if (!list) return;
   list.innerHTML = '';
+  // Update teller
+  const countEl = document.getElementById('meals-count');
+  if (countEl) countEl.textContent = customMeals.length ? '(' + customMeals.length + ')' : '';
 
   // Favorieten altijd bovenaan berekenen
   const favs = getFavoritesFromCheckins();
@@ -4958,7 +4961,7 @@ function renderCustomMealsList() {
           (m.side_dish?'<div style="font-size:11px;color:var(--muted);margin-top:2px">\uD83E\uDD57 '+m.side_dish+'</div>':'')+
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">\uD83D\uDCD6</button>':'') +
-        '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>'+
+        (checkins.some(c=>c.meal_type===m.id) ? '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>' : '')+
         '<button onclick="openEditMeal(customMeals.find(x=>x.id===\''+m.id+'\')|| {})" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         
         '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">\uD83D\uDDD1</button>'+
@@ -5476,6 +5479,18 @@ async function processPastedRecipe() {
     if (btn) { btn.disabled = false; }
     if (statusEl) statusEl.style.display = 'none';
   }
+}
+
+
+// ── Gerecht kiezen voor vandaag vanuit home (geen weekmenu) ──
+function openTodayMealPicker() {
+  const todayDate = todayStr();
+  // Bereken dayIndex (0=ma ... 6=zo)
+  const d = new Date(todayDate + 'T12:00:00');
+  const dayIndex = (d.getDay() + 6) % 7; // ma=0, zo=6
+  // Open de meal-picker met published=true flag
+  window._todayPickerPublish = true;
+  openMealPicker(todayDate, dayIndex, null);
 }
 
 function openAddMealSheet() {
@@ -7250,6 +7265,7 @@ async function applyProposalDay(dateStr, mealId, mealName, mealEmoji) {
 
   if (window._afterChangeMeal) {
     window._afterChangeMeal = false;
+    window._todayPickerPublish = false;
     const newEntry = weeklyMenu.find(m => m.day_date === currentPickDay.dateStr);
     if (newEntry) openCookScreen(newEntry);
     else show('cook');
@@ -10926,7 +10942,8 @@ async function confirmMealPick() {
     corvee_ids: selectedCorvee.length ? JSON.stringify(selectedCorvee) : null,
     corvee_names: corveeNames.length ? corveeNames.join(', ') : null,
     // Bij "toch iets anders" de published-status van het origineel overnemen
-    published: window._afterChangeMeal && currentPickDay?.existing?.published ? true : false,
+    // Bij kiezen vanuit home (geen menu) direct als gepubliceerd opslaan
+    published: (window._afterChangeMeal && currentPickDay?.existing?.published) || window._todayPickerPublish ? true : false,
     variant: variant,
     for_profile_ids: forProfileIds,
   });
@@ -10963,6 +10980,7 @@ async function confirmMealPick() {
   // Vanuit cook-scherm: ga terug naar cook met nieuwe gerecht
   if (window._afterChangeMeal) {
     window._afterChangeMeal = false;
+    window._todayPickerPublish = false;
     const newEntry = weeklyMenu.find(m => m.day_date === dateStr && m.published !== false);
     // published kan false zijn na wijziging - pak gewoon de entry voor die dag
     const anyEntry = weeklyMenu.find(m => m.day_date === dateStr);
