@@ -1769,17 +1769,7 @@ let testPersonId = '0b34e680-45a6-437b-9dac-d1377dab2fef';
 const EMOJI_OPTIONS = ['\uD83C\uDF5D','\uD83C\uDF5A','\uD83E\uDD54','\uD83C\uDF72','\uD83C\uDF55','\uD83C\uDF5B','\uD83E\uDD6A','\uD83E\uDD69','\uD83C\uDF2E','\uD83E\uDD58','\uD83C\uDF5C','\uD83E\uDED5','\uD83E\uDD57','\uD83C\uDF57','\uD83D\uDC1F','\uD83C\uDF73','\uD83E\uDED4','\uD83E\uDDC7','\uD83E\uDD5E','\uD83C\uDF7D'];
 const DAYS = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
 
-const DEFAULT_MEALS = [
-  {id:'pasta',emoji:'\uD83C\uDF5D',label:'Pasta'},
-  {id:'rijst',emoji:'\uD83C\uDF5A',label:'Rijst'},
-  {id:'aardappelen',emoji:'\uD83E\uDD54',label:'Aardappelen'},
-  {id:'soep',emoji:'\uD83C\uDF72',label:'Soep'},
-  {id:'pizza',emoji:'\uD83C\uDF55',label:'Pizza'},
-  {id:'nasi',emoji:'\uD83C\uDF5B',label:'Nasi'},
-  {id:'brood',emoji:'\uD83E\uDD6A',label:'Brood'},
-  {id:'vlees',emoji:'\uD83E\uDD69',label:'Vlees'},
-  {id:'anders',emoji:'\uD83C\uDF7D',label:'Anders'},
-];
+const DEFAULT_MEALS = [];
 
 // ── HELPERS ────────────────────────────────────────────────────
 function show(id) {
@@ -2779,7 +2769,7 @@ function openManageSport(profileId) {
     }
     // Ververs
     if (indicator) indicator.classList.add('refreshing');
-    if (label) { label.innerHTML = '<span class="ptr-spinner">&#x21BB;</span> Verversen...'; }
+    if (label) { label.textContent = 'Verversen...'; }
     try {
       await loadData();
       // Herrender huidig scherm
@@ -4973,94 +4963,7 @@ function renderCustomMealsList() {
       list.appendChild(div);
     });
   }
-
-  // Standaard lijst
-  const div2 = document.createElement('div');
-  div2.style.cssText='margin-top:16px';
-  div2.innerHTML='<div class="label" style="margin-bottom:8px;opacity:0.6">Standaard gerechten</div>';
-  const disabledMeals = getDisabledMeals();
-
-  DEFAULT_MEALS.forEach(m => {
-    const disabled = disabledMeals.includes(m.id);
-    const usedInMenu = checkins.some(c=>c.meal_type===m.id);
-    const item = document.createElement('div');
-    item.className='custom-meal-item';
-    item.style.opacity = disabled ? '0.35' : '0.75';
-    if (disabled) item.style.background = '#F9F9F9';
-
-    const favOf2 = Object.values(favs).filter(f=>f.mealId===m.id).map(f=>f.personName);
-
-    item.innerHTML=
-      '<span class="custom-meal-emoji" style="'+(disabled?'filter:grayscale(1)':'')+'">'+m.emoji+'</span>'+
-      '<div style="flex:1">'+
-        '<div style="display:flex;align-items:center;gap:6px">'+
-          '<span class="custom-meal-name" style="'+(disabled?'text-decoration:line-through;color:#aaa':'')+'">'+m.label+'</span>'+
-          (disabled?'<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#F0F0F0;color:#aaa;font-weight:700">uitgeschakeld</span>':'') +
-          (favOf2.length>0&&!disabled?'<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700">❤ '+favOf2.join(' & ')+'</span>':'') +
-        '</div>'+
-        '<div style="font-size:11px;color:#aaa">'+(usedInMenu?'al gebruikt':'nooit gebruikt')+'</div>'+
-      '</div>';
-
-    // &#x1F4CA; Statistieken knop
-    const statsBtn = document.createElement("button");
-    statsBtn.style.cssText = "font-size:14px;background:var(--green-bg);border:none;border-radius:8px;padding:4px 7px;cursor:pointer";
-    statsBtn.textContent = "\uD83D\uDCCA";
-    statsBtn.title = "Statistieken";
-    statsBtn.onclick = () => openMealDetail(m.id, 'meals');
-    item.appendChild(statsBtn);
-
-    const editBtn = document.createElement("button");
-    editBtn.style.cssText = "font-size:14px;background:var(--green-bg);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
-    editBtn.textContent = "✏️";
-    editBtn.title = "Bewerken";
-    editBtn.onclick = () => {
-      // Haal volledig object op uit customMeals (bevat ook ingredients/instructions)
-      const full = customMeals.find(cm => cm.id === m.id) || m;
-      openEditMeal({
-        id: full.id || '',
-        name: full.name || full.label || '',
-        label: full.name || full.label || '',
-        emoji: full.emoji || '\uD83C\uDF7D',
-        note: full.note || '',
-        recipe_url: full.recipe_url || '',
-        side_dish: full.side_dish || '',
-        ingredients: full.ingredients || '',
-        instructions: full.instructions || '',
-      });
-    };
-    item.appendChild(editBtn);
-
-    if (disabled) {
-      const enableBtn = document.createElement("button");
-      enableBtn.style.cssText = "font-size:13px;background:#E0FAF4;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
-      enableBtn.textContent = "✓";
-      enableBtn.title = "Weer inschakelen";
-      enableBtn.onclick = () => enableDefaultMeal(m.id);
-      item.appendChild(enableBtn);
-    } else {
-      const disableBtn = document.createElement("button");
-      disableBtn.style.cssText = "font-size:13px;background:var(--amber-light);border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
-      disableBtn.textContent = "\uD83D\uDEAB";
-      disableBtn.title = "Uitschakelen";
-      disableBtn.onclick = () => disableDefaultMeal(m.id);
-      item.appendChild(disableBtn);
-    }
-
-    if (!usedInMenu) {
-      const delBtn = document.createElement("button");
-      delBtn.style.cssText = "font-size:13px;background:#FFEEEE;border:none;border-radius:8px;padding:4px 7px;cursor:pointer;margin-left:4px";
-      delBtn.textContent = "🗑";
-      delBtn.title = "Verwijderen";
-      delBtn.onclick = () => { if(confirm(m.label+" definitief verwijderen?")) deleteCustomMeal(m.id); };
-      item.appendChild(delBtn);
-    }
-
-    div2.appendChild(item);
-  });
-  list.appendChild(div2);
 }
-
-
 
 // ── Foto-analyse voor nieuw gerecht ──────────────────────────
 // Bewaar de foto-context voor de chat
