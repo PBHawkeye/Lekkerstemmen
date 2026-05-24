@@ -25,6 +25,7 @@
     }
     #ptr-indicator.visible { height: 52px; }
     #ptr-indicator.refreshing { height: 52px; }
+    body.ptr-active #s-loading { display: none !important; }
     @keyframes ptr-spin { to { transform: rotate(360deg); } }
     .ptr-spinner { display: inline-block; margin-right: 8px; animation: ptr-spin 0.8s linear infinite; }
     :root {
@@ -1299,7 +1300,7 @@ const TRANSLATIONS = {
     success_bad: 'Jammer!', success_bad_sub: 'Hopelijk morgen beter.',
     btn_home: 'Terug naar home', btn_auto_home: 'Ga je automatisch naartoe...',
     menu_title: 'Menu', menu_not_chosen: 'Nog niet gekozen', menu_published: '\u2713 gepubliceerd',
-    menu_publish: 'Menu publiceren voor kinderen \u2192', menu_update: 'Menu bijwerken \u2713',
+    menu_publish: 'Menu publiceren \u2192', menu_update: 'Menu bijwerken \u2713',
     menu_cancel: 'Annuleren', menu_add_second: '+ 2e gerecht toevoegen voor rest gezin',
     menu_kieslijst: '\u2699 Kieslijst instellen \u2192', menu_ai_proposal: '\u2728 AI menuvoorstel \u2192',
     menu_ai_analyse: '\u2728 AI: Is dit menu gezond en evenwichtig?',
@@ -1650,7 +1651,7 @@ function applyTranslations() {
     // Buttons
     'Terug naar home': t('btn_home'),
     'Ga je automatisch naartoe...': t('btn_auto_home'),
-    'Menu publiceren voor kinderen \u2192': t('menu_publish'),
+    'Menu publiceren \u2192': t('menu_publish'),
     'Menu bijwerken \u2713': t('menu_update'),
     'Annuleren': t('btn_cancel'),
     // Cook
@@ -2770,8 +2771,11 @@ function openManageSport(profileId) {
     // Ververs
     if (indicator) indicator.classList.add('refreshing');
     if (label) { label.textContent = 'Verversen...'; }
+    document.body.classList.add('ptr-active');
     try {
+      window._ptrRefreshing = true;
       await loadData();
+      window._ptrRefreshing = false;
       // Herrender huidig scherm
       const active = document.querySelector('.screen.active');
       const screenId = active?.id?.replace('s-', '');
@@ -2786,6 +2790,7 @@ function openManageSport(profileId) {
     setTimeout(() => {
       if (indicator) { indicator.classList.remove('visible','refreshing'); }
       if (label) label.textContent = 'Loslaten om te verversen';
+      document.body.classList.remove('ptr-active');
     }, 600);
     triggered = false;
   });
