@@ -772,11 +772,16 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
           <span style="font-size:16px">✨</span> AI voorstellen
         </button>
       </div>
-      <button onclick="openMealChatAssistant()" class="btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:#F0EEFF;color:#7C6FF7;border:1.5px solid #C5BEFF;padding:10px">
-        <span style="font-size:18px">&#x1F4AC;</span>
-        <span>Chat: help me een gerecht kiezen</span>
-        <span style="font-size:11px;color:#9B8FF0;margin-left:2px">(1 credit)</span>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button onclick="openMealChatAssistant()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#F0EEFF;color:#7C6FF7;border:1.5px solid #C5BEFF;padding:10px">
+          <span style="font-size:16px">&#x1F4AC;</span>
+          <span style="font-size:13px">Chat assistent</span>
+        </button>
+        <button onclick="openPasteRecipeSheet()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#FFF8EC;color:#C47F00;border:1.5px solid #FFD97A;padding:10px">
+          <span style="font-size:16px">&#x1F4CB;</span>
+          <span style="font-size:13px">Recept plakken</span>
+        </button>
+      </div>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
     <div class="label" style="margin-bottom:8px">Onze gerechtenlijst</div>
@@ -2362,6 +2367,12 @@ function renderFriendsScreen(friends, incoming, outgoing) {
   // Generate sectie alleen voor ouders
   const genSection = document.getElementById('friends-generate-section');
   if (genSection) genSection.style.display = currentProfile?.role === 'parent' ? '' : 'none';
+  // Admin-knop in meer-menu: alleen voor paul.brentjens@spotler.com
+  const adminNavBtn = document.getElementById('nav-more-admin');
+  if (adminNavBtn) {
+    const userEmail = currentUser?.email || '';
+    adminNavBtn.style.display = userEmail === 'paul.brentjens@spotler.com' ? 'flex' : 'none';
+  }
 }
 
 // ── Gezin detail met tabs ─────────────────────────────────────
@@ -4295,6 +4306,9 @@ function refreshHome() {
     document.getElementById('nav-more') && (document.getElementById('nav-more').style.display='');
     document.getElementById('nav-status') && (document.getElementById('nav-status').style.display='');
     document.getElementById('nav-shopping') && (document.getElementById('nav-shopping').style.display='');
+    // Admin knop in meer-menu
+    const _adminBtn = document.getElementById('nav-more-admin');
+    if (_adminBtn) _adminBtn.style.display = (currentUser?.email === 'paul.brentjens@spotler.com') ? 'flex' : 'none';
   } else {
     // Kind nav: Home · Voorkeur · Sport
     // Verberg nav-action (Stem knop) en alle ouder items
@@ -5046,6 +5060,10 @@ function renderCustomMealsList() {
 
 
 // ── Foto-analyse voor nieuw gerecht ──────────────────────────
+// Bewaar de foto-context voor de chat
+let _photoBase64 = null;
+let _photoMediaType = null;
+
 async function analyzeMealPhoto(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -5059,40 +5077,30 @@ async function analyzeMealPhoto(input) {
   if (msgEl) msgEl.textContent = ' Foto analyseren...';
 
   try {
-    // Lees foto als base64
     const base64 = await new Promise((res, rej) => {
       const reader = new FileReader();
       reader.onload = () => res(reader.result.split(',')[1]);
       reader.onerror = rej;
       reader.readAsDataURL(file);
     });
-
     const mediaType = file.type || 'image/jpeg';
 
-    // Stuur naar Anthropic API met vision
+    // Bewaar voor eventuele follow-up chat
+    _photoBase64 = base64;
+    _photoMediaType = mediaType;
+
     const response = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 800,
+        max_tokens: 1000,
+        system: 'Je bent een kookassistent. Analyseer foto\'s van gerechten en help de gebruiker het juiste recept te bepalen. Reageer altijd in het Nederlands. Als je een gerecht herkent en een voorstel doet, sluit dan af met:\nVOORSTEL: {"naam":"...","emoji":"...","ingredienten":"...","bereidingswijze":"...","notitie":"..."}',
         messages: [{
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mediaType, data: base64 }
-            },
-            {
-              type: 'text',
-              text: 'Dit is een foto van een gerecht. Analyseer wat je ziet en geef een JSON-object terug met deze velden:\n' +
-                '- naam: Nederlandse naam van het gerecht\n' +
-                '- emoji: 1 passende food emoji\n' +
-                '- ingredienten: lijst van ingrediënten (als tekst, met regeleinden)\n' +
-                '- bereidingswijze: stap-voor-stap bereiding (genummerd)\n' +
-                '- notitie: korte beschrijving (optioneel)\n\n' +
-                'Geef ALLEEN het JSON-object terug, geen uitleg.'
-            }
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: 'Wat is dit voor gerecht? Beschrijf wat je ziet, geef de naam en een recept. Sluit af met het VOORSTEL JSON-blok.' }
           ]
         }]
       })
@@ -5101,58 +5109,71 @@ async function analyzeMealPhoto(input) {
     const data = await response.json();
     const text = data.content?.[0]?.text || '';
 
-    // Parse JSON uit response
-    let parsed;
-    try {
-      const clean = text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      // Probeer JSON uit de tekst te extraheren
-      const match = text.match(/\{[\s\S]+\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Kon gerecht niet herkennen');
-    }
+    // Open chat-modal met de AI-reactie als eerste bericht
+    if (statusEl) statusEl.style.display = 'none';
+    if (btn) btn.style.opacity = '1';
+    input.value = '';
 
-    // Vul velden in
-    if (parsed.naam) {
-      const nameEl = document.getElementById('new-meal-name');
-      if (nameEl) nameEl.value = parsed.naam;
-    }
-    if (parsed.emoji) {
-      selectedEmoji = parsed.emoji;
-      renderEmojiPicker();
-      const emojiVal = document.getElementById('new-meal-emoji-val');
-      // Update hidden emoji value if it exists
-      if (emojiVal) emojiVal.value = parsed.emoji;
-    }
-    if (parsed.notitie) {
-      const noteEl = document.getElementById('new-meal-note');
-      if (noteEl) noteEl.value = parsed.notitie;
-    }
-    if (parsed.ingredienten) {
-      const ingrEl = document.getElementById('new-meal-ingredients');
-      if (ingrEl) ingrEl.value = parsed.ingredienten;
-    }
-    if (parsed.bereidingswijze) {
-      const instEl = document.getElementById('new-meal-instructions');
-      if (instEl) instEl.value = parsed.bereidingswijze;
-    }
-
-    if (msgEl) msgEl.textContent = ' ✓ ' + (parsed.naam || 'Gerecht') + ' herkend!';
-    setTimeout(() => {
-      if (statusEl) statusEl.style.display = 'none';
-    }, 3000);
+    // Start de chat met foto-context
+    openPhotoChatAssistant(base64, mediaType, text);
 
   } catch(e) {
     if (msgEl) msgEl.textContent = ' Kon gerecht niet herkennen: ' + e.message;
-    setTimeout(() => {
-      if (statusEl) statusEl.style.display = 'none';
-    }, 3000);
-  } finally {
+    setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 3000);
     if (btn) btn.style.opacity = '1';
-    // Reset file input voor volgende foto
     input.value = '';
   }
+}
+
+function openPhotoChatAssistant(base64, mediaType, aiFirstReply) {
+  // Initialiseer chat-history met foto + eerste AI-antwoord
+  _mealChatHistory = [
+    {
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+        { type: 'text', text: 'Wat is dit voor gerecht? Geef naam, ingrediënten en bereidingswijze.' }
+      ]
+    },
+    { role: 'assistant', content: aiFirstReply }
+  ];
+  _mealChatSuggestion = null;
+
+  const modal = document.getElementById('meal-chat-modal');
+  const msgs = document.getElementById('meal-chat-messages');
+  const acceptBar = document.getElementById('meal-chat-accept-bar');
+  if (!modal) return;
+
+  if (msgs) msgs.innerHTML = '';
+  if (acceptBar) acceptBar.style.display = 'none';
+
+  // Update modal titel
+  const titleEl = modal.querySelector('[style*="Fraunces"]');
+  if (titleEl) titleEl.textContent = '📷 Foto-assistent';
+
+  modal.style.display = 'flex';
+
+  // Toon thumbnail van de foto
+  const thumb = document.createElement('div');
+  thumb.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;background:#F8F8FF;border-bottom:1px solid var(--border);flex-shrink:0';
+  thumb.innerHTML = '<img src="data:' + mediaType + ';base64,' + base64 + '" style="width:48px;height:48px;object-fit:cover;border-radius:8px">' +
+    '<div style="font-size:12px;color:var(--muted)">Jouw foto · reageer als AI het verkeerd heeft</div>';
+  if (msgs) msgs.parentElement.insertBefore(thumb, msgs);
+
+  // Voeg AI eerste antwoord toe
+  // Check op voorstel in het eerste antwoord
+  const proposalMatch = aiFirstReply.match(/VOORSTEL:\s*(\{[\s\S]+?\})/);
+  if (proposalMatch) {
+    try {
+      _mealChatSuggestion = JSON.parse(proposalMatch[1]);
+      if (acceptBar) acceptBar.style.display = '';
+    } catch(e) {}
+  }
+  const displayText = aiFirstReply.replace(/VOORSTEL:[\s\S]+$/, '').trim();
+  addChatMessage('ai', displayText || 'Ik heb het gerecht geanalyseerd.');
+
+  // Focus op input
+  setTimeout(() => document.getElementById('meal-chat-input')?.focus(), 300);
 }
 
 
@@ -5161,6 +5182,19 @@ let _mealChatHistory = [];
 let _mealChatSuggestion = null; // huidig voorgesteld gerecht
 
 function getMealChatSystem() {
+  const isPhoto = _mealChatHistory.length > 0 &&
+    Array.isArray(_mealChatHistory[0]?.content) &&
+    _mealChatHistory[0].content.some(c => c.type === 'image');
+
+  if (isPhoto) {
+    return 'Je bent een kookassistent die helpt bij het identificeren en verfijnen van gerechten op basis van foto\'s. ' +
+      'De gebruiker heeft een foto gestuurd en jij hebt een eerste analyse gegeven. ' +
+      'Help de gebruiker het gerecht te verfijnen als hij feedback geeft (bijv. ander vlees, andere bereiding). ' +
+      'Reageer altijd in het Nederlands. ' +
+      'Als je een definitief voorstel doet, sluit dan af met:\n' +
+      'VOORSTEL: {"naam":"...","emoji":"...","ingredienten":"...","bereidingswijze":"...","notitie":"..."}';
+  }
+
   const bestaand = customMeals.slice(0, 15).map(m => m.name).join(', ');
   return 'Je bent een vriendelijke Nederlandse kookassistent die gezinnen helpt een nieuw gerecht te kiezen.'
     + (bestaand ? '\nHet gezin heeft al: ' + bestaand + '. Stel iets nieuws voor.' : '')
@@ -5324,6 +5358,123 @@ async function acceptMealSuggestion() {
   } else {
     if (btn) { btn.textContent = '\u2713 Dit gerecht toevoegen aan mijn lijst'; btn.disabled = false; }
     addChatMessage('ai', '\u26A0\uFE0F Kon het gerecht niet opslaan. Probeer het opnieuw.');
+  }
+}
+
+
+// ── Recept plakken ────────────────────────────────────────────
+function openPasteRecipeSheet() {
+  const modal = document.getElementById('paste-recipe-modal');
+  const input = document.getElementById('paste-recipe-input');
+  const errEl = document.getElementById('paste-recipe-error');
+  const statusEl = document.getElementById('paste-recipe-status');
+  if (!modal) return;
+  if (input) input.value = '';
+  if (errEl) errEl.style.display = 'none';
+  if (statusEl) statusEl.style.display = 'none';
+  modal.style.display = 'flex';
+  setTimeout(() => input?.focus(), 200);
+}
+
+function closePasteRecipeSheet() {
+  const modal = document.getElementById('paste-recipe-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function processPastedRecipe() {
+  const input = document.getElementById('paste-recipe-input');
+  const btn = document.getElementById('paste-recipe-btn');
+  const errEl = document.getElementById('paste-recipe-error');
+  const statusEl = document.getElementById('paste-recipe-status');
+  const statusMsg = document.getElementById('paste-recipe-status-msg');
+
+  const text = input?.value?.trim();
+  if (!text || text.length < 20) {
+    if (errEl) { errEl.textContent = 'Plak eerst een recept (minimaal 20 tekens).'; errEl.style.display = ''; }
+    return;
+  }
+
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; }
+  if (statusEl) statusEl.style.display = '';
+  if (statusMsg) statusMsg.textContent = ' AI verwerkt het recept...';
+
+  try {
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: 'Analyseer deze recepttekst en geef een JSON-object terug met deze velden:\n' +
+          '- naam: Nederlandse naam van het gerecht\n' +
+          '- emoji: 1 passende food emoji\n' +
+          '- ingredienten: opgeschoonde ingrediëntenlijst met hoeveelheden, elk op een nieuwe regel\n' +
+          '- bereidingswijze: genummerde stappen, elk op een nieuwe regel\n' +
+          '- notitie: korte beschrijving of tips (optioneel, max 1 zin)\n\n' +
+          'Geef ALLEEN het JSON-object terug, geen uitleg, geen markdown backticks.\n\n' +
+          'RECEPTTEKST:\n' + text
+      }]
+    }, 1, 'Recept plakken');
+
+    if (!response) {
+      if (errEl) { errEl.textContent = 'Geen credits meer. Koop nieuwe credits via Profiel.'; errEl.style.display = ''; }
+      return;
+    }
+
+    const data = await response.json();
+    const rawText = (data.content?.[0]?.text || '').trim();
+
+    let parsed;
+    try {
+      const clean = rawText.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      const match = rawText.match(/\{[\s\S]+\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Kon recept niet verwerken. Probeer de tekst te verkorten of anders op te schrijven.');
+    }
+
+    // Sluit modal
+    closePasteRecipeSheet();
+
+    // Vul add-meal-sheet velden in
+    if (parsed.naam) {
+      const nameEl = document.getElementById('new-meal-name');
+      if (nameEl) nameEl.value = parsed.naam;
+    }
+    if (parsed.emoji) {
+      selectedEmoji = parsed.emoji;
+      renderEmojiPicker();
+    }
+    if (parsed.notitie) {
+      const noteEl = document.getElementById('new-meal-note');
+      if (noteEl) noteEl.value = parsed.notitie;
+    }
+    if (parsed.ingredienten) {
+      const ingrEl = document.getElementById('new-meal-ingredients');
+      if (ingrEl) ingrEl.value = parsed.ingredienten;
+    }
+    if (parsed.bereidingswijze) {
+      const instEl = document.getElementById('new-meal-instructions');
+      if (instEl) instEl.value = parsed.bereidingswijze;
+    }
+
+    // Zorg dat add-meal-sheet open is
+    const sheet = document.getElementById('add-meal-sheet');
+    if (sheet) sheet.style.display = 'flex';
+
+    // Toast
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap';
+    toast.textContent = '✓ ' + (parsed.naam || 'Recept') + ' verwerkt!';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message || 'Er ging iets mis. Probeer opnieuw.'; errEl.style.display = ''; }
+  } finally {
+    if (btn) { btn.disabled = false; }
+    if (statusEl) statusEl.style.display = 'none';
   }
 }
 
@@ -11370,28 +11521,63 @@ async function boot() {
       const tabs = document.querySelector('.tabs');
       if (tabs) tabs.style.display = 'none';
       if (forgotWrap) forgotWrap.style.display = 'none';
-      if (sucEl) { sucEl.classList.remove('hidden'); sucEl.textContent = 'Kies een nieuw wachtwoord en klik op Opslaan.'; }
-      if (authBtn) { authBtn.textContent = 'Nieuw wachtwoord opslaan →'; authBtn.onclick = async () => {
-        const pw = document.getElementById('auth-password')?.value;
-        if (!pw || pw.length < 6) { if (errEl) { errEl.textContent = 'Wachtwoord moet minimaal 6 tekens zijn.'; errEl.classList.remove('hidden'); } return; }
-        authBtn.textContent = 'Bezig...';
-        const { error } = await sb.auth.updateUser({ password: pw });
-        if (error) { if (errEl) { errEl.textContent = error.message; errEl.classList.remove('hidden'); } authBtn.textContent = 'Opslaan →'; return; }
-        if (sucEl) sucEl.textContent = '✓ Wachtwoord opgeslagen! Je wordt ingelogd...';
-        setTimeout(() => { currentUser = session.user; loadProfile(); }, 1500);
-      }; }
+      // Vervang het auth-formulier door een nieuw-wachtwoord formulier
+      const emailFields = document.getElementById('auth-email-fields');
+      if (emailFields) {
+        emailFields.innerHTML =
+          '<div class="field"><label class="label">Nieuw wachtwoord</label>' +
+          '<input type="password" id="auth-password" placeholder="Minimaal 6 tekens" ' +
+          'style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>' +
+          '<div class="field"><label class="label">Bevestig wachtwoord</label>' +
+          '<input type="password" id="auth-password-confirm" placeholder="Herhaal wachtwoord" ' +
+          'onkeydown="if(event.key===\'Enter\')document.getElementById(\'auth-btn\').click()" ' +
+          'style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>';
+      }
+      if (sucEl) { sucEl.classList.remove('hidden'); sucEl.textContent = '🔑 Kies een nieuw wachtwoord voor je account.'; }
+      if (authBtn) {
+        authBtn.textContent = 'Nieuw wachtwoord opslaan →';
+        authBtn.style.display = '';
+        authBtn.onclick = async () => {
+          const pw = document.getElementById('auth-password')?.value;
+          const pw2 = document.getElementById('auth-password-confirm')?.value;
+          if (!pw || pw.length < 6) {
+            if (errEl) { errEl.textContent = 'Wachtwoord moet minimaal 6 tekens zijn.'; errEl.classList.remove('hidden'); }
+            return;
+          }
+          if (pw !== pw2) {
+            if (errEl) { errEl.textContent = 'Wachtwoorden komen niet overeen.'; errEl.classList.remove('hidden'); }
+            return;
+          }
+          authBtn.textContent = 'Bezig...'; authBtn.disabled = true;
+          const { error } = await sb.auth.updateUser({ password: pw });
+          if (error) {
+            if (errEl) { errEl.textContent = error.message; errEl.classList.remove('hidden'); }
+            authBtn.textContent = 'Opslaan →'; authBtn.disabled = false;
+            return;
+          }
+          if (sucEl) sucEl.textContent = '✓ Wachtwoord opgeslagen! Je wordt ingelogd...';
+          setTimeout(() => { currentUser = session?.user; loadProfile(); }, 1500);
+        };
+      }
     }
   });
 
   // Detecteer recovery hash in URL (Supabase voegt #access_token=...&type=recovery toe)
   const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
   if (hashParams.get('type') === 'recovery') {
-    // Supabase's onAuthStateChange pikt dit op — wacht even zodat die kan vuren
-    // Verwijder hash uit URL zonder pagina te herladen
-    history.replaceState(null, '', window.location.pathname);
-    // onAuthStateChange doet de rest — stop boot hier
     show('auth');
     applyTranslations && applyTranslations();
+    // Vertel Supabase de sessie te activeren via de token in de hash
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    if (accessToken) {
+      try {
+        await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
+      } catch(e) { console.warn('setSession recovery error:', e); }
+    }
+    // Hash opschonen pas NA sessie-activering
+    history.replaceState(null, '', window.location.pathname);
+    // onAuthStateChange vuurt nu PASSWORD_RECOVERY event — dat toont het reset-scherm
     return;
   }
 
@@ -11766,6 +11952,10 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <button type="button" onclick="openMealChatAssistant()"
         style="width:100%;margin-top:8px;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:#F0EEFF;color:#7C6FF7;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
         <span style="font-size:20px">&#x1F4AC;</span> Chat: help me een gerecht kiezen <span style="font-size:11px;font-weight:500;margin-left:4px">(1 credit)</span>
+      </button>
+      <button type="button" onclick="openPasteRecipeSheet()"
+        style="width:100%;margin-top:8px;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:#FFF8EC;color:#C47F00;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span style="font-size:20px">&#x1F4CB;</span> Recept plakken (Instagram, website...) <span style="font-size:11px;font-weight:500;margin-left:4px">(1 credit)</span>
       </button>
       <div id="meal-photo-status" style="display:none;margin-top:8px;padding:10px 12px;background:var(--green-bg);border-radius:var(--r);font-size:13px;color:var(--green)">
         <span id="meal-photo-spinner" style="display:inline-block;animation:ptr-spin 0.8s linear infinite">&#x21BB;</span>
@@ -12418,6 +12608,38 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 </div>
 
 
+
+<!-- Recept plakken modal -->
+<div id="paste-recipe-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.5);align-items:flex-end">
+  <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;margin-bottom:0">
+    <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-family:'Fraunces',serif;font-weight:800;font-size:17px">&#x1F4CB; Recept plakken</div>
+        <div style="font-size:11px;color:var(--muted)">Kopieer tekst van Instagram, een website of kookboek</div>
+      </div>
+      <button onclick="closePasteRecipeSheet()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)">&times;</button>
+    </div>
+    <div style="padding:16px;overflow-y:auto;flex:1">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+        Plak hieronder de tekst van een recept — bijv. een Instagram-caption, een website-tekst of getypte instructies. AI structureert het automatisch naar naam, ingrediënten en bereidingswijze.
+      </div>
+      <textarea id="paste-recipe-input"
+        placeholder="Bijv: Pasta carbonara voor 4 personen. Ingrediënten: 400g spaghetti, 150g pancetta, 4 eieren, 100g parmezaan... Bereiding: 1. Kook de pasta al dente..."
+        style="width:100%;min-height:180px;padding:12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;outline:none;line-height:1.5"></textarea>
+      <div id="paste-recipe-error" style="display:none;color:var(--coral);font-size:13px;margin-top:8px"></div>
+      <div id="paste-recipe-status" style="display:none;margin-top:10px;padding:10px 12px;background:var(--green-bg);border-radius:var(--r);font-size:13px;color:var(--green)">
+        <span style="animation:ptr-spin 0.8s linear infinite;display:inline-block">&#x21BB;</span>
+        <span id="paste-recipe-status-msg"> AI verwerkt het recept...</span>
+      </div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:10px">
+      <button onclick="closePasteRecipeSheet()" style="flex:1;padding:14px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">Annuleren</button>
+      <button onclick="processPastedRecipe()" id="paste-recipe-btn" class="btn btn-primary" style="flex:2">Verwerken &#x2192; <span style="font-size:11px;font-weight:500">(1 credit)</span></button>
+    </div>
+  </div>
+</div>
+
+
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label"><span data-i18n="nav_home">Home</span></span></button>
     <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Stem</span></button>
@@ -12441,6 +12663,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <button class="nav-btn" onclick="goFriendsScreen();toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#x1F465;</span><span class="nav-label">Vrienden</span></button>
       <button class="nav-btn" onclick="goScreen('feedback');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128172;</span><span class="nav-label">Feedback</span></button>
       <button class="nav-btn" onclick="goScreen('profile');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128100;</span><span class="nav-label">Profiel</span></button>
+      <button id="nav-more-admin" class="nav-btn" onclick="openAdminDashboard();toggleMoreMenu()" style="display:none;flex-direction:column;align-items:center"><span class="nav-icon">&#x1F9EA;</span><span class="nav-label">Admin</span></button>
     </div>
   </div>
   </nav>
