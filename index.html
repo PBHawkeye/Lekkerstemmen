@@ -626,6 +626,13 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
+  <!-- Retrolog: log gerecht voor een dag in het verleden -->
+  <div id="today-retro-log" class="today-card hidden" style="background:white;border:2px dashed var(--border)">
+    <div class="today-badge" style="background:var(--muted);color:white" id="retro-log-date-label">Gisteren</div>
+    <div class="today-q" style="color:var(--text);font-size:15px">Wat hebben jullie gegeten?</div>
+    <button class="btn-white" onclick="openRetroLogPicker()" style="border-color:var(--border);color:var(--green)">Gerecht invoeren →</button>
+  </div>
+
   <div id="today-parent" class="today-card hidden">
     <div class="today-badge">Vandaag</div>
     <div class="today-q">Wat eten jullie vanavond?</div>
@@ -4318,7 +4325,7 @@ function refreshHome() {
     document.getElementById('nav-profile-child') && (document.getElementById('nav-profile-child').style.display='');
   }
 
-  ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin']
+  ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin','today-retro-log']
     .forEach(id => hide(document.getElementById(id)));
   var after16 = isAfter16();
   var isToday = (homeDayOffset === 0);
@@ -4350,7 +4357,18 @@ function refreshHome() {
         // Alleen "wacht" tonen als het echt vandaag is EN er geen menu is
         unhide(document.getElementById('today-child-wait'));
       }
-      // Op andere dagen: niets tonen (geen menu = niets te doen)
+      // Op andere dagen: bied retrolog aan als ouder
+      if (!isToday && p.role === 'parent') {
+        const retroCard2 = document.getElementById('today-retro-log');
+        const retroLabel2 = document.getElementById('retro-log-date-label');
+        if (retroCard2) {
+          if (retroLabel2) {
+            const daysAgo2 = Math.abs(homeDayOffset);
+            retroLabel2.textContent = daysAgo2 === 1 ? 'Gisteren' : daysAgo2 + ' dagen geleden';
+          }
+          unhide(retroCard2);
+        }
+      }
     } else if (hasCheckedIn) {
       // Al gecheckt: toon done kaart
       unhide(document.getElementById('today-child-done'));
@@ -4396,8 +4414,22 @@ function refreshHome() {
       hide(document.getElementById('today-parent-done'));
       hide(document.getElementById('today-parent-checkin'));
     } else if (!todayMeal) {
-      // Geen menu en niets gelogd: vraag om te loggen
-      unhide(document.getElementById('today-parent'));
+      // Geen menu en niets gelogd
+      if (isToday) {
+        // Vandaag: vraag om te loggen
+        unhide(document.getElementById('today-parent'));
+      } else {
+        // Verleden dag: bied retrolog aan
+        const retroCard = document.getElementById('today-retro-log');
+        const retroLabel = document.getElementById('retro-log-date-label');
+        if (retroCard) {
+          if (retroLabel) {
+            const daysAgo = Math.abs(homeDayOffset);
+            retroLabel.textContent = daysAgo === 1 ? 'Gisteren' : daysAgo + ' dagen geleden';
+          }
+          unhide(retroCard);
+        }
+      }
     } else if (hasCheckedIn) {
       hide(document.getElementById('today-parent-done'));
       hide(document.getElementById('today-parent-checkin'));
@@ -5239,10 +5271,12 @@ async function sendMealChatMessage() {
 async function acceptMealSuggestion() {
   if (!_mealChatSuggestion) return;
   const s = _mealChatSuggestion;
+  const addToMenu = document.getElementById('meal-chat-add-to-menu')?.checked || false;
 
   const btn = document.querySelector('#meal-chat-accept-bar button');
   if (btn) { btn.textContent = 'Opslaan...'; btn.disabled = true; }
 
+  // 1. Sla op in custom_meals
   const { data: saved, error } = await sb.from('custom_meals').insert({
     family_id: currentProfile.family_id,
     name: s.naam,
@@ -5252,24 +5286,49 @@ async function acceptMealSuggestion() {
     instructions: s.bereidingswijze || null,
   }).select().maybeSingle();
 
-  if (!error && saved) {
-    customMeals.push(saved);
-    closeMealChatAssistant();
-    // Sluit ook het add-meal sheet
-    closeAddMealSheet();
-    // Herlaad gerechtenlijst
-    renderCustomMealsList();
-
-    // Toast
-    const toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap';
-    toast.textContent = '\u2713 ' + s.naam + ' toegevoegd!';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-  } else {
-    if (btn) { btn.textContent = '\u2713 Dit gerecht toevoegen aan mijn lijst'; btn.disabled = false; }
+  if (error || !saved) {
+    if (btn) { btn.textContent = 'Gerecht opslaan'; btn.disabled = false; }
     addChatMessage('ai', '\u26A0\uFE0F Kon het gerecht niet opslaan. Probeer het opnieuw.');
+    return;
   }
+
+  customMeals.push(saved);
+
+  // 2. Optioneel: voeg toe aan menu voor vandaag als gepubliceerd
+  if (addToMenu) {
+    const todayDate = todayStr();
+    const weekStart = testMondayOfWeek();
+    const d = new Date(todayDate + 'T12:00:00');
+    const dayIndex = (d.getDay() + 6) % 7;
+    const cookName = currentProfile.name || null;
+
+    await sb.from('weekly_menu').insert({
+      family_id: currentProfile.family_id,
+      week_of: weekStart,
+      day_date: todayDate,
+      meal_id: saved.id,
+      meal_name: saved.name,
+      meal_emoji: saved.emoji,
+      cook_id: currentProfile.id,
+      cook_name: cookName,
+      published: true,
+      variant: 'A',
+      for_profile_ids: null,
+    });
+  }
+
+  closeMealChatAssistant();
+  closeAddMealSheet();
+  await loadData();
+  renderCustomMealsList();
+  refreshHome();
+
+  // Toast
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap';
+  toast.textContent = '\u2713 ' + s.naam + (addToMenu ? ' opgeslagen & op menu gezet!' : ' toegevoegd!');
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
 }
 
 
@@ -5391,6 +5450,18 @@ async function processPastedRecipe() {
 
 
 // ── Gerecht kiezen voor vandaag vanuit home (geen weekmenu) ──
+
+// ── Retrolog: gerecht invoeren voor verleden dag ─────────────
+function openRetroLogPicker() {
+  const dateStr = todayStr(); // bevat homeDayOffset
+  const d = new Date(dateStr + 'T12:00:00');
+  const dayIndex = (d.getDay() + 6) % 7;
+  // Markeer dat dit een retro-pick is: opslaan als gepubliceerd weekmenu + check-in prompt
+  window._retroPickDate = dateStr;
+  window._todayPickerPublish = true;
+  openMealPicker(dateStr, dayIndex, null);
+}
+
 function openTodayMealPicker() {
   const todayDate = todayStr();
   // Bereken dayIndex (0=ma ... 6=zo)
@@ -12513,9 +12584,13 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div id="meal-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
 
     <!-- Voorstel overnemen knop (verborgen totdat AI een gerecht voorstelt) -->
-    <div id="meal-chat-accept-bar" style="display:none;padding:8px 16px;background:var(--green-bg);border-top:1px solid var(--green);flex-shrink:0">
+    <div id="meal-chat-accept-bar" style="display:none;padding:10px 16px;background:var(--green-bg);border-top:1px solid var(--green);flex-shrink:0">
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--green)">
+        <input type="checkbox" id="meal-chat-add-to-menu" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer" />
+        Vandaag op het menu zetten
+      </label>
       <button onclick="acceptMealSuggestion()" class="btn btn-primary" style="width:100%">
-        &#x2713; Dit gerecht toevoegen aan mijn lijst
+        &#x2713; Gerecht opslaan
       </button>
     </div>
 
