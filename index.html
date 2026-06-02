@@ -5011,6 +5011,21 @@ let _photoMediaType = null;
 // ── Meerdere foto's analyseren (galerij-selectie) ────────────
 
 // ── Robuuste JSON-extractie uit AI-tekst ─────────────────────
+// Zet AI-veld om naar string (kan array, object of string zijn)
+function toStr(val) {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (Array.isArray(val)) return val.map(item => {
+    if (typeof item === 'string') return item;
+    if (typeof item === 'object') {
+      // Bijv. {naam:'kip', hoeveelheid:'500g'} of {step:1, text:'Bak de kip'}
+      return Object.values(item).filter(v => v !== null && v !== undefined).join(' ');
+    }
+    return String(item);
+  }).join('\n');
+  if (typeof val === 'object') return Object.values(val).join('\n');
+  return String(val);
+}
 function extractJSON(text) {
   if (!text) return null;
   // 1. Strip markdown code blocks
@@ -5106,8 +5121,8 @@ async function analyzeMealPhotos(input) {
     if (parsed.naam) { const el = document.getElementById('new-meal-name'); if (el) el.value = parsed.naam; }
     if (parsed.emoji) { selectedEmoji = parsed.emoji; renderEmojiPicker(); }
     if (parsed.notitie) { const el = document.getElementById('new-meal-note'); if (el) el.value = parsed.notitie; }
-    if (parsed.ingredienten) { const el = document.getElementById('new-meal-ingredients'); if (el) el.value = parsed.ingredienten; }
-    if (parsed.bereidingswijze) { const el = document.getElementById('new-meal-instructions'); if (el) el.value = parsed.bereidingswijze; }
+    if (toStr(parsed.ingredienten || parsed.ingredients || parsed.ingrediënten)) { const el = document.getElementById('new-meal-ingredients'); if (el) el.value = toStr(parsed.ingredienten || parsed.ingredients || parsed.ingrediënten); }
+    if (toStr(parsed.bereidingswijze || parsed.instructions || parsed.bereiding)) { const el = document.getElementById('new-meal-instructions'); if (el) el.value = toStr(parsed.bereidingswijze || parsed.instructions || parsed.bereiding); }
 
     if (msgEl) msgEl.textContent = ' ✓ ' + (parsed.naam || 'Gerecht') + ' herkend uit ' + files.length + ' foto\'s!';
     setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 3000);
@@ -5528,13 +5543,13 @@ async function processPastedRecipe() {
       const noteEl = document.getElementById('new-meal-note');
       if (noteEl) noteEl.value = parsed.notitie;
     }
-    if (parsed.ingredienten) {
+    if (toStr(parsed.ingredienten || parsed.ingredients || parsed.ingrediënten)) {
       const ingrEl = document.getElementById('new-meal-ingredients');
-      if (ingrEl) ingrEl.value = parsed.ingredienten;
+      if (ingrEl) ingrEl.value = toStr(parsed.ingredienten || parsed.ingredients || parsed.ingrediënten);
     }
-    if (parsed.bereidingswijze) {
+    if (toStr(parsed.bereidingswijze || parsed.instructions || parsed.bereiding)) {
       const instEl = document.getElementById('new-meal-instructions');
-      if (instEl) instEl.value = parsed.bereidingswijze;
+      if (instEl) instEl.value = toStr(parsed.bereidingswijze || parsed.instructions || parsed.bereiding);
     }
 
     // Zorg dat add-meal-sheet open is
@@ -8896,8 +8911,8 @@ async function analyzeAllRecipePhotos() {
     if (parsed.naam && !existingName) { const el = document.getElementById('new-meal-name'); if (el) el.value = parsed.naam; }
     if (parsed.emoji) { mealSelectedEmoji = parsed.emoji; renderEmojiPickerInSheet(); }
     if (parsed.notitie) { const el = document.getElementById('new-meal-note'); if (el) el.value = parsed.notitie; }
-    if (parsed.ingredienten) { const el = document.getElementById('new-meal-ingredients'); if (el) el.value = parsed.ingredienten; }
-    if (parsed.bereidingswijze) { const el = document.getElementById('new-meal-instructions'); if (el) el.value = parsed.bereidingswijze; }
+    if (toStr(parsed.ingredienten || parsed.ingredients || parsed.ingrediënten)) { const el = document.getElementById('new-meal-ingredients'); if (el) el.value = toStr(parsed.ingredienten || parsed.ingredients || parsed.ingrediënten); }
+    if (toStr(parsed.bereidingswijze || parsed.instructions || parsed.bereiding)) { const el = document.getElementById('new-meal-instructions'); if (el) el.value = toStr(parsed.bereidingswijze || parsed.instructions || parsed.bereiding); }
     if (parsed.bijgerecht) { const el = document.getElementById('new-meal-side'); if (el) el.value = parsed.bijgerecht; }
     if (parsed.recept_url) { const el = document.getElementById('new-meal-url'); if (el) el.value = parsed.recept_url; }
     if (msgEl) { msgEl.textContent = '✓ Velden ingevuld!'; msgEl.style.color = 'var(--green)'; }
