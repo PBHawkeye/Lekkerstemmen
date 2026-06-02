@@ -5009,6 +5009,41 @@ let _photoMediaType = null;
 
 
 // ── Meerdere foto's analyseren (galerij-selectie) ────────────
+
+// ── Robuuste JSON-extractie uit AI-tekst ─────────────────────
+function extractJSON(text) {
+  if (!text) return null;
+  // 1. Strip markdown code blocks
+  let clean = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  // 2. Probeer direct
+  try { return JSON.parse(clean); } catch(e) {}
+  // 3. Zoek eerste { tot laatste }
+  const first = clean.indexOf('{');
+  const last = clean.lastIndexOf('}');
+  if (first >= 0 && last > first) {
+    try { return JSON.parse(clean.slice(first, last + 1)); } catch(e) {}
+  }
+  // 4. Zoek eerste [ tot laatste ] (voor arrays)
+  const arrFirst = clean.indexOf('[');
+  const arrLast = clean.lastIndexOf(']');
+  if (arrFirst >= 0 && arrLast > arrFirst) {
+    try { return JSON.parse(clean.slice(arrFirst, arrLast + 1)); } catch(e) {}
+  }
+  // 5. Probeer per regel of er een JSON-object begint
+  const lines = clean.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('{') || line.startsWith('[')) {
+      const rest = lines.slice(i).join('\n');
+      const end = rest.lastIndexOf(line.startsWith('{') ? '}' : ']');
+      if (end > 0) {
+        try { return JSON.parse(rest.slice(0, end + 1)); } catch(e) {}
+      }
+    }
+  }
+  return null;
+}
+
 async function analyzeMealPhotos(input) {
   const files = Array.from(input.files || []);
   if (!files.length) return;
@@ -5064,14 +5099,8 @@ async function analyzeMealPhotos(input) {
     const data = await response.json();
     const text = (data.content?.[0]?.text || '').trim();
 
-    let parsed;
-    try {
-      parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-    } catch(e) {
-      const match = text.match(/\{[\s\S]+\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Kon gerecht niet herkennen uit de foto\'s');
-    }
+    const parsed = extractJSON(text);
+    if (!parsed) throw new Error('Kon gerecht niet herkennen uit de foto\'s. Probeer een duidelijkere foto.');
 
     // Vul velden in
     if (parsed.naam) { const el = document.getElementById('new-meal-name'); if (el) el.value = parsed.naam; }
@@ -5190,10 +5219,10 @@ function openPhotoChatAssistant(base64, mediaType, aiFirstReply) {
 
   // Voeg AI eerste antwoord toe
   // Check op voorstel in het eerste antwoord
-  const proposalMatch = aiFirstReply.match(/VOORSTEL:\s*(\{[\s\S]+?\})/);
+  const proposalMatch = aiFirstReply.match(/VOORSTEL:[\s\S]+/);
   if (proposalMatch) {
     try {
-      _mealChatSuggestion = JSON.parse(proposalMatch[1]);
+      _mealChatSuggestion = extractJSON(proposalMatch[0].replace(/^VOORSTEL:\s*/,''));
       if (acceptBar) acceptBar.style.display = '';
     } catch(e) {}
   }
@@ -5329,7 +5358,8 @@ async function sendMealChatMessage() {
 
     if (proposalMatch) {
       try {
-        _mealChatSuggestion = JSON.parse(proposalMatch[1]);
+        _mealChatSuggestion = extractJSON(proposalMatch[1]);
+        if (!_mealChatSuggestion) throw new Error('parse');
         // Verberg VOORSTEL JSON uit de weergave
         displayText = reply.replace(/VOORSTEL:[\s\S]+$/, '').trim();
         // Toon overnemen-knop
@@ -5479,15 +5509,8 @@ async function processPastedRecipe() {
     const data = await response.json();
     const rawText = (data.content?.[0]?.text || '').trim();
 
-    let parsed;
-    try {
-      const clean = rawText.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      const match = rawText.match(/\{[\s\S]+\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Kon recept niet verwerken. Probeer de tekst te verkorten of anders op te schrijven.');
-    }
+    const parsed = extractJSON(rawText);
+    if (!parsed) throw new Error('Kon het recept niet verwerken. Probeer de tekst te verkorten of anders op te schrijven.');
 
     // Sluit modal
     closePasteRecipeSheet();
