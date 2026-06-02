@@ -4960,6 +4960,17 @@ function renderCustomMealsList() {
   const countEl = document.getElementById('meals-count');
   if (countEl) countEl.textContent = customMeals.length ? '(' + customMeals.length + ')' : '';
 
+  // Event delegation voor delete-knoppen (vermijdt escaping-problemen)
+  list.onclick = (e) => {
+    const btn = e.target.closest('.del-btn');
+    if (!btn) return;
+    const id = btn.dataset.mealId;
+    const meal = customMeals.find(m => m.id === id);
+    if (!meal) return;
+    if (!confirm(meal.name + ' definitief verwijderen?')) return;
+    deleteCustomMeal(id);
+  };
+
   // Favorieten altijd bovenaan berekenen
   const favs = getFavoritesFromCheckins();
 
@@ -4991,7 +5002,7 @@ function renderCustomMealsList() {
         (checkins.some(c=>c.meal_type===m.id) ? '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>' : '')+
         '<button onclick="openEditMeal(customMeals.find(x=>x.id===\''+m.id+'\')|| {})" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         
-        '<button class="del-btn" onclick="confirmDeleteMeal(\'"+m.id+"\',\'"+m.name.replace(/\'/g,\"\\\'\")+"\')" style="font-size:16px;background:#FFEEEE;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Verwijderen">\uD83D\uDDD1</button>'+
+        '<button class="del-btn" data-meal-id="'+m.id+'" style="font-size:16px;background:#FFEEEE;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Verwijderen">\uD83D\uDDD1</button>'+
         '</div>'+
         (lastComment?
           '<div style="background:#F7F6FF;border-radius:8px;padding:6px 10px;font-size:11px;color:#7B7A8E;width:100%;border-left:2px solid #7C6FF7">'+
@@ -5101,15 +5112,12 @@ async function analyzeMealPhotos(input) {
         'Geef JSON: naam, emoji, ingredienten (met hoeveelheden), bereidingswijze (genummerde stappen), notitie. Geef ALLEEN het JSON-object terug.'
     });
 
-    const response = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const response = await anthropicFetch({
         model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         messages: [{ role: 'user', content: imageContent }]
-      })
-    });
+      }, 1, "Foto-analyse meerdere foto's");
+    if (!response) throw new Error('Geen credits meer.');
 
     const data = await response.json();
     const text = (data.content?.[0]?.text || '').trim();
@@ -5161,10 +5169,7 @@ async function analyzeMealPhoto(input) {
     _photoBase64 = base64;
     _photoMediaType = mediaType;
 
-    const response = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const response = await anthropicFetch({
         model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         system: 'Je bent een ervaren kookassistent. Je analyseert foto'+"\x27"+'s van gerechten, recepten of ingredienten. BELANGRIJK: Als de foto niet alles toont, vul ontbrekende informatie aan vanuit je kookkennis voor een COMPLEET recept. Reageer altijd in het Nederlands. Als je een gerecht voorstelt, sluit af met:\nVOORSTEL: {"naam":"...","emoji":"...","ingredienten":"...","bereidingswijze":"...","notitie":"..."}',
@@ -5175,9 +5180,10 @@ async function analyzeMealPhoto(input) {
             { type: 'text', text: 'Analyseer deze foto en lever een compleet recept. Als de foto niet alle details toont (alleen eindgerecht, alleen ingredienten, of deels), vul dan ontbrekende ingredienten of stappen aan op basis van je kookkennis. Geef altijd een volledig bruikbaar recept. Sluit af met het VOORSTEL JSON-blok.' }
           ]
         }]
-      })
-    });
+      }, 1, 'Foto-analyse');
 
+
+    if (!response) throw new Error('Geen credits meer.');
     const data = await response.json();
     const text = data.content?.[0]?.text || '';
 
@@ -5648,9 +5654,15 @@ async function addCustomMeal() {
 }
 
 async function deleteCustomMeal(id) {
-  const { error } = await sb.from('custom_meals').delete().eq('id', id);
+  console.log('[Delete] Verwijderen id:', id);
+  const { data, error } = await sb.from('custom_meals').delete().eq('id', id).select();
+  console.log('[Delete] result data:', data, 'error:', error);
   if (error) {
-    alert('Kon gerecht niet verwijderen: ' + error.message);
+    alert('Fout: ' + error.message + ' (code: ' + error.code + ')');
+    return;
+  }
+  if (!data || data.length === 0) {
+    alert('Gerecht niet verwijderd — mogelijk geen rechten (RLS). Voer fix_custom_meals_delete_rls.sql uit in Supabase.');
     return;
   }
   await loadData();
