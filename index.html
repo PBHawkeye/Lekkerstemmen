@@ -11660,14 +11660,16 @@ async function boot() {
           'style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>' +
           '<div class="field"><label class="label">Bevestig wachtwoord</label>' +
           '<input type="password" id="auth-password-confirm" placeholder="Herhaal wachtwoord" ' +
-          'onkeydown="if(event.key===\'Enter\')document.getElementById(\'auth-btn\').click()" ' +
-          'style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>';
+          'onkeydown="if(event.key===\'Enter\')document.getElementById(\'auth-save-btn\').click()" ' +
+          'style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>' +
+          '<button id="auth-save-btn" class="btn btn-primary" style="width:100%;margin-top:8px">Wachtwoord opslaan →</button>';
       }
       if (sucEl) { sucEl.classList.remove('hidden'); sucEl.textContent = '🔑 Kies een nieuw wachtwoord voor je account.'; }
-      if (authBtn) {
-        authBtn.textContent = 'Nieuw wachtwoord opslaan →';
-        authBtn.style.display = '';
-        authBtn.onclick = async () => {
+      // Koppel aan de nieuwe opslaan-knop die in emailFields.innerHTML staat
+      setTimeout(() => {
+        const saveBtn = document.getElementById('auth-save-btn');
+        if (saveBtn) saveBtn.onclick = async () => {
+          const authBtnRef = saveBtn;
           const pw = document.getElementById('auth-password')?.value;
           const pw2 = document.getElementById('auth-password-confirm')?.value;
           if (!pw || pw.length < 6) {
@@ -11678,17 +11680,17 @@ async function boot() {
             if (errEl) { errEl.textContent = 'Wachtwoorden komen niet overeen.'; errEl.classList.remove('hidden'); }
             return;
           }
-          authBtn.textContent = 'Bezig...'; authBtn.disabled = true;
+          authBtnRef.textContent = 'Bezig...'; authBtnRef.disabled = true;
           const { error } = await sb.auth.updateUser({ password: pw });
           if (error) {
             if (errEl) { errEl.textContent = error.message; errEl.classList.remove('hidden'); }
-            authBtn.textContent = 'Opslaan →'; authBtn.disabled = false;
+            authBtnRef.textContent = 'Wachtwoord opslaan →'; authBtnRef.disabled = false;
             return;
           }
           if (sucEl) sucEl.textContent = '✓ Wachtwoord opgeslagen! Je wordt ingelogd...';
           setTimeout(() => { currentUser = session?.user; loadProfile(); }, 1500);
         };
-      }
+      }, 100);
     }
   });
 
