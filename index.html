@@ -4991,7 +4991,7 @@ function renderCustomMealsList() {
         (checkins.some(c=>c.meal_type===m.id) ? '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>' : '')+
         '<button onclick="openEditMeal(customMeals.find(x=>x.id===\''+m.id+'\')|| {})" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Bewerken">✏️</button>'+
         
-        '<button class="del-btn" onclick="deleteCustomMeal(\'"+m.id+"\')" style="margin-left:4px">\uD83D\uDDD1</button>'+
+        '<button class="del-btn" onclick="confirmDeleteMeal(\'"+m.id+"\',\'"+m.name.replace(/\'/g,\"\\\'\")+"\')" style="font-size:16px;background:#FFEEEE;border:none;border-radius:8px;padding:5px 8px;cursor:pointer;margin-left:4px" title="Verwijderen">\uD83D\uDDD1</button>'+
         '</div>'+
         (lastComment?
           '<div style="background:#F7F6FF;border-radius:8px;padding:6px 10px;font-size:11px;color:#7B7A8E;width:100%;border-left:2px solid #7C6FF7">'+
@@ -5406,19 +5406,20 @@ async function acceptMealSuggestion() {
   const btn = document.querySelector('#meal-chat-accept-bar button');
   if (btn) { btn.textContent = 'Opslaan...'; btn.disabled = true; }
 
-  // 1. Sla op in custom_meals
+  // 1. Sla op in custom_meals (toStr zorgt dat arrays correct worden omgezet)
   const { data: saved, error } = await sb.from('custom_meals').insert({
     family_id: currentProfile.family_id,
-    name: s.naam,
+    name: s.naam || s.name || 'Onbekend gerecht',
     emoji: s.emoji || '\uD83C\uDF7D',
-    note: s.notitie || null,
-    ingredients: s.ingredienten || null,
-    instructions: s.bereidingswijze || null,
+    note: toStr(s.notitie || s.note) || null,
+    ingredients: toStr(s.ingredienten || s.ingredients || s.ingrediënten) || null,
+    instructions: toStr(s.bereidingswijze || s.instructions || s.bereiding) || null,
   }).select().maybeSingle();
 
   if (error || !saved) {
+    console.error('[acceptMealSuggestion] error:', error?.message, 'saved:', saved);
     if (btn) { btn.textContent = 'Gerecht opslaan'; btn.disabled = false; }
-    addChatMessage('ai', '\u26A0\uFE0F Kon het gerecht niet opslaan. Probeer het opnieuw.');
+    addChatMessage('ai', '\u26A0\uFE0F Kon het gerecht niet opslaan: ' + (error?.message || 'onbekende fout'));
     return;
   }
 
@@ -5647,9 +5648,18 @@ async function addCustomMeal() {
 }
 
 async function deleteCustomMeal(id) {
-  await sb.from('custom_meals').delete().eq('id',id);
+  const { error } = await sb.from('custom_meals').delete().eq('id', id);
+  if (error) {
+    alert('Kon gerecht niet verwijderen: ' + error.message);
+    return;
+  }
   await loadData();
   renderCustomMealsList();
+}
+
+function confirmDeleteMeal(id, name) {
+  if (!confirm(name + ' definitief verwijderen?\n\nLetop: als dit gerecht in het weekmenu staat, blijft het daar zichtbaar.')) return;
+  deleteCustomMeal(id);
 }
 
 // ── CHECKIN ────────────────────────────────────────────────────
