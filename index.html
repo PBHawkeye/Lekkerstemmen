@@ -605,7 +605,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Menu deze week</div>
       <div id="today-menu-preview-list"></div>
-      <button class="btn" style="background:var(--green-bg);color:var(--green);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="menuWeekOffset=menuBaseOffset;goScreen('menu')">Heel menu bekijken →</button>
+      <button class="btn" style="background:var(--green-bg);color:var(--green);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="window._menuForceCurrentWeek=true;goScreen('menu')">Heel menu bekijken →</button>
     </div>
   </div>
   <!-- Vanavond kaart - toont menu item voor vandaag aan iedereen -->
@@ -804,7 +804,21 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </div>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
-    <div class="label" style="margin-bottom:8px">Onze gerechtenlijst <span id="meals-count" style="font-weight:500;color:var(--muted)"></span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="label">Onze gerechtenlijst <span id="meals-count" style="font-weight:500;color:var(--muted)"></span></div>
+      <select id="meals-sort" onchange="renderCustomMealsList()"
+        style="font-size:12px;border:1.5px solid var(--border);border-radius:8px;padding:4px 8px;background:white;color:var(--text);font-family:inherit;cursor:pointer">
+        <option value="eaten">Meest gegeten</option>
+        <option value="name">A → Z</option>
+        <option value="score">Hoogste score</option>
+        <option value="recent">Recent toegevoegd</option>
+      </select>
+    </div>
+    <div style="position:relative;margin-bottom:10px">
+      <input type="text" id="meals-search" placeholder="&#x1F50D; Zoek gerecht..."
+        oninput="renderCustomMealsList()"
+        style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;outline:none;-webkit-appearance:none" />
+    </div>
     <div id="custom-meals-list"></div>
   </div>
 </div>
@@ -3920,25 +3934,24 @@ function goScreen(name) {
   else if (name==='menu') {
     menuBaseOffset = getRealWeekOffset();
     menuWeekOffset = menuBaseOffset;
-    // Slimme startweek: bepaal of er nog ongepubliceerde toekomstige dagen zijn deze week
+    // Slimme startweek: alleen als niet geforceerd naar huidige week
     (async () => {
-      const thisWeekStart = getMenuWeekStart();
-      const today = todayStr();
-      const { data: thisWeek } = await sb.from('weekly_menu')
-        .select('day_date,published')
-        .eq('family_id', currentProfile.family_id)
-        .eq('week_of', thisWeekStart);
-      const thisWeekItems = thisWeek || [];
-      // Toekomstige dagen = vandaag of later
-      const futureDays = thisWeekItems.filter(m => m.day_date >= today);
-      // Heeft de huidige week nog toekomstige ongepubliceerde dagen?
-      const hasOpenFuture = futureDays.some(m => !m.published);
-      // Of: heeft de huidige week helemaal geen items voor toekomstige dagen?
-      const hasNoFuture = futureDays.length === 0;
-      if (!hasOpenFuture || hasNoFuture) {
-        // Geen werk meer deze week: spring naar volgende week
-        menuWeekOffset = menuBaseOffset + 1;
+      if (!window._menuForceCurrentWeek) {
+        const thisWeekStart = getMenuWeekStart();
+        const today = todayStr();
+        const { data: thisWeek } = await sb.from('weekly_menu')
+          .select('day_date,published')
+          .eq('family_id', currentProfile.family_id)
+          .eq('week_of', thisWeekStart);
+        const thisWeekItems = thisWeek || [];
+        const futureDays = thisWeekItems.filter(m => m.day_date >= today);
+        const hasOpenFuture = futureDays.some(m => !m.published);
+        const hasNoFuture = futureDays.length === 0;
+        if (!hasOpenFuture || hasNoFuture) {
+          menuWeekOffset = menuBaseOffset + 1;
+        }
       }
+      window._menuForceCurrentWeek = false;
       renderMenuScreen().then(()=>show('menu'));
     })();
   }
@@ -4979,13 +4992,33 @@ function renderEmojiPicker() {
   });
 }
 
+
+function showMealTip(text, el) {
+  // Verwijder bestaande tooltip
+  document.querySelectorAll('.meal-tip-bubble').forEach(e => e.remove());
+  const bubble = document.createElement('div');
+  bubble.className = 'meal-tip-bubble';
+  bubble.textContent = text;
+  bubble.style.cssText = 'position:fixed;z-index:9999;background:#333;color:white;font-size:12px;' +
+    'padding:7px 12px;border-radius:8px;max-width:240px;line-height:1.4;pointer-events:none;' +
+    'box-shadow:0 4px 12px rgba(0,0,0,0.2)';
+  document.body.appendChild(bubble);
+
+  const rect = el.getBoundingClientRect();
+  const left = Math.min(rect.left, window.innerWidth - 260);
+  bubble.style.left = Math.max(8, left) + 'px';
+  bubble.style.top = (rect.bottom + 6) + 'px';
+
+  // Verwijder na 3 seconden of bij klik
+  const remove = () => bubble.remove();
+  setTimeout(remove, 3000);
+  document.addEventListener('click', remove, { once: true });
+}
+
 function renderCustomMealsList() {
   const list = document.getElementById('custom-meals-list');
   if (!list) return;
   list.innerHTML = '';
-  // Update teller
-  const countEl = document.getElementById('meals-count');
-  if (countEl) countEl.textContent = customMeals.length ? '(' + customMeals.length + ')' : '';
 
   // Event delegation voor delete-knoppen (vermijdt escaping-problemen)
   list.onclick = (e) => {
@@ -4998,13 +5031,85 @@ function renderCustomMealsList() {
     deleteCustomMeal(id);
   };
 
+  // Zoek + sorteer
+  const searchQ = (document.getElementById('meals-search')?.value || '').toLowerCase().trim();
+  const sortBy = document.getElementById('meals-sort')?.value || 'eaten';
+
+  // Bereken statistieken per gerecht
+  const mealStats = {};
+  customMeals.forEach(m => {
+    const cis = checkins.filter(c => c.meal_type === m.id);
+    const scored = cis.filter(c => c.score);
+    mealStats[m.id] = {
+      count: cis.length,
+      avgScore: scored.length ? scored.reduce((s,c) => s+c.score, 0) / scored.length : 0,
+    };
+  });
+
+  // Bereken contextuele tips per gerecht
+  const today = todayStr();
+  const mealTips = {};
+  customMeals.forEach(m => {
+    const st = mealStats[m.id];
+    const tips = [];
+
+    // Tip: populair bij kinderen
+    const kidScores = checkins.filter(c => c.meal_type === m.id && c.score === 3 &&
+      familyProfiles.find(p => p.id === c.profile_id && p.role === 'child'));
+    if (kidScores.length >= 2) tips.push('\uD83D\uDC6B Kinderen vinden dit altijd lekker');
+
+    // Tip: al lang niet gegeten
+    const lastEaten = checkins.filter(c => c.meal_type === m.id)
+      .map(c => c.eaten_at).sort().pop();
+    if (lastEaten) {
+      const daysSince = Math.floor((new Date(today) - new Date(lastEaten)) / 86400000);
+      if (daysSince > 21) tips.push('\u23F0 Al ' + daysSince + ' dagen niet gegeten');
+    }
+
+    // Tip: recept ontbreekt
+    if (st.count > 0 && !m.ingredients && !m.instructions)
+      tips.push('\uD83D\uDCDD Nog geen recept — voeg ingrediënten toe');
+
+    // Tip: seizoensgebonden (ruw op basis van naam)
+    const name = m.name.toLowerCase();
+    const month = new Date().getMonth() + 1;
+    if ((name.includes('soep') || name.includes('stamppot') || name.includes('erwten')) && month >= 10)
+      tips.push('\u2744\uFE0F Perfect voor dit seizoen');
+    if ((name.includes('bbq') || name.includes('salade') || name.includes('grill')) && month >= 5 && month <= 8)
+      tips.push('\u2600\uFE0F Populair in de zomer');
+
+    // Tip: hoog gewaardeerd maar weinig op menu
+    if (st.avgScore >= 2.7 && st.count >= 2 && st.count < 5)
+      tips.push('\u2B50 Goed beoordeeld — zet vaker op het menu');
+
+    if (tips.length > 0) mealTips[m.id] = tips[0]; // toon max 1 tip
+  });
+
+  // Filter
+  let filtered = customMeals.filter(m =>
+    !searchQ || m.name.toLowerCase().includes(searchQ) || (m.note||'').toLowerCase().includes(searchQ)
+  );
+
+  // Sorteer
+  if (sortBy === 'eaten') filtered.sort((a,b) => (mealStats[b.id]?.count||0) - (mealStats[a.id]?.count||0));
+  else if (sortBy === 'name') filtered.sort((a,b) => a.name.localeCompare(b.name, 'nl'));
+  else if (sortBy === 'score') filtered.sort((a,b) => (mealStats[b.id]?.avgScore||0) - (mealStats[a.id]?.avgScore||0));
+  else if (sortBy === 'recent') filtered.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+
+  // Update teller met gefilterd aantal
+  const countEl = document.getElementById('meals-count');
+  if (countEl) countEl.textContent = filtered.length !== customMeals.length
+    ? '(' + filtered.length + '/' + customMeals.length + ')'
+    : (customMeals.length ? '(' + customMeals.length + ')' : '');
+
   // Favorieten altijd bovenaan berekenen
   const favs = getFavoritesFromCheckins();
 
-  if (customMeals.length===0) {
-    list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:16px">Nog geen eigen gerechten. Voeg er een toe!</p>';
+  if (filtered.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:16px">' +
+      (searchQ ? 'Geen gerechten gevonden voor "' + searchQ + '"' : 'Nog geen eigen gerechten. Voeg er een toe!') + '</p>';
   } else {
-    customMeals.forEach(m => {
+    filtered.forEach(m => {
       const div = document.createElement('div');
       div.className = 'custom-meal-item';
       div.style.cssText = 'flex-direction:column;align-items:flex-start;gap:4px';
@@ -5017,13 +5122,28 @@ function renderCustomMealsList() {
         '<div style="display:flex;align-items:center;gap:12px;width:100%">'+
         '<span class="custom-meal-emoji">'+m.emoji+'</span>'+
         '<div style="flex:1">'+
-          '<div style="display:flex;align-items:center;gap:6px">'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
             '<span class="custom-meal-name">'+m.name+'</span>'+
             (favoriteOf.length>0?
-              '<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700;white-space:nowrap">❤ '+favoriteOf.join(' & ')+'</span>':'')+
+              '<span style="font-size:10px;padding:1px 7px;border-radius:99px;background:#FFEEEE;color:#FF6B6B;border:1px solid #FFB5B5;font-weight:700;white-space:nowrap">\u2764 '+favoriteOf.join(' & ')+'</span>':'')+
+            (mealTips[m.id] ?
+              '<span title="'+mealTips[m.id]+'" onclick="event.stopPropagation();showMealTip(\'' +
+              mealTips[m.id].replace(/'/g,'\\'+'') + '\',this)" '+
+              'style="width:18px;height:18px;border-radius:50%;background:#EEF0FF;color:#7C6FF7;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;border:1px solid #C5BEFF">i</span>'
+              : '')+
           '</div>'+
           (m.note?'<div class="custom-meal-note">'+m.note+'</div>':'')+
           (m.side_dish?'<div style="font-size:11px;color:var(--muted);margin-top:2px">\uD83E\uDD57 '+m.side_dish+'</div>':'')+
+          (() => {
+            const st = mealStats[m.id];
+            if (!st || st.count === 0) return '';
+            const stars = st.avgScore >= 2.5 ? '\uD83D\uDE0B' : st.avgScore >= 1.5 ? '\uD83D\uDE10' : '\uD83D\uDE15';
+            return '<div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:6px;align-items:center">' +
+              '<span>' + stars + ' ' + st.avgScore.toFixed(1) + '</span>' +
+              '<span style="color:var(--border)">·</span>' +
+              '<span>' + st.count + '× gegeten</span>' +
+            '</div>';
+          })()+
         '</div>'+
         (m.recipe_url?'<button onclick="window.open(\''+m.recipe_url+'\',\'_blank\')" style="font-size:18px;background:none;border:none;cursor:pointer;padding:0" title="Recept bekijken">\uD83D\uDCD6</button>':'') +
         (checkins.some(c=>c.meal_type===m.id) ? '<button onclick="openMealDetail(\''+m.id+'\')" style="font-size:16px;background:var(--green-bg);border:none;border-radius:8px;padding:5px 8px;cursor:pointer" title="Statistieken">\uD83D\uDCCA</button>' : '')+
@@ -8002,6 +8122,26 @@ async function openCookScreen(menuEntry) {
 function renderCookHistory(history) {
   const el = document.getElementById('cook-history');
   const scoresEl = document.getElementById('cook-scores');
+
+  // Score-samenvatting banner bovenaan kookscherm
+  const summaryEl = document.getElementById('cook-score-summary');
+  if (summaryEl) {
+    if (!history.length) {
+      summaryEl.style.display = 'none';
+    } else {
+      const allScored = history.filter(c => c.score);
+      const avg = allScored.length ? allScored.reduce((s,c) => s+c.score, 0) / allScored.length : 0;
+      const avgE = avg >= 2.5 ? '\uD83D\uDE0B' : avg >= 1.5 ? '\uD83D\uDE10' : avg > 0 ? '\uD83D\uDE15' : '';
+      const times = Object.keys(history.reduce((acc,c) => { acc[c.eaten_at]=1; return acc; }, {})).length;
+      summaryEl.style.display = '';
+      summaryEl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--green-bg);border-radius:var(--r);border:1px solid var(--green);margin-bottom:12px">' +
+        '<span style="font-size:26px">' + avgE + '</span>' +
+        '<div><div style="font-weight:700;font-size:14px;color:var(--green)">' + (avg > 0 ? avg.toFixed(1) + '/3 gemiddeld' : 'Nog geen beoordeling') + '</div>' +
+        '<div style="font-size:12px;color:var(--muted)">' + times + '× eerder gemaakt</div></div>' +
+        '</div>';
+    }
+  }
 
   if (!history.length) {
     el.innerHTML = '<div style="color:var(--muted);font-style:italic;font-size:13px">Nog niet eerder gegeten.</div>';
@@ -12403,6 +12543,7 @@ boot();
     <!-- Scores per persoon -->
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px">SCORES</div>
+      <div id="cook-score-summary" style="display:none"></div>
       <div id="cook-scores"></div>
     </div>
   </div>
