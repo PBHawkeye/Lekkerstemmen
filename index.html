@@ -4226,10 +4226,16 @@ async function refreshInsightFamily(silent) {
     byPerson[name].push(c);
   });
 
+  // Bouw naam-lookup uit customMeals + weeklyMenu
+  const mealNameLookup = {};
+  (customMeals || []).forEach(m => { mealNameLookup[m.id] = m.name; });
+  (weeklyMenu || []).forEach(m => { if (m.meal_id) mealNameLookup[m.meal_id] = m.meal_name; });
+
   const summary = Object.entries(byPerson).map(([name, cis]) => {
     const avg = cis.filter(c=>c.score).reduce((s,c)=>s+c.score,0) / (cis.filter(c=>c.score).length||1);
-    const fav = cis.filter(c=>c.score===3).map(c=>c.meal_type).filter(Boolean)[0];
-    return name + ': gemiddeld ' + avg.toFixed(1) + (fav ? ', favoriet: ' + fav : '');
+    const favId = cis.filter(c=>c.score===3).map(c=>c.meal_type).filter(Boolean)[0];
+    const favName = favId ? (mealNameLookup[favId] || null) : null;
+    return name + ': gemiddeld ' + avg.toFixed(1) + (favName ? ', favoriet: ' + favName : '');
   }).join('; ');
 
   // Varieer het type observatie
