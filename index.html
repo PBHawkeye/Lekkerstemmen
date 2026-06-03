@@ -9832,6 +9832,107 @@ function copyShoppingList() {
 let currentMealDetail = null;
 let mealDetailPrevScreen = 'meals';
 
+
+// ── Aan menu toevoegen vanuit statistieken ────────────────────
+function openAddMealToMenuPicker(meal) {
+  // Zoek lege dagen in de komende 2 weken
+  const DAYS_NL = ['zo','ma','di','wo','do','vr','za'];
+  const days = [];
+  for (let i = 0; i < 14; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const dateStr = localDateStr(d);
+    const hasEntry = weeklyMenu.some(m => m.day_date === dateStr && m.published);
+    if (!hasEntry) {
+      days.push({
+        dateStr,
+        label: (i === 0 ? 'Vandaag' : i === 1 ? 'Morgen' : DAYS_NL[d.getDay()] + ' ' + d.getDate() + ' ' + d.toLocaleDateString('nl-NL', {month:'short'}))
+      });
+    }
+  }
+
+  // Verwijder bestaande modal
+  document.getElementById('add-to-menu-picker-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'add-to-menu-picker-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
+
+  const inner = document.createElement('div');
+  inner.style.cssText = 'background:white;border-radius:24px 24px 0 0;width:100%;padding:20px 16px 40px;max-height:80vh;overflow-y:auto';
+
+  inner.innerHTML =
+    '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:18px;margin-bottom:4px">' +
+      (meal.emoji || '\uD83C\uDF7D') + ' ' + (meal.name || meal.label) +
+    '</div>' +
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">Kies een dag om dit gerecht op het menu te zetten</div>' +
+    (days.length === 0
+      ? '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">De komende 2 weken staan al vol gepland.</div>'
+      : days.map(day =>
+          '<button onclick="addMealToMenuOnDate(\''+meal.id+'\',\''+day.dateStr+'\')" ' +
+          'style="display:block;width:100%;text-align:left;padding:12px 14px;border:1.5px solid var(--border);' +
+          'border-radius:var(--r);background:white;cursor:pointer;font-family:inherit;font-size:14px;' +
+          'margin-bottom:8px;font-weight:600" ' +
+          'onmouseover="this.style.background=\'var(--green-bg)\';this.style.borderColor=\'var(--green)\'" ' +
+          'onmouseout="this.style.background=\'white\';this.style.borderColor=\'var(--border)\'">' +
+          day.label +
+          '</button>'
+        ).join('')) +
+    '<button onclick="document.getElementById(\'add-to-menu-picker-modal\').remove()" ' +
+    'style="display:block;width:100%;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);' +
+    'background:white;font-size:14px;cursor:pointer;font-family:inherit;color:var(--muted);margin-top:4px">Annuleren</button>';
+
+  modal.appendChild(inner);
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+async function addMealToMenuOnDate(mealId, dateStr) {
+  document.getElementById('add-to-menu-picker-modal')?.remove();
+  const meal = customMeals.find(m => m.id === mealId) || currentMealDetail;
+  if (!meal) return;
+
+  const d = new Date(dateStr + 'T12:00:00');
+  const dayIndex = (d.getDay() + 6) % 7;
+  const weekStart = (() => {
+    const dd = new Date(dateStr + 'T12:00:00');
+    const day = dd.getDay();
+    dd.setDate(dd.getDate() - (day === 0 ? 6 : day - 1));
+    return localDateStr(dd);
+  })();
+
+  const { error } = await sb.from('weekly_menu').insert({
+    family_id: currentProfile.family_id,
+    week_of: weekStart,
+    day_date: dateStr,
+    meal_id: meal.id,
+    meal_name: meal.name || meal.label,
+    meal_emoji: meal.emoji || '\uD83C\uDF7D',
+    cook_id: currentProfile.id,
+    cook_name: currentProfile.name,
+    published: true,
+    variant: 'A',
+    for_profile_ids: null,
+  });
+
+  if (error) {
+    alert('Kon niet toevoegen: ' + error.message);
+    return;
+  }
+
+  await loadData();
+
+  const DAYS_NL = ['zo','ma','di','wo','do','vr','za'];
+  const dday = new Date(dateStr + 'T12:00:00');
+  const dayLabel = DAYS_NL[dday.getDay()] + ' ' + dday.getDate() + ' ' + dday.toLocaleDateString('nl-NL', {month:'short'});
+
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap';
+  toast.textContent = '\u2713 ' + (meal.name||meal.label) + ' op ' + dayLabel;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+
 function openMealDetail(mealId, fromScreen='meals') {
   const meal = getAllMeals(true).find(m=>m.id===mealId)
     || customMeals.find(m=>m.id===mealId)
@@ -10016,7 +10117,29 @@ async function renderMealDetail(meal) {
   }
 
   // ── AI aanbeveling ───────────────────────────────────────────
-  generateMealAI(meal, cis, votes, menuHistory);
+  const aiCacheKey = 'meal_ai_' + meal.id;
+  const cachedAI = sessionStorage.getItem(aiCacheKey);
+  const aiEl = document.getElementById('md-ai-tip');
+  if (cachedAI) {
+    if (aiEl) aiEl.textContent = cachedAI;
+  } else {
+    generateMealAI(meal, cis, votes, menuHistory);
+  }
+
+  // ── Aan menu toevoegen knop ──────────────────────────────────
+  let addToMenuBtn = document.getElementById('md-add-to-menu-btn');
+  if (!addToMenuBtn) {
+    addToMenuBtn = document.createElement('button');
+    addToMenuBtn.id = 'md-add-to-menu-btn';
+    addToMenuBtn.className = 'btn btn-primary';
+    addToMenuBtn.style.cssText = 'width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px';
+    addToMenuBtn.innerHTML = '\uD83D\uDCC5 Aan menu toevoegen';
+    // Voeg in boven de AI sectie
+    const aiSection = document.querySelector('[id="md-ai-tip"]')?.closest('div[style*="gradient"]')?.parentElement;
+    const aiBlock = document.getElementById('md-ai-tip')?.closest('div[style*="linear-gradient"]');
+    if (aiBlock) aiBlock.parentElement.insertBefore(addToMenuBtn, aiBlock);
+  }
+  addToMenuBtn.onclick = () => openAddMealToMenuPicker(meal);
 }
 
 async function generateMealAI(meal, cis, votes, menuHistory) {
@@ -10079,7 +10202,10 @@ async function generateMealAI(meal, cis, votes, menuHistory) {
     });
     if (!res) { aiEl.textContent = 'Geen AI credits meer.'; return; }
     const data = await res.json();
-    aiEl.textContent = data.content?.[0]?.text || 'Geen aanbeveling beschikbaar.';
+    const tip = data.content?.[0]?.text || 'Geen aanbeveling beschikbaar.';
+    aiEl.textContent = tip;
+    // Cache zodat we niet elke keer opnieuw laden
+    try { sessionStorage.setItem('meal_ai_' + meal.id, tip); } catch(e) {}
   } catch(e) {
     aiEl.textContent = 'Kon geen analyse genereren. Probeer het opnieuw.';
   }
