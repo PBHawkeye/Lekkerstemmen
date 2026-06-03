@@ -5649,8 +5649,10 @@ async function addCustomMeal() {
   const urlEl = document.getElementById('new-meal-url');
   if (urlEl) urlEl.value='';
   selectedEmoji='\uD83C\uDF7D';
+  closeAddMealSheet();
   await loadData();
   renderMealsScreen();
+  renderCustomMealsList();
 }
 
 async function deleteCustomMeal(id) {
@@ -6674,7 +6676,19 @@ function openEditMeal(meal) {
   if (aiSuggestWrap) {
     const hasIngr = !!(meal.ingredients && meal.ingredients.trim());
     const hasInst = !!(meal.instructions && meal.instructions.trim());
-    aiSuggestWrap.style.display = (hasIngr && hasInst) ? 'none' : '';
+    aiSuggestWrap.style.display = '';  // altijd tonen
+    const aiBtn = document.getElementById('edit-meal-ai-suggest-btn');
+    if (aiBtn) {
+      if (!hasIngr && !hasInst) {
+        aiBtn.textContent = '\u2728 AI: volledig recept genereren';
+      } else if (!hasIngr) {
+        aiBtn.textContent = '\u2728 AI: ingrediënten aanvullen';
+      } else if (!hasInst) {
+        aiBtn.textContent = '\u2728 AI: bereidingswijze aanvullen';
+      } else {
+        aiBtn.textContent = '\u2728 AI: recept vernieuwen';
+      }
+    }
     // Sla mealdata op voor de AI call
     aiSuggestWrap.dataset.mealName = meal.name || meal.label || '';
     aiSuggestWrap.dataset.mealNote = meal.note || '';
@@ -6712,11 +6726,15 @@ async function generateEditMealRecipe() {
     if (!match) throw new Error('Geen JSON in antwoord');
     const parsed = JSON.parse(match[0]);
 
-    // Vul alleen lege velden in — overschrijf bestaande inhoud niet
     const ingrEl = document.getElementById('edit-meal-ingredients');
     const instEl = document.getElementById('edit-meal-instructions');
-    if (ingrEl && !ingrEl.value.trim() && parsed.ingredients) ingrEl.value = parsed.ingredients;
-    if (instEl && !instEl.value.trim() && parsed.instructions) instEl.value = parsed.instructions;
+    const btnText = btn?.textContent || '';
+    const forceOverwrite = btnText.includes('vernieuwen');
+    // Vul lege velden in, of overschrijf als "vernieuwen" gekozen
+    if (ingrEl && (!ingrEl.value.trim() || forceOverwrite) && parsed.ingredients)
+      ingrEl.value = toStr(parsed.ingredients);
+    if (instEl && (!instEl.value.trim() || forceOverwrite) && parsed.instructions)
+      instEl.value = toStr(parsed.instructions);
 
     if (wrap) wrap.style.display = 'none';
   } catch(e) {
