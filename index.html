@@ -605,7 +605,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div style="background:white;border-radius:var(--r);border:1.5px solid var(--border);padding:14px 16px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Menu deze week</div>
       <div id="today-menu-preview-list"></div>
-      <button class="btn" style="background:var(--green-bg);color:var(--green);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="goScreen('menu')">Heel menu bekijken →</button>
+      <button class="btn" style="background:var(--green-bg);color:var(--green);padding:10px;font-size:13px;margin-top:10px;margin-bottom:0" onclick="menuWeekOffset=menuBaseOffset;goScreen('menu')">Heel menu bekijken →</button>
     </div>
   </div>
   <!-- Vanavond kaart - toont menu item voor vandaag aan iedereen -->
@@ -1742,7 +1742,7 @@ const sb = supabase.createClient(
 
 // ── STATE ──────────────────────────────────────────────────────
 let currentUser = null, currentProfile = null;
-let todayMeal = null, checkins = [], customMeals = [];
+let todayMeal = null, checkins = [], customMeals = [], myVotes = [];
 let familyProfiles = [];
 let selectedScore = null, selectedDrink = null, selectedMeal = null, selectedComment = '';
 let togTogether = true, togSport = false, selectedRole = null;
@@ -3820,6 +3820,7 @@ async function loadData() {
     wmRes,
     settingsRes,
     availRes,
+    votesRes,
   ] = await Promise.all([
     sb.from('meals').select('*').eq('family_id',familyId).eq('eaten_at',todayStr()).maybeSingle(),
     sb.from('checkins_with_context').select('*').eq('profile_id',profileId).gte('eaten_at',sinceStr).order('eaten_at',{ascending:false}).limit(60),
@@ -3829,11 +3830,13 @@ async function loadData() {
       .lte('day_date', (() => { const d = new Date(); d.setDate(d.getDate()+testDayOffset+21); return localDateStr(d); })()),
     sb.from('family_settings').select('*').eq('family_id',familyId).maybeSingle(),
     sb.from('vote_available_meals').select('*').eq('family_id',familyId).eq('week_of',weekStart).order('sort_order'),
+    sb.from('votes').select('profile_id,week_of').eq('family_id',familyId).eq('week_of',nextMondayOfWeek()),
   ]);
 
   todayMeal = mealRes.data;
   customMeals = cmRes.data||[];
   weeklyMenu = wmRes.data||[];
+  myVotes = votesRes?.data || [];
 
   // Laad sport schedule data voor gebruik in menu scherm
   const {data:sportData} = await sb.from('sport_schedule')
@@ -4856,12 +4859,14 @@ function refreshHome() {
         (isToday2?'<span style="font-size:10px;background:var(--green);color:white;border-radius:99px;padding:1px 6px;font-weight:700;margin-left:4px">vandaag</span>':'')+
         '</div>';
     }).join('');
-    // Koken knop als jij vandaag kookt
+    // Koken knop: alleen tonen als jij vandaag kookt én nog niet ingecheckt hebt
     const todayEntry = previewItems.find(m => m.day_date === today2);
     const kookSection = document.getElementById('tonight-cook-section');
     const kookBtn = document.getElementById('tonight-cook-btn');
+    const alreadyCheckedIn = checkins.some(c => c.eaten_at === today2 && c.profile_id === p.id);
     if (kookSection && todayEntry && todayEntry.cook_name &&
-        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase())) {
+        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase()) &&
+        !alreadyCheckedIn) {
       kookSection.style.display = '';
       if (kookBtn) kookBtn.onclick = () => openCookScreen(todayEntry);
     } else if (kookSection) {
@@ -4872,12 +4877,13 @@ function refreshHome() {
     hide(menuPreview);
   }
 
-  // Stemdag block — toon op de ingestelde stemdag
+  // Stemdag block — toon alleen als kind nog niet gestemd heeft
   const isStemdag = testDayOfWeek()===(familySettings.vote_day||6);
   const fridayBlock = document.getElementById('friday-block');
-  // Toon ook als kind nog niet gestemd heeft, ongeacht dag
-  const hasVotedThisWeek = false; // TODO: check votes
-  if (p.role==='child' && (isStemdag || availableMeals.length > 0)) unhide(fridayBlock);
+  const nextWeekVotes = nextMondayOfWeek();
+  const hasVotedThisWeek = myVotes.some(v => v.profile_id === p.id);
+  // Toon als: er zijn gerechten om op te stemmen EN kind heeft nog niet gestemd
+  if (p.role === 'child' && availableMeals.length > 0 && !hasVotedThisWeek) unhide(fridayBlock);
   else hide(fridayBlock);
 
   // Update stemdag label
@@ -5406,7 +5412,7 @@ async function sendMealChatMessage() {
         displayText = reply.replace(/VOORSTEL:[\s\S]+$/, '').trim();
         // Toon overnemen-knop
         const acceptBar = document.getElementById('meal-chat-accept-bar');
-        if (acceptBar) acceptBar.style.display = '';
+        if (acceptBar) { acceptBar.style.display = ''; renderMenuDateOptions(); }
       } catch(e) { /* JSON parse mislukt, toon gewoon de tekst */ }
     } else {
       // Geen nieuw voorstel: verberg overnemen-knop als er geen actief voorstel is
@@ -5425,10 +5431,70 @@ async function sendMealChatMessage() {
   }
 }
 
+
+// ── Menu-datum opties voor chat-assistent ────────────────────
+function renderMenuDateOptions() {
+  const container = document.getElementById('meal-chat-menu-options');
+  if (!container) return;
+
+  const today = todayStr();
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDateStr(d); })();
+
+  const todayEntry = weeklyMenu.find(m => m.day_date === today && m.published);
+  const tomorrowEntry = weeklyMenu.find(m => m.day_date === tomorrow && m.published);
+
+  const DAYS_NL = ['zo','ma','di','wo','do','vr','za'];
+  const tomorrowDay = DAYS_NL[new Date(tomorrow + 'T12:00:00').getDay()];
+
+  let html = '';
+
+  if (!todayEntry) {
+    // Vandaag vrij
+    html += `<label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--green)">
+      <input type="radio" name="menu-date-pick" value="today" checked
+        style="width:18px;height:18px;accent-color:var(--green);cursor:pointer" />
+      Vandaag op het menu zetten
+    </label>`;
+  } else {
+    // Vandaag al bezet
+    html += `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;padding:6px 8px;background:#FFF8EC;border-radius:8px">
+      ⚠️ Vandaag staat al <strong>${todayEntry.meal_name}</strong> op het menu.
+    </div>`;
+    html += `<label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;font-size:13px;color:var(--muted)">
+      <input type="radio" name="menu-date-pick" value="none" checked
+        style="width:18px;height:18px;cursor:pointer" />
+      Alleen opslaan, niet op menu
+    </label>`;
+  }
+
+  if (!tomorrowEntry) {
+    html += `<label style="display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--green)">
+      <input type="radio" name="menu-date-pick" value="tomorrow" ${todayEntry ? 'checked' : ''}
+        style="width:18px;height:18px;accent-color:var(--green);cursor:pointer" />
+      ${tomorrowDay} (morgen) op het menu zetten
+    </label>`;
+  } else if (todayEntry) {
+    html += `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+      Morgen staat ook al <strong>${tomorrowEntry.meal_name}</strong> op het menu.
+    </div>`;
+  }
+
+  if (!todayEntry && !tomorrowEntry) {
+    html += `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--muted)">
+      <input type="radio" name="menu-date-pick" value="none"
+        style="width:18px;height:18px;cursor:pointer" />
+      Alleen opslaan, niet op menu
+    </label>`;
+  }
+
+  container.innerHTML = html;
+}
+
 async function acceptMealSuggestion() {
   if (!_mealChatSuggestion) return;
   const s = _mealChatSuggestion;
-  const addToMenu = document.getElementById('meal-chat-add-to-menu')?.checked || false;
+  const menuDatePick = document.querySelector('input[name="menu-date-pick"]:checked')?.value || 'none';
+  const addToMenu = menuDatePick !== 'none';
 
   const btn = document.querySelector('#meal-chat-accept-bar button');
   if (btn) { btn.textContent = 'Opslaan...'; btn.disabled = true; }
@@ -5454,9 +5520,12 @@ async function acceptMealSuggestion() {
 
   // 2. Optioneel: voeg toe aan menu voor vandaag als gepubliceerd
   if (addToMenu) {
-    const todayDate = todayStr();
-    const weekStart = testMondayOfWeek();
-    const d = new Date(todayDate + 'T12:00:00');
+    const menuDate = menuDatePick === 'tomorrow'
+      ? (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDateStr(d); })()
+      : todayStr();
+    const todayDate = menuDate;
+    const weekStart = (() => { const d = new Date(menuDate + 'T12:00:00'); const day = d.getDay(); d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)); return localDateStr(d); })();
+    const d = new Date(menuDate + 'T12:00:00');
     const dayIndex = (d.getDay() + 6) % 7;
     const cookName = currentProfile.name || null;
 
@@ -5484,7 +5553,8 @@ async function acceptMealSuggestion() {
   // Toast
   const toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:99px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap';
-  toast.textContent = '\u2713 ' + s.naam + (addToMenu ? ' opgeslagen & op menu gezet!' : ' toegevoegd!');
+  const dateLabel = menuDatePick === 'tomorrow' ? ' & morgen op menu gezet!' : menuDatePick === 'today' ? ' & vandaag op menu gezet!' : ' toegevoegd!';
+  toast.textContent = '\u2713 ' + s.naam + dateLabel;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2500);
 }
@@ -12475,10 +12545,7 @@ boot();
 
     <!-- Voorstel overnemen knop (verborgen totdat AI een gerecht voorstelt) -->
     <div id="meal-chat-accept-bar" style="display:none;padding:10px 16px;background:var(--green-bg);border-top:1px solid var(--green);flex-shrink:0">
-      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--green)">
-        <input type="checkbox" id="meal-chat-add-to-menu" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer" />
-        Vandaag op het menu zetten
-      </label>
+      <div id="meal-chat-menu-options" style="margin-bottom:10px"></div>
       <button onclick="acceptMealSuggestion()" class="btn btn-primary" style="width:100%">
         &#x2713; Gerecht opslaan
       </button>
