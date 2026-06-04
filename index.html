@@ -2261,8 +2261,8 @@ async function doAuth() {
 
       if (prof) {
         // Gebruikersnaam gevonden → fake-email login
-        const cleanUsername = input.toLowerCase().replace(/[^a-z0-9_.@-]/g,'');
-        const fakeEmail = cleanUsername + '@' + prof.family_id + '.myfavmeal.app';
+        const cleanUsername = input.toLowerCase();
+        const fakeEmail = cleanUsername.replace(/@/g, '_at_').replace(/[^a-z0-9_.at-]/gi, '') + '@' + prof.family_id + '.myfavmeal.app';
         console.log('[Login] Gebruikersnaam gevonden, probeer:', fakeEmail);
         ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: fakeEmail, password }));
         if (loginError) throw new Error('Wachtwoord onjuist. (' + loginError.message + ')');
@@ -3201,7 +3201,7 @@ async function doUsernameLogin() {
     if (!profile) throw new Error('Gebruikersnaam niet gevonden.');
 
     // Inloggen met de nep-email
-    const fakeEmail = username + '@' + profile.family_id + '.myfavmeal.app';
+    const fakeEmail = username.replace(/@/g, '_at_').replace(/[^a-z0-9_.at-]/gi, '') + '@' + profile.family_id + '.myfavmeal.app';
     const { data, error } = await sb.auth.signInWithPassword({ email: fakeEmail, password });
     if (error) throw new Error('Onjuist wachtwoord.');
 
@@ -3274,7 +3274,7 @@ async function setMemberUsername(profileId, username, password) {
   const { data: profile } = await sb.from('profiles').select('id,family_id').eq('id', profileId).maybeSingle();
   if (!profile) throw new Error('Profiel niet gevonden.');
 
-  const fakeEmail = username + '@' + profile.family_id + '.myfavmeal.app';
+  const fakeEmail = username.replace(/@/g, '_at_').replace(/[^a-z0-9_.at-]/gi, '') + '@' + profile.family_id + '.myfavmeal.app';
 
   // Sla gebruikersnaam op in profiel
   await sb.from('profiles').update({ username }).eq('id', profileId);
@@ -11989,7 +11989,7 @@ async function createChildAccount() {
 
     // Genereer tijdelijk wachtwoord en maak auth-account aan
     const tempPw = generateTempPassword();
-    const fakeEmail = username.toLowerCase().replace(/[^a-z0-9_.@-]/g,'') + '@' + currentProfile.family_id + '.myfavmeal.app';
+    const fakeEmail = username.toLowerCase().replace(/@/g, '_at_').replace(/[^a-z0-9_.at-]/gi, '') + '@' + currentProfile.family_id + '.myfavmeal.app';
 
     // Gebruik admin endpoint voor betrouwbaar account aanmaken
     const pwRes = await fetch('/api/set-member-password', {
