@@ -1069,6 +1069,32 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       <div id="family-members-list"></div>
     </div>
 
+    <!-- Kind direct aanmaken -->
+    <div style="background:var(--green-bg);border-radius:var(--r);padding:18px;margin-bottom:16px;border:1.5px solid var(--green)">
+      <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">&#x1F476; Kind direct aanmaken</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">Maak meteen een account aan voor je kind. Kies een gebruikersnaam en het kind kan direct inloggen.</div>
+      <div class="field" style="margin-bottom:10px">
+        <label class="label">Naam</label>
+        <input type="text" id="new-child-name" placeholder="bijv. Emma" maxlength="30"
+          style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box;background:white" />
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label class="label">Gebruikersnaam <span style="font-weight:400;color:var(--muted)">(om in te loggen)</span></label>
+        <input type="text" id="new-child-username" placeholder="bijv. emma" maxlength="30" autocapitalize="none"
+          style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box;background:white" />
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Alleen kleine letters, cijfers en _</div>
+      </div>
+      <div id="new-child-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:10px"></div>
+      <div id="new-child-result" style="display:none;background:white;border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px">&#x2713; Account aangemaakt!</div>
+        <div style="font-size:13px;margin-bottom:4px">Gebruikersnaam: <strong id="new-child-result-username"></strong></div>
+        <div style="font-size:13px;margin-bottom:8px">Tijdelijk wachtwoord: <strong id="new-child-result-password" style="font-family:monospace;font-size:15px;color:var(--green)"></strong></div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5">Deel dit met je kind. Bij eerste login wordt gevraagd een eigen wachtwoord te kiezen.</div>
+        <button onclick="copyChildCredentials()" class="btn" style="width:100%;margin-top:10px;background:var(--green-bg);color:var(--green)">&#x1F4CB; Kopieer inloggegevens</button>
+      </div>
+      <button onclick="createChildAccount()" id="new-child-btn" class="btn btn-primary" style="width:100%">Account aanmaken &#x2192;</button>
+    </div>
+
     <!-- Uitnodiging genereren -->
     <div style="background:var(--green-bg);border-radius:var(--r);padding:18px;margin-bottom:16px;border:1.5px solid var(--border)">
       <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">&#x1F4E9; Iemand uitnodigen</div>
@@ -3156,12 +3182,58 @@ async function doUsernameLogin() {
     if (error) throw new Error('Onjuist wachtwoord.');
 
     currentUser = data.user;
-    await loadProfile();
+    // Check of het een temp wachtwoord is (patroon: woord-woord-getal)
+    const isTempPw = /^[a-z]+-[a-z]+-\d+$/.test(password);
+    if (isTempPw) {
+      // Toon wachtwoord-wijzig modal voor eerste login
+      await loadProfile();
+      showChangePasswordModal();
+    } else {
+      await loadProfile();
+    }
   } catch(e) {
     if (errEl) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
   } finally {
     if (btn) { btn.textContent = 'Inloggen →'; btn.disabled = false; }
   }
+}
+
+function showChangePasswordModal() {
+  const modal = document.createElement('div');
+  modal.id = 'change-pw-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end';
+  modal.innerHTML =
+    '<div style="background:white;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 40px">' +
+    '<div style="font-family:\'Fraunces\',serif;font-weight:800;font-size:20px;margin-bottom:6px">\uD83D\uDD11 Kies een wachtwoord</div>' +
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">Je logt in met een tijdelijk wachtwoord. Kies nu een eigen wachtwoord.</div>' +
+    '<div class="field"><label class="label">Nieuw wachtwoord</label>' +
+    '<input type="password" id="cpw-new" placeholder="Minimaal 6 tekens" style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>' +
+    '<div class="field"><label class="label">Bevestig wachtwoord</label>' +
+    '<input type="password" id="cpw-confirm" placeholder="Herhaal wachtwoord" style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box" /></div>' +
+    '<div id="cpw-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:12px"></div>' +
+    '<button onclick="saveNewPassword()" class="btn btn-primary" id="cpw-btn" style="width:100%">Wachtwoord opslaan \u2192</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('cpw-new')?.focus(), 200);
+}
+
+async function saveNewPassword() {
+  const pw = document.getElementById('cpw-new')?.value;
+  const pw2 = document.getElementById('cpw-confirm')?.value;
+  const errEl = document.getElementById('cpw-error');
+  const btn = document.getElementById('cpw-btn');
+
+  if (!pw || pw.length < 6) { if (errEl) { errEl.textContent = 'Minimaal 6 tekens.'; errEl.style.display = ''; } return; }
+  if (pw !== pw2) { if (errEl) { errEl.textContent = 'Wachtwoorden komen niet overeen.'; errEl.style.display = ''; } return; }
+
+  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) {
+    if (errEl) { errEl.textContent = error.message; errEl.style.display = ''; }
+    if (btn) { btn.textContent = 'Opslaan \u2192'; btn.disabled = false; }
+    return;
+  }
+  document.getElementById('change-pw-modal')?.remove();
 }
 
 async function setMemberUsername(profileId, username, password) {
@@ -11836,6 +11908,102 @@ let currentInviteCode = null;
 let currentInviteRole = null;
 let joinInviteData = null;
 let joinSelectedEmoji = '\uD83D\uDE00';
+
+
+// ── Kind direct aanmaken ──────────────────────────────────────
+function generateTempPassword() {
+  const woorden = ['pizza','pasta','soep','rijst','appel','mango','citroen','banaan','kaas','brood'];
+  const cijfers = Math.floor(10 + Math.random() * 90);
+  const w1 = woorden[Math.floor(Math.random() * woorden.length)];
+  const w2 = woorden[Math.floor(Math.random() * woorden.length)];
+  return w1 + '-' + w2 + '-' + cijfers;
+}
+
+let _newChildCredentials = null;
+
+async function createChildAccount() {
+  const nameEl = document.getElementById('new-child-name');
+  const usernameEl = document.getElementById('new-child-username');
+  const errEl = document.getElementById('new-child-error');
+  const btn = document.getElementById('new-child-btn');
+  const resultEl = document.getElementById('new-child-result');
+
+  const name = nameEl?.value.trim();
+  const username = usernameEl?.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+  if (errEl) errEl.style.display = 'none';
+
+  if (!name) { if (errEl) { errEl.textContent = 'Vul een naam in.'; errEl.style.display = ''; } return; }
+  if (!username || username.length < 2) { if (errEl) { errEl.textContent = 'Gebruikersnaam moet minimaal 2 tekens zijn (a-z, 0-9, _).'; errEl.style.display = ''; } return; }
+
+  if (btn) { btn.textContent = 'Bezig...'; btn.disabled = true; }
+
+  try {
+    // Check gebruikersnaam beschikbaarheid
+    const { data: existing } = await sb.from('profiles').select('id').eq('username', username).maybeSingle();
+    if (existing) throw new Error('Gebruikersnaam "' + username + '" is al in gebruik.');
+
+    // Maak profiel aan
+    const EMOJIS = ['\uD83D\uDE0A','\uD83D\uDE04','\uD83E\uDD73','\uD83D\uDE0E','\uD83E\uDD17','\uD83D\uDE07','\uD83E\uDD29'];
+    const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    const { data: profile, error: profErr } = await sb.from('profiles').insert({
+      family_id: currentProfile.family_id,
+      name,
+      username,
+      emoji,
+      role: 'child',
+    }).select().maybeSingle();
+
+    if (profErr || !profile) throw new Error('Kon profiel niet aanmaken: ' + (profErr?.message || ''));
+
+    // Genereer tijdelijk wachtwoord en maak auth-account aan
+    const tempPw = generateTempPassword();
+    const fakeEmail = username + '@' + currentProfile.family_id + '.myfavmeal.app';
+
+    const { error: authErr } = await sb.rpc('set_member_password', {
+      p_email: fakeEmail,
+      p_password: tempPw,
+      p_profile_id: profile.id,
+    });
+
+    if (authErr) throw new Error('Auth account mislukt: ' + authErr.message);
+
+    // Toon resultaat
+    _newChildCredentials = { name, username, tempPw };
+    document.getElementById('new-child-result-username').textContent = username;
+    document.getElementById('new-child-result-password').textContent = tempPw;
+    if (resultEl) resultEl.style.display = '';
+    if (btn) { btn.textContent = '+ Nog een kind aanmaken'; btn.disabled = false; }
+    if (nameEl) nameEl.value = '';
+    if (usernameEl) usernameEl.value = '';
+
+    // Herlaad lijst
+    await loadFamilyMembers();
+
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
+    if (btn) { btn.textContent = 'Account aanmaken →'; btn.disabled = false; }
+  }
+}
+
+function copyChildCredentials() {
+  if (!_newChildCredentials) return;
+  const { name, username, tempPw } = _newChildCredentials;
+  const text = 'My Fav Meal inloggegevens voor ' + name + ':\n' +
+    '🌐 lekkerstemmen.app\n' +
+    '👤 Gebruikersnaam: ' + username + '\n' +
+    '🔑 Wachtwoord: ' + tempPw + '\n\n' +
+    'Na het inloggen kun je een eigen wachtwoord kiezen.';
+  if (navigator.share) {
+    navigator.share({ text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      btn.textContent = '✓ Gekopieerd!';
+      setTimeout(() => btn.textContent = '\uD83D\uDCCB Kopieer inloggegevens', 2000);
+    });
+  }
+}
 
 async function openInviteScreen() {
   await loadFamilyMembers();
