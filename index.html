@@ -218,9 +218,8 @@
     /* BOTTOM NAV */
     .bottom-nav { position: fixed; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 420px; background: white; border: 1.5px solid var(--border); display: flex; padding: 8px 4px; z-index: 1000; box-shadow: 0 4px 24px rgba(0,0,0,0.12); border-radius: 999px; }
     .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border: none; background: transparent; cursor: pointer; color: var(--muted); font-family: 'DM Sans', sans-serif; }
-    .nav-btn { position: relative; }
+    .nav-btn { position: relative; transition: color 0.2s; }
     .nav-btn.active { color: var(--green); }
-    .nav-btn.active::before { content: ''; position: absolute; inset: -4px 0; background: var(--green-bg); border-radius: 999px; z-index: -1; }
     .nav-icon { font-size: 22px; line-height: 1; }
     .nav-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
     .loading-wrap { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; min-height: 100vh; }
@@ -1811,6 +1810,11 @@ const DEFAULT_MEALS = [];
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('s-'+id).classList.add('active');
+  // Update nav active state
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  // Vind de knop die naar dit scherm navigeert
+  const activeBtn = document.querySelector('.nav-btn[data-screen="'+id+'"]');
+  if (activeBtn) activeBtn.classList.add('active');
   window.scrollTo(0, 0);
 }
 function hide(el) { if(el) el.classList.add('hidden'); }
@@ -3923,7 +3927,7 @@ async function loadData() {
 
 // ── HOME ───────────────────────────────────────────────────────
 function goScreen(name) {
-  if (name==='home') { homeDayOffset = 0; show('home'); refreshHome(); }
+  if (name==='home') { homeDayOffset = 0; show('home'); refreshHome(); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); const hb=document.getElementById('nav-home'); if(hb) hb.classList.add('active'); }
   else if (name==='checkin') { selectedScore=null; selectedDrink=null; resetCheckin(); show('checkin'); }
   else if (name==='log') { selectedMeal=null; resetLog(); buildLogGrid(); show('log'); }
   else if (name==='vote') {
@@ -12870,19 +12874,19 @@ boot();
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goScreen('home')"><span class="nav-icon">&#x1F3E0;</span><span class="nav-label"><span data-i18n="nav_home">Home</span></span></button>
     <button class="nav-btn" id="nav-action" onclick="navAction()"><span class="nav-icon" id="nav-action-icon">&#x1F60B;</span><span class="nav-label" id="nav-action-label">Stem</span></button>
-    <button class="nav-btn" id="nav-log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
-    <button class="nav-btn" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Voorkeur</span></button>
-    <button class="nav-btn" id="nav-meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
-    <button class="nav-btn" id="nav-menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label"><span data-i18n="nav_menu">Menu</span></span></button>
-    <button class="nav-btn" id="nav-shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label"><span data-i18n="nav_shopping">Inkopen</span></span></button>
-    <button class="nav-btn" id="nav-status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label"><span data-i18n="nav_status">Status</span></span></button>
-    <button class="nav-btn" id="nav-invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
-    <button class="nav-btn" id="nav-sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
-    <button class="nav-btn" id="nav-stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
-    <button class="nav-btn" id="nav-sport-parent" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
-    <button class="nav-btn" id="nav-profile-child" onclick="goScreen('profile')" style="display:none"><span class="nav-icon">&#x1F464;</span><span class="nav-label">Profiel</span></button>
+    <button class="nav-btn" id="nav-log" data-screen="log" onclick="goScreen('log')" style="display:none"><span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Log</span></button>
+    <button class="nav-btn" data-screen="vote" onclick="goScreen('vote')" id="nav-vote-btn"><span class="nav-icon">&#x1F5F3;</span><span class="nav-label">Voorkeur</span></button>
+    <button class="nav-btn" id="nav-meals" data-screen="meals" onclick="goScreen('meals')" style="display:none"><span class="nav-icon">&#x1F37D;</span><span class="nav-label"><span data-i18n="meals_title">Gerechten</span></span></button>
+    <button class="nav-btn" id="nav-menu" data-screen="menu" onclick="goScreen('menu')" style="display:none"><span class="nav-icon">&#x1F4C5;</span><span class="nav-label"><span data-i18n="nav_menu">Menu</span></span></button>
+    <button class="nav-btn" id="nav-shopping" data-screen="shopping" onclick="goScreen('shopping')" style="display:none"><span class="nav-icon">&#x1F6D2;</span><span class="nav-label"><span data-i18n="nav_shopping">Inkopen</span></span></button>
+    <button class="nav-btn" id="nav-status" data-screen="status" onclick="goScreen('status')" style="display:none"><span class="nav-icon">✅</span><span class="nav-label"><span data-i18n="nav_status">Status</span></span></button>
+    <button class="nav-btn" id="nav-invite" data-screen="invite" onclick="goScreen('invite')" style="display:none"><span class="nav-icon">&#x1F46A;</span><span class="nav-label">Gezin</span></button>
+    <button class="nav-btn" id="nav-sport" data-screen="sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">⚽</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
+    <button class="nav-btn" id="nav-stats" data-screen="stats" onclick="goScreen('stats')" style="display:none"><span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Stats</span></button>
+    <button class="nav-btn" id="nav-sport-parent" data-screen="sport" onclick="goScreen('sport')" style="display:none"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
+    <button class="nav-btn" id="nav-profile-child" data-screen="profile" onclick="goScreen('profile')" style="display:none"><span class="nav-icon">&#x1F464;</span><span class="nav-label">Profiel</span></button>
     <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()" style="display:none"><span class="nav-icon" style="font-size:20px;letter-spacing:-2px">&#8230;</span><span class="nav-label"><span data-i18n="nav_more">Meer</span></span></button>
-  <div id="nav-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:white;border-top:1.5px solid var(--border);padding:10px 16px;z-index:300;box-shadow:0 -4px 24px rgba(0,0,0,0.10)">
+  <div id="nav-more-menu" style="display:none;position:fixed;bottom:calc(76px + env(safe-area-inset-bottom,0px));left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:1.5px solid var(--border);border-radius:20px;padding:12px 16px;z-index:300;box-shadow:0 -4px 32px rgba(0,0,0,0.15)">
     <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto">
       <button class="nav-btn" onclick="goScreen('sport');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#9917;</span><span class="nav-label"><span data-i18n="nav_sport">Sport</span></span></button>
       <button class="nav-btn" onclick="goScreen('stats');toggleMoreMenu()" style="display:flex;flex-direction:column;align-items:center"><span class="nav-icon">&#128202;</span><span class="nav-label">Stats</span></button>
