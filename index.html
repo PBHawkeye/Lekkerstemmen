@@ -376,15 +376,24 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div class="tabs" style="display:flex;gap:4px">
       <button class="tab active" onclick="authTab('login')" id="tab-login" style="flex:1"><span data-i18n="btn_login">Inloggen</span></button>
       <button class="tab" onclick="authTab('signup')" id="tab-signup" style="flex:1"><span data-i18n="btn_register">Aanmelden</span></button>
-      <button class="tab" onclick="authTab('username')" id="tab-username" style="flex:1">Gebruikersnaam</button>
     </div>
     <div id="auth-error" class="msg-error hidden"></div>
     <div id="auth-success" class="msg-success hidden"></div>
 
-    <!-- Email login/signup velden -->
+    <!-- Slim login veld: email of gebruikersnaam -->
     <div id="auth-email-fields">
-      <div class="field"><label class="label"><span data-i18n="lbl_email">E-mailadres</span></label><input type="email" id="auth-email" placeholder="jouw@email.nl" /></div>
-      <div class="field" id="auth-password-field"><label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label><input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doAuth()" /></div>
+      <div class="field">
+        <label class="label">E-mailadres of gebruikersnaam</label>
+        <input type="text" id="auth-email" placeholder="jouw@email.nl of emma"
+          autocomplete="username" autocapitalize="none"
+          onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()"
+          style="-webkit-appearance:none" />
+      </div>
+      <div class="field" id="auth-password-field">
+        <label class="label"><span data-i18n="lbl_password">Wachtwoord</span></label>
+        <input type="password" id="auth-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
+          onkeydown="if(event.key==='Enter')doAuth()" />
+      </div>
       <button class="btn btn-primary" onclick="doAuth()" id="auth-btn" style="width:100%"><span data-i18n="btn_login">Inloggen</span> &#x2192;</button>
       <div id="auth-forgot-wrap" style="text-align:center;margin-top:10px">
         <button type="button" onclick="doForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit">Wachtwoord vergeten?</button>
@@ -395,22 +404,10 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </div>
     </div>
 
-    <!-- Gebruikersnaam login velden -->
+    <!-- Verborgen username velden (voor compatibiliteit) -->
     <div id="auth-username-fields" style="display:none">
-      <div style="background:var(--green-bg);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--green);margin-bottom:14px;line-height:1.5">
-        Voor gezinsleden zonder e-mailadres. De ouder stelt de gebruikersnaam en het wachtwoord in bij Gezin → lid bewerken.
-      </div>
-      <div class="field">
-        <label class="label">Gebruikersnaam</label>
-        <input type="text" id="auth-username" placeholder="bijv. emma" autocomplete="username" autocapitalize="none"
-          onkeydown="if(event.key==='Enter')document.getElementById('auth-username-password').focus()" />
-      </div>
-      <div class="field">
-        <label class="label">Wachtwoord</label>
-        <input type="password" id="auth-username-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
-          onkeydown="if(event.key==='Enter')doUsernameLogin()" />
-      </div>
-      <button class="btn btn-primary" onclick="doUsernameLogin()" style="width:100%">Inloggen &#x2192;</button>
+      <input type="text" id="auth-username" style="display:none" />
+      <input type="password" id="auth-username-password" style="display:none" />
     </div>
 
     <div id="auth-reset-success" style="display:none;background:var(--green-bg);color:var(--green);border-radius:var(--r);padding:12px 14px;font-size:13px;font-weight:600;text-align:center;margin-top:10px"></div>
@@ -1080,9 +1077,9 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </div>
       <div class="field" style="margin-bottom:10px">
         <label class="label">Gebruikersnaam <span style="font-weight:400;color:var(--muted)">(om in te loggen)</span></label>
-        <input type="text" id="new-child-username" placeholder="bijv. emma" maxlength="30" autocapitalize="none"
+        <input type="text" id="new-child-username" placeholder="bijv. emma of emma@gmail.com" maxlength="60" autocapitalize="none" autocomplete="username"
           style="-webkit-appearance:none;display:block;width:100%;box-sizing:border-box;background:white" />
-        <div style="font-size:11px;color:var(--muted);margin-top:3px">Alleen kleine letters, cijfers en _</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Bijv. emma of emma@gmail.com</div>
       </div>
       <div id="new-child-error" style="display:none;color:var(--coral);font-size:13px;margin-bottom:10px"></div>
       <div id="new-child-result" style="display:none;background:white;border-radius:12px;padding:14px;margin-bottom:10px">
@@ -2245,19 +2242,42 @@ function authTab(tab) {
 }
 
 async function doAuth() {
-  const email = document.getElementById('auth-email').value;
+  const input = (document.getElementById('auth-email').value || '').trim();
   const password = document.getElementById('auth-password').value;
   const errEl = document.getElementById('auth-error');
   const sucEl = document.getElementById('auth-success');
   hide(errEl); hide(sucEl);
-  if (!email||!password) return;
+  if (!input || !password) return;
   const _el_auth_btn = document.getElementById('auth-btn'); if (_el_auth_btn) _el_auth_btn.textContent = '...';
+
+  // Detecteer automatisch: bevat @ → email login, anders → gebruikersnaam login
+  const isEmail = input.includes('@') && input.includes('.');
+
   try {
-    if (currentAuthTab==='login') {
-      const {data, error} = await sb.auth.signInWithPassword({email,password});
-      if (error) throw error;
-      currentUser = data.user;
-      // loadProfile handelt admin via bootTestMode af, gewone gebruikers normaal
+    if (currentAuthTab === 'login') {
+      let loginData, loginError;
+      if (isEmail) {
+        // Gewone email login
+        ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: input, password }));
+      } else {
+        // Gebruikersnaam login: zoek het bijbehorende fake-email op
+        const { data: prof } = await sb.from('profiles').select('id,family_id').eq('username', input).maybeSingle();
+        if (!prof) throw new Error('Gebruikersnaam "' + input + '" niet gevonden.');
+        const fakeEmail = input + '@' + prof.family_id + '.myfavmeal.app';
+        ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: fakeEmail, password }));
+        // Check tijdelijk wachtwoord patroon
+        if (!loginError) {
+          const isTempPw = /^[a-z]+-[a-z]+-\d+$/.test(password);
+          if (isTempPw) {
+            currentUser = loginData.user;
+            await loadProfile();
+            showChangePasswordModal();
+            return;
+          }
+        }
+      }
+      if (loginError) throw loginError;
+      currentUser = loginData.user;
       await loadProfile();
     } else {
       const {data: signupData, error: signupErr} = await sb.auth.signUp({email,password});
@@ -3238,8 +3258,8 @@ async function saveNewPassword() {
 
 async function setMemberUsername(profileId, username, password) {
   // Sla gebruikersnaam op in profiles tabel
-  username = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-  if (!username || username.length < 2) throw new Error('Gebruikersnaam te kort (min. 2 tekens, a-z, 0-9, _)');
+  username = username.trim().toLowerCase().replace(/[^a-z0-9_.@-]/g, '');
+  if (!username || username.length < 2) throw new Error('Gebruikersnaam te kort (minimaal 2 tekens)');
   if (password.length < 6) throw new Error('Wachtwoord te kort (min. 6 tekens)');
 
   // Check of gebruikersnaam al bestaat
@@ -3282,7 +3302,7 @@ function openSetUsernameModal(profileId, memberName, currentUsername) {
         '<input type="text" id="set-username-input" value="' + currentUsername + '" ' +
           'placeholder="bijv. emma (alleen a-z, 0-9, _)" autocapitalize="none" ' +
           'style="width:100%;box-sizing:border-box;-webkit-appearance:none" />' +
-        '<div style="font-size:11px;color:var(--muted);margin-top:4px">Alleen kleine letters, cijfers en _</div>' +
+        '<div style="font-size:11px;color:var(--muted);margin-top:3px">Bijv. emma of emma@gmail.com</div>' +
       '</div>' +
       '<div class="field">' +
         '<label class="label">' + (currentUsername ? 'Nieuw wachtwoord' : 'Wachtwoord') + '</label>' +
@@ -11929,7 +11949,9 @@ async function createChildAccount() {
   const resultEl = document.getElementById('new-child-result');
 
   const name = nameEl?.value.trim();
-  const username = usernameEl?.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  // Strip alles wat geen gebruikersnaam is (ook emailadres vóór @)
+    const username = usernameEl?.value.trim().toLowerCase().replace(/[^a-z0-9_.@-]/g, '');
+    if (usernameEl) usernameEl.value = username; // toon gefilterde waarde
 
   if (errEl) errEl.style.display = 'none';
 
@@ -11946,7 +11968,10 @@ async function createChildAccount() {
     // Maak profiel aan
     const EMOJIS = ['\uD83D\uDE0A','\uD83D\uDE04','\uD83E\uDD73','\uD83D\uDE0E','\uD83E\uDD17','\uD83D\uDE07','\uD83E\uDD29'];
     const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    // Genereer UUID voor het profiel
+    const newId = crypto.randomUUID();
     const { data: profile, error: profErr } = await sb.from('profiles').insert({
+      id: newId,
       family_id: currentProfile.family_id,
       name,
       username,
