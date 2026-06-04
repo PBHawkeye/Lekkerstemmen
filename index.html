@@ -3279,14 +3279,34 @@ async function setMemberUsername(profileId, username, password) {
   // Sla gebruikersnaam op in profiel
   await sb.from('profiles').update({ username }).eq('id', profileId);
 
-  // Maak Supabase auth account aan of update wachtwoord
-  // Gebruik admin-functie via RPC (zie SQL script)
-  const { error } = await sb.rpc('set_member_password', {
+  // Probeer via RPC, anders via signUp/updateUser
+  const { error: rpcError } = await sb.rpc('set_member_password', {
     p_email: fakeEmail,
     p_password: password,
     p_profile_id: profileId,
   });
-  if (error) throw new Error('Kon account niet aanmaken: ' + error.message);
+
+  if (rpcError) {
+    console.warn('[setMemberUsername] RPC mislukt:', rpcError.message, '— probeer signUp');
+    // Check of account al bestaat via signIn
+    const { data: signInTest } = await sb.auth.signInWithPassword({
+      email: fakeEmail, password: 'wrongpw_test_123'
+    });
+    // Als 400 = account bestaat maar wachtwoord fout → we kunnen niet updaten zonder admin key
+    // Gebruik signUp: als account al bestaat geeft Supabase een fout die we negeren
+    const { error: signUpErr } = await sb.auth.signUp({
+      email: fakeEmail,
+      password: password,
+      options: { data: { profile_id: profileId } }
+    });
+    if (signUpErr && !signUpErr.message.includes('already')) {
+      throw new Error('Kon account niet aanmaken: ' + signUpErr.message);
+    }
+    // Als account al bestond: wachtwoord via updateUser als ingelogd als die gebruiker
+    if (signUpErr?.message.includes('already')) {
+      throw new Error('Account bestaat al maar wachtwoord kan niet worden gewijzigd via de app. Gebruik het Supabase dashboard: Authentication → Users → zoek ' + fakeEmail + ' → Edit user.');
+    }
+  }
 }
 
 
