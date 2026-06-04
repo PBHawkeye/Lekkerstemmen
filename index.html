@@ -2254,9 +2254,10 @@ async function doAuth() {
     if (currentAuthTab === 'login') {
       let loginData, loginError;
 
-      // Altijd eerst kijken of input een bekende gebruikersnaam is in profiles
-      const { data: prof } = await sb.from('profiles')
-        .select('id,family_id,username').eq('username', input).maybeSingle();
+      // Altijd eerst kijken of input een bekende gebruikersnaam is
+      // Gebruik RPC zodat RLS niet blokkeert (gebruiker is nog niet ingelogd)
+      const { data: profRows } = await sb.rpc('get_family_id_by_username', { p_username: input });
+      const prof = profRows?.[0] || null;
 
       if (prof) {
         // Gebruikersnaam gevonden → fake-email login
