@@ -2250,31 +2250,34 @@ async function doAuth() {
   if (!input || !password) return;
   const _el_auth_btn = document.getElementById('auth-btn'); if (_el_auth_btn) _el_auth_btn.textContent = '...';
 
-  // Detecteer automatisch: bevat @ → email login, anders → gebruikersnaam login
-  const isEmail = input.includes('@') && input.includes('.');
-
   try {
     if (currentAuthTab === 'login') {
       let loginData, loginError;
-      if (isEmail) {
-        // Gewone email login
-        ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: input, password }));
-      } else {
-        // Gebruikersnaam login: zoek het bijbehorende fake-email op
-        const { data: prof } = await sb.from('profiles').select('id,family_id').eq('username', input).maybeSingle();
-        if (!prof) throw new Error('Gebruikersnaam "' + input + '" niet gevonden.');
-        const fakeEmail = input + '@' + prof.family_id + '.myfavmeal.app';
+
+      // Altijd eerst kijken of input een bekende gebruikersnaam is in profiles
+      const { data: prof } = await sb.from('profiles')
+        .select('id,family_id,username').eq('username', input).maybeSingle();
+
+      if (prof) {
+        // Gebruikersnaam gevonden → fake-email login
+        const cleanUsername = input.toLowerCase().replace(/[^a-z0-9_.@-]/g,'');
+        const fakeEmail = cleanUsername + '@' + prof.family_id + '.myfavmeal.app';
+        console.log('[Login] Gebruikersnaam gevonden, probeer:', fakeEmail);
         ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: fakeEmail, password }));
+        if (loginError) throw new Error('Wachtwoord onjuist. (' + loginError.message + ')');
         // Check tijdelijk wachtwoord patroon
-        if (!loginError) {
-          const isTempPw = /^[a-z]+-[a-z]+-\d+$/.test(password);
-          if (isTempPw) {
-            currentUser = loginData.user;
-            await loadProfile();
-            showChangePasswordModal();
-            return;
-          }
+        const isTempPw = /^[a-z]+-[a-z]+-\d+$/.test(password);
+        if (isTempPw) {
+          currentUser = loginData.user;
+          await loadProfile();
+          showChangePasswordModal();
+          return;
         }
+      } else {
+        // Niet gevonden als gebruikersnaam → probeer als emailadres
+        console.log('[Login] Geen gebruikersnaam, probeer email:', input);
+        ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: input, password }));
+        if (loginError) throw new Error('Inloggen mislukt. Controleer je gegevens. (' + loginError.message + ')');
       }
       if (loginError) throw loginError;
       currentUser = loginData.user;
@@ -11983,15 +11986,34 @@ async function createChildAccount() {
 
     // Genereer tijdelijk wachtwoord en maak auth-account aan
     const tempPw = generateTempPassword();
-    const fakeEmail = username + '@' + currentProfile.family_id + '.myfavmeal.app';
+    const fakeEmail = username.toLowerCase().replace(/[^a-z0-9_.@-]/g,'') + '@' + currentProfile.family_id + '.myfavmeal.app';
 
+    // Probeer via RPC (set_member_password), anders via signUp
+    let authOk = false;
     const { error: authErr } = await sb.rpc('set_member_password', {
       p_email: fakeEmail,
       p_password: tempPw,
       p_profile_id: profile.id,
     });
 
-    if (authErr) throw new Error('Auth account mislukt: ' + authErr.message);
+    if (!authErr) {
+      authOk = true;
+    } else {
+      // Fallback: gewone signUp
+      const { data: signupData, error: signupErr } = await sb.auth.signUp({
+        email: fakeEmail,
+        password: tempPw,
+        options: { data: { profile_id: profile.id } }
+      });
+      if (signupErr) throw new Error('Kon account niet aanmaken: ' + signupErr.message + ' (RPC: ' + authErr.message + ')');
+      // Koppel auth-id aan profiel
+      if (signupData?.user?.id) {
+        await sb.from('profiles').update({ id: signupData.user.id }).eq('id', profile.id);
+      }
+      authOk = true;
+    }
+
+    if (!authOk) throw new Error('Auth account aanmaken mislukt.');
 
     // Toon resultaat
     _newChildCredentials = { name, username, tempPw };
