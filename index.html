@@ -3279,33 +3279,15 @@ async function setMemberUsername(profileId, username, password) {
   // Sla gebruikersnaam op in profiel
   await sb.from('profiles').update({ username }).eq('id', profileId);
 
-  // Probeer via RPC, anders via signUp/updateUser
-  const { error: rpcError } = await sb.rpc('set_member_password', {
-    p_email: fakeEmail,
-    p_password: password,
-    p_profile_id: profileId,
+  // Gebruik admin endpoint voor betrouwbaar wachtwoord instellen
+  const pwRes = await fetch('/api/set-member-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: fakeEmail, password, profile_id: profileId })
   });
-
-  if (rpcError) {
-    console.warn('[setMemberUsername] RPC mislukt:', rpcError.message, '— probeer signUp');
-    // Check of account al bestaat via signIn
-    const { data: signInTest } = await sb.auth.signInWithPassword({
-      email: fakeEmail, password: 'wrongpw_test_123'
-    });
-    // Als 400 = account bestaat maar wachtwoord fout → we kunnen niet updaten zonder admin key
-    // Gebruik signUp: als account al bestaat geeft Supabase een fout die we negeren
-    const { error: signUpErr } = await sb.auth.signUp({
-      email: fakeEmail,
-      password: password,
-      options: { data: { profile_id: profileId } }
-    });
-    if (signUpErr && !signUpErr.message.includes('already')) {
-      throw new Error('Kon account niet aanmaken: ' + signUpErr.message);
-    }
-    // Als account al bestond: wachtwoord via updateUser als ingelogd als die gebruiker
-    if (signUpErr?.message.includes('already')) {
-      throw new Error('Account bestaat al maar wachtwoord kan niet worden gewijzigd via de app. Gebruik het Supabase dashboard: Authentication → Users → zoek ' + fakeEmail + ' → Edit user.');
-    }
+  const pwData = await pwRes.json();
+  if (!pwRes.ok || pwData.error) {
+    throw new Error('Kon wachtwoord niet instellen: ' + (pwData.error || pwRes.status));
   }
 }
 
@@ -12009,32 +11991,16 @@ async function createChildAccount() {
     const tempPw = generateTempPassword();
     const fakeEmail = username.toLowerCase().replace(/[^a-z0-9_.@-]/g,'') + '@' + currentProfile.family_id + '.myfavmeal.app';
 
-    // Probeer via RPC (set_member_password), anders via signUp
-    let authOk = false;
-    const { error: authErr } = await sb.rpc('set_member_password', {
-      p_email: fakeEmail,
-      p_password: tempPw,
-      p_profile_id: profile.id,
+    // Gebruik admin endpoint voor betrouwbaar account aanmaken
+    const pwRes = await fetch('/api/set-member-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: fakeEmail, password: tempPw, profile_id: profile.id })
     });
-
-    if (!authErr) {
-      authOk = true;
-    } else {
-      // Fallback: gewone signUp
-      const { data: signupData, error: signupErr } = await sb.auth.signUp({
-        email: fakeEmail,
-        password: tempPw,
-        options: { data: { profile_id: profile.id } }
-      });
-      if (signupErr) throw new Error('Kon account niet aanmaken: ' + signupErr.message + ' (RPC: ' + authErr.message + ')');
-      // Koppel auth-id aan profiel
-      if (signupData?.user?.id) {
-        await sb.from('profiles').update({ id: signupData.user.id }).eq('id', profile.id);
-      }
-      authOk = true;
+    const pwData = await pwRes.json();
+    if (!pwRes.ok || pwData.error) {
+      throw new Error('Kon account niet aanmaken: ' + (pwData.error || pwRes.status));
     }
-
-    if (!authOk) throw new Error('Auth account aanmaken mislukt.');
 
     // Toon resultaat
     _newChildCredentials = { name, username, tempPw };
