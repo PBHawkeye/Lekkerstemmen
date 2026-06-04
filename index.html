@@ -3927,6 +3927,7 @@ async function loadData() {
 
 // ── HOME ───────────────────────────────────────────────────────
 function goScreen(name) {
+  if (name !== 'cook' && _wakeLock) releaseWakeLock();
   if (name==='home') { homeDayOffset = 0; show('home'); refreshHome(); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); const hb=document.getElementById('nav-home'); if(hb) hb.classList.add('active'); }
   else if (name==='checkin') { selectedScore=null; selectedDrink=null; resetCheckin(); show('checkin'); }
   else if (name==='log') { selectedMeal=null; resetLog(); buildLogGrid(); show('log'); }
@@ -7999,6 +8000,39 @@ async function setTestCredits() {
 // ── KOKEN SCHERM ────────────────────────────────────────────────
 let currentCookEntry = null;
 
+
+// ── Screen Wake Lock (voorkomt schermvergrendeling tijdens koken) ─
+let _wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return; // niet ondersteund
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    console.log('[WakeLock] Scherm blijft wakker');
+    // Heractiveer na tab-wissel (browser releaseert automatisch)
+    document.addEventListener('visibilitychange', reacquireWakeLock);
+  } catch(e) {
+    console.warn('[WakeLock] Kon wake lock niet activeren:', e.message);
+  }
+}
+
+async function reacquireWakeLock() {
+  if (_wakeLock !== null && document.visibilityState === 'visible') {
+    try {
+      _wakeLock = await navigator.wakeLock.request('screen');
+    } catch(e) {}
+  }
+}
+
+function releaseWakeLock() {
+  if (_wakeLock) {
+    _wakeLock.release();
+    _wakeLock = null;
+    document.removeEventListener('visibilitychange', reacquireWakeLock);
+    console.log('[WakeLock] Vrijgegeven');
+  }
+}
+
 async function openCookScreen(menuEntry) {
   currentCookEntry = menuEntry;
   const familyId = currentProfile.family_id;
@@ -8123,6 +8157,7 @@ async function openCookScreen(menuEntry) {
   renderCookHistory(history);
 
   show('cook');
+  requestWakeLock();
 }
 
 function renderCookHistory(history) {
