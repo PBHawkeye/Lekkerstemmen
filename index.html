@@ -4917,7 +4917,7 @@ function refreshHome() {
           }
         }
         // Toon ook wat al gestemd is
-        const fridayCard = fridayBlock.querySelector('.card p, #friday-block p');
+        const fridayCard = document.getElementById('friday-block')?.querySelector('.card p, #friday-block p');
         if (fridayCard && myVote) {
           const c1 = getAllMeals().find(m=>m.id===myVote.meal_choice_1);
           const c2 = getAllMeals().find(m=>m.id===myVote.meal_choice_2);
