@@ -5265,6 +5265,119 @@ function renderCustomMealsList() {
   }
 }
 
+
+// ── Multi-foto collector voor gerecht aanmaken ───────────────
+let _mealPhotos = []; // [{data, type, thumb}]
+
+function resetMealPhotos() {
+  _mealPhotos = [];
+  const preview = document.getElementById('meal-photos-preview');
+  const thumbs = document.getElementById('meal-photos-thumbs');
+  if (preview) preview.style.display = 'none';
+  if (thumbs) thumbs.innerHTML = '';
+}
+
+async function addMealPhoto(input, source) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+
+  for (const file of files) {
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+    const thumb = URL.createObjectURL(file);
+    _mealPhotos.push({ data: base64, type: file.type || 'image/jpeg', thumb });
+  }
+  input.value = '';
+  renderMealPhotoPreviews();
+}
+
+function renderMealPhotoPreviews() {
+  const preview = document.getElementById('meal-photos-preview');
+  const thumbs = document.getElementById('meal-photos-thumbs');
+  const count = document.getElementById('meal-photos-count');
+  const creditLabel = document.getElementById('meal-photos-credit-label');
+  if (!preview) return;
+  if (_mealPhotos.length === 0) { preview.style.display = 'none'; return; }
+  preview.style.display = '';
+  if (count) count.textContent = '(' + _mealPhotos.length + ')';
+  if (creditLabel) creditLabel.textContent = _mealPhotos.length <= 3 ? '1' : '2';
+  if (thumbs) {
+    thumbs.innerHTML = _mealPhotos.map((p, i) =>
+      '<div style="position:relative;width:64px;height:64px;flex-shrink:0">' +
+        '<img src="' + p.thumb + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--border)" />' +
+        '<button onclick="removeMealPhoto(' + i + ')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:#FF4444;color:white;font-size:11px;cursor:pointer;font-weight:700">x</button>' +
+      '</div>'
+    ).join('');
+  }
+}
+
+function removeMealPhoto(index) {
+  _mealPhotos.splice(index, 1);
+  renderMealPhotoPreviews();
+}
+
+async function startMealPhotoAnalysis() {
+  if (_mealPhotos.length === 0) return;
+  const statusEl = document.getElementById('meal-photo-status');
+  const msgEl = document.getElementById('meal-photo-msg');
+  const btn = document.getElementById('meal-photos-analyze-btn');
+  if (statusEl) statusEl.style.display = '';
+  if (btn) { btn.style.opacity = '0.5'; btn.disabled = true; }
+  if (msgEl) msgEl.textContent = ' ' + _mealPhotos.length + ' foto\'s analyseren...';
+
+  try {
+    if (_mealPhotos.length === 1) {
+      _photoBase64 = _mealPhotos[0].data;
+      _photoMediaType = _mealPhotos[0].type;
+      if (statusEl) statusEl.style.display = 'none';
+      if (btn) { btn.style.opacity = '1'; btn.disabled = false; }
+      resetMealPhotos();
+      await openPhotoChatAssistant(_photoBase64, _photoMediaType);
+      return;
+    }
+
+    // Meerdere foto\'s samen analyseren
+    const imageContent = _mealPhotos.map(p => ({
+      type: 'image', source: { type: 'base64', media_type: p.type, data: p.data }
+    }));
+    imageContent.push({ type: 'text',
+      text: 'Dit zijn ' + _mealPhotos.length + ' fotos (bijv. vlees, groenten, aardappels). ' +
+        'Analyseer elke foto afzonderlijk en combineer ze tot een compleet gerecht. ' +
+        'Vul ontbrekende informatie aan vanuit je kookkennis. ' +
+        'Geef JSON: naam, emoji, ingredienten (met hoeveelheden), bereidingswijze (genummerde stappen), notitie. Alleen JSON, geen uitleg.'
+    });
+
+    const response = await anthropicFetch({
+      model: 'claude-sonnet-4-5', max_tokens: 1500,
+      messages: [{ role: 'user', content: imageContent }]
+    }, _mealPhotos.length <= 3 ? 1 : 2, 'Foto-analyse (' + _mealPhotos.length + ' fotos)');
+
+    if (!response) throw new Error('Geen credits meer.');
+    const data = await response.json();
+    const parsed = extractJSON(data.content?.[0]?.text || '');
+    if (!parsed) throw new Error('Kon gerecht niet herkennen.');
+
+    if (parsed.naam || parsed.name) { const el = document.getElementById('new-meal-name'); if (el) el.value = parsed.naam || parsed.name; }
+    if (parsed.emoji) { selectedEmoji = parsed.emoji; if (typeof renderEmojiPicker === 'function') renderEmojiPicker(); }
+    if (parsed.notitie || parsed.note) { const el = document.getElementById('new-meal-note'); if (el) el.value = toStr(parsed.notitie || parsed.note); }
+    if (parsed.ingredienten || parsed.ingredients) { const el = document.getElementById('new-meal-ingredients'); if (el) el.value = toStr(parsed.ingredienten || parsed.ingredients); }
+    if (parsed.bereidingswijze || parsed.instructions) { const el = document.getElementById('new-meal-instructions'); if (el) el.value = toStr(parsed.bereidingswijze || parsed.instructions); }
+
+    if (msgEl) msgEl.textContent = ' \u2713 ' + (parsed.naam || parsed.name || 'Gerecht') + ' herkend!';
+    setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 3000);
+    resetMealPhotos();
+  } catch(e) {
+    if (msgEl) msgEl.textContent = ' Fout: ' + e.message;
+    setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 3000);
+  } finally {
+    if (btn) { btn.style.opacity = '1'; btn.disabled = false; }
+  }
+}
+
 // ── Foto-analyse voor nieuw gerecht ──────────────────────────
 // Bewaar de foto-context voor de chat
 let _photoBase64 = null;
@@ -12398,21 +12511,33 @@ boot();
   <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px 40px;max-height:90vh;overflow-y:auto">
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;margin-bottom:14px">Nieuw gerecht</div>
 
-    <!-- Foto-analyse -->
+    <!-- Foto-analyse: meerdere foto's verzamelen -->
     <div style="margin-bottom:14px">
       <input type="file" id="meal-photo-input" accept="image/*" capture="environment"
-        style="display:none" onchange="analyzeMealPhoto(this)" />
+        style="display:none" onchange="addMealPhoto(this,'camera')" />
       <input type="file" id="meal-photo-gallery-input" accept="image/*" multiple
-        style="display:none" onchange="analyzeMealPhotos(this)" />
-      <div style="display:flex;gap:8px">
+        style="display:none" onchange="addMealPhoto(this,'gallery')" />
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <button type="button" onclick="document.getElementById('meal-photo-input').click()"
           id="meal-photo-btn"
-          style="flex:1;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:var(--green-bg);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-          <span style="font-size:20px">&#x1F4F7;</span> Camera
+          style="flex:1;padding:10px;border:1.5px dashed var(--border);border-radius:var(--r);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:18px">&#x1F4F7;</span> Camera
         </button>
         <button type="button" onclick="document.getElementById('meal-photo-gallery-input').click()"
-          style="flex:1;padding:12px;border:1.5px dashed var(--border);border-radius:var(--r);background:var(--green-bg);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-          <span style="font-size:20px">&#x1F5BC;</span> Galerij
+          style="flex:1;padding:10px;border:1.5px dashed var(--border);border-radius:var(--r);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:18px">&#x1F5BC;</span> Galerij
+        </button>
+      </div>
+      <!-- Preview van geselecteerde foto's -->
+      <div id="meal-photos-preview" style="display:none;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
+          Geselecteerde foto's <span id="meal-photos-count" style="color:var(--green)"></span>
+        </div>
+        <div id="meal-photos-thumbs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <button type="button" onclick="startMealPhotoAnalysis()"
+          id="meal-photos-analyze-btn"
+          style="width:100%;padding:11px;border:none;border-radius:var(--r);background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="font-size:16px">&#x2728;</span> AI analyseren (<span id="meal-photos-credit-label">1</span> credit)
         </button>
       </div>
       <button type="button" onclick="openMealChatAssistant()"
