@@ -3279,10 +3279,14 @@ async function setMemberUsername(profileId, username, password) {
   // Sla gebruikersnaam op in profiel
   await sb.from('profiles').update({ username }).eq('id', profileId);
 
-  // Gebruik admin endpoint voor betrouwbaar wachtwoord instellen
+  // Gebruik admin endpoint — stuur sessie-token mee voor authenticatie
+  const { data: { session: _sess } } = await sb.auth.getSession();
   const pwRes = await fetch('/api/set-member-password', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (_sess?.access_token || '')
+    },
     body: JSON.stringify({ email: fakeEmail, password, profile_id: profileId })
   });
   const pwData = await pwRes.json();
@@ -12104,10 +12108,14 @@ async function createChildAccount() {
     const tempPw = generateTempPassword();
     const fakeEmail = username.toLowerCase().replace(/@/g, '_at_').replace(/[^a-z0-9_.at-]/gi, '') + '@' + currentProfile.family_id + '.myfavmeal.app';
 
-    // Gebruik admin endpoint voor betrouwbaar account aanmaken
+    // Gebruik admin endpoint — stuur sessie-token mee voor authenticatie
+    const { data: { session: _sess2 } } = await sb.auth.getSession();
     const pwRes = await fetch('/api/set-member-password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (_sess2?.access_token || '')
+      },
       body: JSON.stringify({ email: fakeEmail, password: tempPw, profile_id: profile.id })
     });
     const pwData = await pwRes.json();
