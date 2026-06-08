@@ -4067,7 +4067,10 @@ function goScreen(name) {
         const futureDays = thisWeekItems.filter(m => m.day_date >= today);
         const hasOpenFuture = futureDays.some(m => !m.published);
         const hasNoFuture = futureDays.length === 0;
-        if (!hasOpenFuture || hasNoFuture) {
+        const weekIsCompletelyEmpty = thisWeekItems.length === 0;
+        // Alleen naar volgende week als deze week items heeft maar alles gepubliceerd is
+        // Als de week helemaal leeg is: blijf op huidige week
+        if (!weekIsCompletelyEmpty && !hasOpenFuture) {
           menuWeekOffset = menuBaseOffset + 1;
         }
       }
