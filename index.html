@@ -590,6 +590,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
+  <div id="debug-tonight" style="font-size:10px;color:red;padding:4px 16px"></div>
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op gerecht van ouder...</div>
@@ -4506,10 +4507,16 @@ function refreshHome() {
   if (p.role === 'child' || (p.role === 'parent' && (after16 || !isToday))) {
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
 
+    // DEBUG: log wat er gevonden wordt
+    if (p.role === 'parent') {
+      const debugEl = document.getElementById('debug-tonight');
+      if (debugEl) debugEl.textContent = 'today='+todayDateStr+' menu='+JSON.stringify(weeklyMenu.slice(0,3).map(m=>m.day_date+'|'+m.published));
+    }
+
     if (!todayMeal && !todayMenuEntry) {
       // Geen menu voor vandaag/geselecteerde dag
-      if (homeDayOffset === 0) {
-        // Alleen "wacht" tonen als het echt vandaag is EN er geen menu is
+      if (homeDayOffset === 0 && p.role === 'child') {
+        // Alleen voor kinderen "wacht" tonen
         unhide(document.getElementById('today-child-wait'));
       }
       // Op andere dagen: bied retrolog aan als ouder
