@@ -959,6 +959,11 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </label>
     </div>
     <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="confirmMealPick()"><span data-i18n="checkin_save">Opslaan ✓</span></button>
+    <div id="meal-picker-delete-wrap" style="display:none;margin-top:8px">
+      <button onclick="deleteMenuDayEntry()" class="btn" style="width:100%;background:#FFF0F0;color:#CC0000;border:1.5px solid #FFAAAA;font-weight:700">
+        🗑 Gerecht verwijderen van dit menu
+      </button>
+    </div>
   </div>
 </div>
 
@@ -11522,6 +11527,18 @@ async function searchMealsAI() {
   if (btn) btn.textContent = '✨';
 }
 
+
+async function deleteMenuDayEntry() {
+  const { dateStr, existing } = currentPickDay || {};
+  if (!existing || !dateStr) return;
+  if (!confirm((existing.meal_name || 'Gerecht') + ' verwijderen van ' + dateStr + '?')) return;
+  await sb.from('weekly_menu').delete()
+    .eq('family_id', currentProfile.family_id)
+    .eq('day_date', dateStr);
+  goScreen('menu');
+  await loadData();
+}
+
 async function openMealPicker(dateStr, dayIndex, existing) {
   // Blokkeer bewoners om gepubliceerd menu te wijzigen
   if (currentProfile.role !== 'parent' && existing && existing.published) {
@@ -11532,6 +11549,11 @@ async function openMealPicker(dateStr, dayIndex, existing) {
     return;
   }
   currentPickDay = {dateStr, dayIndex, existing};
+
+  // Toon verwijder-knop alleen als er al een gerecht staat
+  const delWrap = document.getElementById('meal-picker-delete-wrap');
+  if (delWrap) delWrap.style.display = existing ? '' : 'none';
+
   const d = new Date(dateStr+'T12:00:00');
   const _el_meal_picker_title = document.getElementById('meal-picker-title'); if (_el_meal_picker_title) _el_meal_picker_title.textContent = WEEK_DAYS[dayIndex]+' '+d.getDate();
   document.getElementById('meal-picker-sub').textContent = existing
