@@ -60,6 +60,8 @@
     .screen { display: none; min-height: 100vh; flex-direction: column; max-width: 480px; margin: 0 auto; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); position: relative; z-index: 0; }
     .screen.active { display: flex; }
     .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 12px; }
+    .btn-back { background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;color:var(--text);display:flex;align-items:center;line-height:1; }
+    .btn-cancel { display:block;width:100%;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);background:white;font-size:14px;cursor:pointer;font-family:inherit;color:var(--muted);margin-top:8px;font-weight:600;text-align:center; }
     .logo { display:flex; align-items:center; }
     .logo-text-lekker { font-family:'Fraunces',serif; font-weight:700; font-size:20px; color:var(--text); }
     .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--green-bg); border: 1.5px solid var(--border); cursor: pointer; font-weight: 600; font-size: 14px; color: var(--green-dark); }
@@ -6047,14 +6049,15 @@ function toggleAddMealOptions() {
   const opts = document.getElementById('add-meal-options');
   const btn = document.getElementById('add-meal-toggle-btn');
   if (!opts) return;
-  const open = opts.style.display === 'none' || opts.style.display === '';
-  opts.style.display = open ? '' : 'none';
+  const isOpen = opts.style.display !== 'none' && opts.style.display !== '';
+  opts.style.display = isOpen ? 'none' : '';
   if (btn) {
-    btn.innerHTML = open
-      ? '<span style="font-size:16px">&#x2715;</span> Sluiten'
-      : '<span style="font-size:18px">+</span> Toevoegen';
-    btn.style.background = open ? 'var(--border)' : '';
-    btn.style.color = open ? 'var(--muted)' : '';
+    btn.innerHTML = isOpen
+      ? '<span style="font-size:18px">+</span> Toevoegen'
+      : '<span style="font-size:16px">&#x2715;</span> Sluiten';
+    btn.style.background = isOpen ? '' : 'var(--green-bg)';
+    btn.style.color = isOpen ? '' : 'var(--green)';
+    btn.style.border = isOpen ? '' : '1.5px solid var(--green)';
   }
 }
 
@@ -10128,7 +10131,7 @@ function openAddMealToMenuPicker(meal) {
         ).join('')) +
     '<button onclick="document.getElementById(\'add-to-menu-picker-modal\').remove()" ' +
     'style="display:block;width:100%;padding:12px;border-radius:var(--r);border:1.5px solid var(--border);' +
-    'background:white;font-size:14px;cursor:pointer;font-family:inherit;color:var(--muted);margin-top:4px">Annuleren</button>';
+    'background:white;font-size:14px;cursor:pointer;font-family:inherit;color:var(--muted);margin-top:4px">&#x2715; Annuleren</button>';
 
   modal.appendChild(inner);
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
@@ -12733,7 +12736,7 @@ boot();
 
 <div id="s-feedback" class="screen">
   <div class="topbar">
-    <button class="back-btn" onclick="goScreen('home')">&larr;</button>
+    <button class="back-btn" onclick="goScreen('home')">&#x2190;</button>
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px">
       Feedback
       <span id="feedback-unread-badge" style="display:none;background:var(--coral);color:white;font-size:11px;font-weight:700;border-radius:99px;padding:2px 7px;margin-left:6px;vertical-align:middle"></span>
@@ -12797,7 +12800,7 @@ boot();
 
 <div id="s-admin" class="screen" style="background:#0D0D1A">
   <div class="topbar" style="background:#1A1A2E;border-bottom:1px solid #2A2A3E">
-    <button class="back-btn" onclick="show('home');refreshHome()" style="color:#aaa">&larr;</button>
+    <button class="back-btn" onclick="show('home');refreshHome()" style="color:#aaa">&#x2190;</button>
     <div style="font-family:'Fraunces',serif;font-weight:800;font-size:18px;color:white">&#x1F9EA; Admin</div>
     <button onclick="loadAdminDashboard()" style="background:none;border:none;color:#FFB830;font-size:18px;cursor:pointer" title="Verversen">&#x21BB;</button>
   </div>
