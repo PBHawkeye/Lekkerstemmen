@@ -590,6 +590,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
+  <div id="debug-tonight" style="font-size:10px;color:red;padding:4px 16px"></div>
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op gerecht van ouder...</div>
@@ -906,7 +907,8 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div style="width:38px"></div>
   </div>
   <div style="padding:0 16px 100px">
-    <p style="font-size:13px;color:var(--muted);padding:0 8px 12px" id="meal-picker-sub"></p>
+    <p style="font-size:13px;color:var(--muted);padding:0 8px 8px" id="meal-picker-sub"></p>
+
 
     <div style="position:relative;margin-bottom:10px">
       <input type="text" id="meal-search" placeholder="Zoek of vraag AI: 'iets met kip wat Faas lekker vindt'..."
@@ -960,7 +962,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
     <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="confirmMealPick()"><span data-i18n="checkin_save">Opslaan ✓</span></button>
     <div id="meal-picker-delete-wrap" style="display:none;margin-top:8px">
-      <button onclick="deleteMenuDayEntry()" class="btn" style="width:100%;background:#FFF0F0;color:#CC0000;border:1.5px solid #FFAAAA;font-weight:700">
+      <button onclick="deleteMenuDayEntry()" class="btn" style="width:100%;background:#FFF0F0;color:#CC0000;border:1.5px solid #FFAAAA;font-weight:700;padding:12px">
         🗑 Gerecht verwijderen van dit menu
       </button>
     </div>
@@ -4069,14 +4071,12 @@ function goScreen(name) {
           .eq('week_of', thisWeekStart);
         const thisWeekItems = thisWeek || [];
         const futureDays = thisWeekItems.filter(m => m.day_date >= today);
-        const hasOpenFuture = futureDays.some(m => !m.published);
-        const hasNoFuture = futureDays.length === 0;
-        const weekIsCompletelyEmpty = thisWeekItems.length === 0;
-        // Alleen naar volgende week als deze week items heeft maar alles gepubliceerd is
-        // Als de week helemaal leeg is: blijf op huidige week
-        if (!weekIsCompletelyEmpty && !hasOpenFuture) {
+        // Spring naar volgende week ALLEEN als alle toekomstige dagen al gepubliceerd zijn
+        const allFuturePublished = futureDays.length > 0 && futureDays.every(m => m.published);
+        if (allFuturePublished) {
           menuWeekOffset = menuBaseOffset + 1;
         }
+        // Anders: blijf op huidige week (leeg, deels ingevuld, of ongepubliceerd)
       }
       window._menuForceCurrentWeek = false;
       renderMenuScreen().then(()=>show('menu'));
@@ -4513,6 +4513,13 @@ function refreshHome() {
 
   if (p.role === 'child' || (p.role === 'parent' && (after16 || !isToday))) {
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+
+    // DEBUG: log wat er gevonden wordt
+    if (p.role === 'parent') {
+      const debugEl = document.getElementById('debug-tonight');
+      if (debugEl) debugEl.textContent = 'today='+todayDateStr+' menu='+JSON.stringify(weeklyMenu.slice(0,3).map(m=>m.day_date+'|'+m.published));
+    }
+
     if (!todayMeal && !todayMenuEntry) {
       // Geen menu voor vandaag/geselecteerde dag
       if (homeDayOffset === 0 && p.role === 'child') {
@@ -11208,8 +11215,6 @@ async function renderMenuScreen() {
       // Rechter-klik of long-press toont statistieken (hier: apart info knop)
       row.onclick=()=>openMealPicker(dateStr,i,existing);
 
-
-
       // Verplaats-knoppen (swap met vorige/volgende dag)
       const moveWrap = document.createElement('div');
       moveWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex-shrink:0;margin-left:4px';
@@ -11239,36 +11244,6 @@ async function renderMenuScreen() {
         statsBtn.title = 'Statistieken voor '+existing.meal_name;
         statsBtn.onclick = (e) => { e.stopPropagation(); openMealDetail(existing.meal_id, 'menu'); };
         row.appendChild(statsBtn);
-      }
-      // Long-press of rechtermuisklik → verwijder optie
-      if (existing) {
-        let pressTimer = null;
-        const showDelBtn = () => {
-          // Verwijder bestaande delete overlay als die er al is
-          const old = row.querySelector('.menu-del-overlay');
-          if (old) { old.remove(); return; }
-          const overlay = document.createElement('div');
-          overlay.className = 'menu-del-overlay';
-          overlay.style.cssText = 'position:absolute;inset:0;background:rgba(255,50,50,0.92);border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:12px;z-index:10;cursor:pointer';
-          overlay.innerHTML = '<span style="font-size:22px">🗑</span><span style="color:white;font-weight:800;font-size:15px">Verwijder ' + (existing.meal_name||'gerecht') + '</span>';
-          overlay.onclick = async (e) => {
-            e.stopPropagation();
-            await sb.from('weekly_menu').delete()
-              .eq('family_id', currentProfile.family_id)
-              .eq('day_date', dateStr);
-            await renderMenuScreen();
-          };
-          row.style.position = 'relative';
-          row.appendChild(overlay);
-          // Automatisch sluiten na 3 seconden
-          setTimeout(() => overlay.remove(), 3000);
-        };
-        // Long press (mobiel)
-        row.addEventListener('touchstart', () => { pressTimer = setTimeout(showDelBtn, 600); }, {passive:true});
-        row.addEventListener('touchend', () => clearTimeout(pressTimer), {passive:true});
-        row.addEventListener('touchmove', () => clearTimeout(pressTimer), {passive:true});
-        // Rechtermuisklik (desktop)
-        row.addEventListener('contextmenu', (e) => { e.preventDefault(); showDelBtn(); });
       }
       daysList.appendChild(row);
 
@@ -11527,18 +11502,6 @@ async function searchMealsAI() {
   if (btn) btn.textContent = '✨';
 }
 
-
-async function deleteMenuDayEntry() {
-  const { dateStr, existing } = currentPickDay || {};
-  if (!existing || !dateStr) return;
-  if (!confirm((existing.meal_name || 'Gerecht') + ' verwijderen van ' + dateStr + '?')) return;
-  await sb.from('weekly_menu').delete()
-    .eq('family_id', currentProfile.family_id)
-    .eq('day_date', dateStr);
-  goScreen('menu');
-  await loadData();
-}
-
 async function openMealPicker(dateStr, dayIndex, existing) {
   // Blokkeer bewoners om gepubliceerd menu te wijzigen
   if (currentProfile.role !== 'parent' && existing && existing.published) {
@@ -11549,11 +11512,6 @@ async function openMealPicker(dateStr, dayIndex, existing) {
     return;
   }
   currentPickDay = {dateStr, dayIndex, existing};
-
-  // Toon verwijder-knop alleen als er al een gerecht staat
-  const delWrap = document.getElementById('meal-picker-delete-wrap');
-  if (delWrap) delWrap.style.display = existing ? '' : 'none';
-
   const d = new Date(dateStr+'T12:00:00');
   const _el_meal_picker_title = document.getElementById('meal-picker-title'); if (_el_meal_picker_title) _el_meal_picker_title.textContent = WEEK_DAYS[dayIndex]+' '+d.getDate();
   document.getElementById('meal-picker-sub').textContent = existing
