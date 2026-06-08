@@ -782,23 +782,41 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
   </div>
   <div class="meals-wrap">
     <div style="padding:0 0 12px">
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <button onclick="openAddMealSheet()" class="btn btn-primary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
-          <span style="font-size:18px">+</span> Toevoegen
-        </button>
-        <button onclick="openMealSuggestions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green)">
-          <span style="font-size:16px">✨</span> AI voorstellen
-        </button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="openMealChatAssistant()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#F0EEFF;color:#7C6FF7;border:1.5px solid #C5BEFF;padding:10px">
-          <span style="font-size:16px">&#x1F4AC;</span>
-          <span style="font-size:13px">Chat assistent</span>
-        </button>
-        <button onclick="openPasteRecipeSheet()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#FFF8EC;color:#C47F00;border:1.5px solid #FFD97A;padding:10px">
-          <span style="font-size:16px">&#x1F4CB;</span>
-          <span style="font-size:13px">Recept plakken</span>
-        </button>
+      <!-- Toevoegen knop + uitklapbare opties -->
+      <button onclick="toggleAddMealOptions()" id="add-meal-toggle-btn" class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px">
+        <span style="font-size:18px">+</span> Toevoegen
+      </button>
+      <div id="add-meal-options" style="display:none;margin-top:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button onclick="openAddMealSheet();toggleAddMealOptions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green);padding:10px">
+            <span style="font-size:16px">&#x270F;&#xFE0F;</span>
+            <span style="font-size:13px">Handmatig</span>
+          </button>
+          <button onclick="openMealSuggestions();toggleAddMealOptions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green);padding:10px">
+            <span style="font-size:16px">&#x2728;</span>
+            <span style="font-size:13px">AI voorstellen</span>
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button onclick="openMealChatAssistant();toggleAddMealOptions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#F0EEFF;color:#7C6FF7;border:1.5px solid #C5BEFF;padding:10px">
+            <span style="font-size:16px">&#x1F4AC;</span>
+            <span style="font-size:13px">Chat assistent</span>
+          </button>
+          <button onclick="openPasteRecipeSheet();toggleAddMealOptions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#FFF8EC;color:#C47F00;border:1.5px solid #FFD97A;padding:10px">
+            <span style="font-size:16px">&#x1F4CB;</span>
+            <span style="font-size:13px">Recept plakken</span>
+          </button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="openAddMealSheet();setTimeout(()=>{document.getElementById('meal-photo-input')?.click()},300);toggleAddMealOptions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#FFF0F5;color:#C4007A;border:1.5px solid #FFB3D9;padding:10px">
+            <span style="font-size:16px">&#x1F4F7;</span>
+            <span style="font-size:13px">Via camera</span>
+          </button>
+          <button onclick="openAddMealSheet();setTimeout(()=>{document.getElementById('meal-photo-gallery-input')?.click()},300);toggleAddMealOptions()" class="btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#FFF0F5;color:#C4007A;border:1.5px solid #FFB3D9;padding:10px">
+            <span style="font-size:16px">&#x1F5BC;</span>
+            <span style="font-size:13px">Via foto's</span>
+          </button>
+        </div>
       </div>
     </div>
     <div id="meals-error" class="msg-error hidden"></div>
@@ -896,11 +914,11 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;padding:4px" title="AI zoeken">✨</button>
     </div>
     <div id="meal-search-ai-result" style="display:none;padding:8px 10px;background:var(--green-bg);border-radius:var(--r);border:1.5px solid var(--border);font-size:12px;color:var(--muted);margin-bottom:8px"></div>
-    <div class="label" style="margin-bottom:8px" id="meal-grid-label">Wat eten we?</div>
-    <div class="meal-grid" id="meal-picker-grid"></div>
-    <div style="margin-top:8px;margin-bottom:16px">
+    <div style="margin-bottom:10px">
       <input type="text" id="meal-picker-custom" placeholder="Of typ een eigen gerecht..." maxlength="40" />
     </div>
+    <div class="label" style="margin-bottom:8px" id="meal-grid-label">Wat eten we?</div>
+    <div class="meal-grid" id="meal-picker-grid"></div>
 
     <div class="label" style="margin-bottom:8px">Wie kookt er? &#x1F468;&#x1F373;</div>
     <div class="person-grid" id="cook-person-grid"></div>
@@ -1906,7 +1924,6 @@ function getMealDisplay(id) {
 
 // ── TEST BAR ───────────────────────────────────────────────────
 function initTestBar() {
-  console.log('[TestBar] Initializing...');
   // Injecteer de testbalk in de DOM als die er nog niet is
   if (!document.getElementById('test-bar')) {
     const bar = document.createElement('div');
@@ -1939,7 +1956,6 @@ function initTestBar() {
   renderTestPersons();
   updateTestDayDisplay();
   updateScenarioHighlight();
-  console.log('[TestBar] Done, persons:', TEST_PERSONS.map(p=>p.name));
 }
 
 function syncTestCreditsInput() {
@@ -2263,7 +2279,6 @@ async function doAuth() {
         // Gebruikersnaam gevonden → fake-email login
         const cleanUsername = input.toLowerCase();
         const fakeEmail = cleanUsername.replace(/@/g, '_at_').replace(/[^a-z0-9_.at-]/gi, '') + '@' + prof.family_id + '.myfavmeal.app';
-        console.log('[Login] Gebruikersnaam gevonden, probeer:', fakeEmail);
         ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: fakeEmail, password }));
         if (loginError) throw new Error('Wachtwoord onjuist. (' + loginError.message + ')');
         // Check tijdelijk wachtwoord patroon
@@ -2276,7 +2291,6 @@ async function doAuth() {
         }
       } else {
         // Niet gevonden als gebruikersnaam → probeer als emailadres
-        console.log('[Login] Geen gebruikersnaam, probeer email:', input);
         ({ data: loginData, error: loginError } = await sb.auth.signInWithPassword({ email: input, password }));
         if (loginError) throw new Error('Inloggen mislukt. Controleer je gegevens. (' + loginError.message + ')');
       }
@@ -2875,7 +2889,7 @@ function openManageSport(profileId) {
       else if (screenId === 'meals') renderMealsScreen();
       else if (screenId === 'friends') loadFriendsData();
       else if (screenId === 'feedback') loadFeedbackThreads();
-    } catch(e) { console.warn('PTR refresh error:', e); }
+    } catch(e) { }
     setTimeout(() => {
       if (indicator) { indicator.classList.remove('visible','refreshing'); }
       if (label) label.textContent = 'Loslaten om te verversen';
@@ -3657,7 +3671,6 @@ async function saveOnboardingMeals() {
       }
     }
   } catch(e) {
-    console.warn('Recepten ophalen mislukt, gerechten worden zonder recept opgeslagen:', e.message);
   }
 
   if (btn) btn.textContent = 'Opslaan...';
@@ -3812,9 +3825,7 @@ async function bootTestMode() {
     const result = await sb.from('profiles')
       .select('id,family_id,name,role,emoji,sports,language')
       .eq('family_id', TEST_FAMILY_ID);
-    console.log('[bootTestMode] profiles result:', result);
     familyProfiles = result.data || [];
-    console.log('[bootTestMode] familyProfiles:', familyProfiles.map(p=>p.name));
   } catch(e) {
     console.error('[bootTestMode] profiles fetch error:', e);
     familyProfiles = [];
@@ -3853,7 +3864,6 @@ async function setTestProfile(nameOrId) {
   let sports = [];
   try { sports = src.sports ? (typeof src.sports === 'string' ? JSON.parse(src.sports) : src.sports) : []; } catch(e) {}
   currentProfile = { ...src, sports, family_id: src.family_id || TEST_FAMILY_ID };
-  console.log('[setTestProfile] currentProfile:', currentProfile.name, 'family_id:', currentProfile.family_id);
   if (currentProfile.language) { currentLang = currentProfile.language; localStorage.setItem('lang', currentLang); }
   applyTranslations();
   return true;
@@ -3878,7 +3888,6 @@ async function loadProfile() {
   const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (error) { console.error('loadProfile error:', error); return; }
   if (!data) {
-    console.warn('Geen profiel voor user:', currentUser.id);
     const ac = document.getElementById('setup-appcode-section');
     const ps = document.getElementById('setup-profile-section');
     if (localStorage.getItem('app_code_ok') === '1') {
@@ -3905,7 +3914,6 @@ async function loadData() {
   dataLoaded = false;
   const familyId = currentProfile.family_id;
   const profileId = currentProfile.id;
-  console.log('[loadData] familyId:', familyId, 'profileId:', profileId);
   const weekStart = getVoteWeekStart();
   const vwLabel = document.getElementById('vote-week-label');
   const vwSub = document.getElementById('vote-week-sub');
@@ -4279,7 +4287,6 @@ async function addSuggestedMeal(btn) {
       }
     }
   } catch(e) {
-    console.warn('Recept ophalen mislukt, gerecht wordt zonder recept opgeslagen:', e.message);
   }
 
   btn.textContent = '\u23F3 Opslaan...';
@@ -6035,6 +6042,22 @@ function openTodayMealPicker() {
   openMealPicker(todayDate, dayIndex, null);
 }
 
+
+function toggleAddMealOptions() {
+  const opts = document.getElementById('add-meal-options');
+  const btn = document.getElementById('add-meal-toggle-btn');
+  if (!opts) return;
+  const open = opts.style.display === 'none' || opts.style.display === '';
+  opts.style.display = open ? '' : 'none';
+  if (btn) {
+    btn.innerHTML = open
+      ? '<span style="font-size:16px">&#x2715;</span> Sluiten'
+      : '<span style="font-size:18px">+</span> Toevoegen';
+    btn.style.background = open ? 'var(--border)' : '';
+    btn.style.color = open ? 'var(--muted)' : '';
+  }
+}
+
 function openAddMealSheet() {
   recipePhotos = [];
   renderRecipePhotos();
@@ -6089,9 +6112,7 @@ async function addCustomMeal() {
 }
 
 async function deleteCustomMeal(id) {
-  console.log('[Delete] Verwijderen id:', id);
   const { data, error } = await sb.from('custom_meals').delete().eq('id', id).select();
-  console.log('[Delete] result data:', data, 'error:', error);
   if (error) {
     alert('Fout: ' + error.message + ' (code: ' + error.code + ')');
     return;
@@ -6288,12 +6309,9 @@ async function doCheckin() {
   }
   // selectedCheckinVariant kan door gebruiker gewijzigd zijn (switch gerecht)
   if (window._selectedCheckinEntry) menuEntry = window._selectedCheckinEntry;
-  console.log("[Checkin] todayStr:", todayDateStr2, "homeDayOffset:", homeDayOffset, "testDayOffset:", testDayOffset);
-  console.log("[Checkin] todayMeal:", todayMeal?.id, "eaten_at:", todayMeal?.eaten_at);
   
   // Gebruik todayMeal alleen als die voor DEZE dag is
   let mealId = (todayMeal?.eaten_at === todayDateStr2) ? todayMeal?.id : null;
-  console.log("[Checkin] mealId na check:", mealId);
   if (!mealId) {
     // Zoek bestaand meal record voor deze dag
     const {data:existMeal} = await sb.from('meals')
@@ -6321,8 +6339,6 @@ async function doCheckin() {
       }
     }
   }
-
-  console.log("[Checkin] mealId:", mealId);
   const _el_checkin_btn = document.getElementById('checkin-btn'); if (_el_checkin_btn) _el_checkin_btn.textContent = 'Opslaan...';
   const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
   // Verwijder bestaande checkin voor dit meal, dan opnieuw invoegen
@@ -6337,7 +6353,6 @@ async function doCheckin() {
     sport_type: todaySportKey||null,
     meal_variant: (window._selectedCheckinEntry?.variant || menuEntry?.variant || 'A'),
   });
-  console.log("[Checkin] insert result, error:", ciError);
   if (ciError) {
     console.error('Checkin error:', ciError);
     const _el_checkin_btn = document.getElementById('checkin-btn'); if (_el_checkin_btn) _el_checkin_btn.textContent = 'Opslaan ✓';
@@ -7611,10 +7626,6 @@ async function saveSportSchedule() {
   const allMembers = getFamilyMembers();
   const btn = document.querySelector('[onclick="saveSportSchedule()"]');
 
-  console.log('[Sport save] familyId:', familyId);
-  console.log('[Sport save] members:', allMembers.map(m=>m.name+':'+m.id));
-  console.log('[Sport save] data:', JSON.stringify(sportScheduleData));
-
   // Verwijder bestaande data voor deze week en leden, dan opnieuw invoegen
   const memberIds = allMembers.map(m => m.id);
 
@@ -7643,8 +7654,6 @@ async function saveSportSchedule() {
       }
     });
   });
-
-  console.log('[Sport save] Rows to insert:', rows.length, rows);
 
   if (rows.length > 0) {
     const { error: insErr } = await sb.from('sport_schedule').insert(rows);
@@ -8119,15 +8128,11 @@ async function saveProfileSport() {
   const editIndex = parseInt(document.getElementById('sport-edit-index').value);
   if (editIndex >= 0) sports[editIndex] = newSport;
   else { if (sports.length >= 2) return; sports.push(newSport); }
-  console.log('[Sport] Opslaan voor profiel ID:', currentProfile.id);
-  console.log('[Sport] Sports data:', JSON.stringify(sports));
 
   const { data: updateData, error: sportError } = await sb.from('profiles')
     .update({ sports: JSON.stringify(sports) })
     .eq('id', currentProfile.id)
     .select();
-
-  console.log('[Sport] Update resultaat:', updateData, 'Fout:', sportError);
 
   if (sportError) {
     console.error('[Sport] Opslaan mislukt:', sportError);
@@ -8140,7 +8145,6 @@ async function saveProfileSport() {
   }
 
   if (!updateData || updateData.length === 0) {
-    console.warn('[Sport] Update uitgevoerd maar geen rijen aangepast. Profiel ID klopt niet of RLS blokkeert.');
     const errEl = document.getElementById('sport-modal-error');
     if (errEl) {
       errEl.textContent = 'Opgeslagen maar 0 rijen aangepast — controleer of je ingelogd bent.';
@@ -8223,11 +8227,9 @@ async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return; // niet ondersteund
   try {
     _wakeLock = await navigator.wakeLock.request('screen');
-    console.log('[WakeLock] Scherm blijft wakker');
     // Heractiveer na tab-wissel (browser releaseert automatisch)
     document.addEventListener('visibilitychange', reacquireWakeLock);
   } catch(e) {
-    console.warn('[WakeLock] Kon wake lock niet activeren:', e.message);
   }
 }
 
@@ -8244,7 +8246,6 @@ function releaseWakeLock() {
     _wakeLock.release();
     _wakeLock = null;
     document.removeEventListener('visibilitychange', reacquireWakeLock);
-    console.log('[WakeLock] Vrijgegeven');
   }
 }
 
@@ -8617,10 +8618,7 @@ function renderForWhoChips(existing) {
     }
   }
 
-  console.log('[ForWho] members:', members.length, 'selected:', JSON.stringify(forWhoSelected));
-
   container.onclick = function(e) {
-    console.log('[ForWho] click on:', e.target.tagName, e.target.getAttribute && e.target.getAttribute('data-mid'));
     var btn = e.target.closest('button[data-mid]');
     if (!btn) return;
     var mid = btn.getAttribute('data-mid');
@@ -8931,7 +8929,6 @@ async function checkPromptIsAboutFood(prompt) {
     const answer = (data.content?.[0]?.text || '').toLowerCase().trim();
     return answer.startsWith('ja');
   } catch(e) {
-    console.warn('Guard check mislukt, doorgaan:', e);
     return true; // bij netwerkfout: niet blokkeren
   }
 }
@@ -9633,7 +9630,7 @@ async function deductCredit(cost, reason) {
   if (current < needed) return false;
 
   const familyId = currentProfile?.family_id;
-  if (!familyId) { console.warn('deductCredit: geen family_id'); return true; }
+  if (!familyId) { return true; }
 
   const deduction = -(needed);
   const { error } = await sb.from('credits').insert({
@@ -9666,7 +9663,6 @@ async function initCreditsIfNew() {
   const { data, error } = await sb.from('credits')
     .select('id').eq('family_id', currentProfile.family_id).limit(1);
   if (error) {
-    console.warn('Credits tabel niet gevonden. Voer migrations.sql uit:', error.message);
     cachedCredits = AI_CREDITS_START; // gebruik geheugen-fallback
     return;
   }
@@ -9789,8 +9785,6 @@ async function renderShoppingDayPicker() {
     .eq('published', true)
     .order('day_date', {ascending:true});
 
-  console.log('[Shopping] alle gepubliceerde dagen:', allMenuDays?.length, allMenuDays?.map(m=>m.day_date));
-
   // Alleen vandaag en toekomstige dagen tonen
   const menuDays = (allMenuDays || []).filter(m => m.day_date >= today);
 
@@ -9803,7 +9797,6 @@ async function renderShoppingDayPicker() {
       '<span style="font-size:12px;opacity:0.8">Stel eerst het weekmenu vast en publiceer het via het Menu scherm.</span></div>';
     return;
   }
-  console.log('[Shopping] toon', menuDays.length, 'dagen');
 
   const DAYS_FULL = ['zo','ma','di','wo','do','vr','za'];
 
@@ -9977,7 +9970,6 @@ async function generateShoppingList() {
     }
     const data = await res.json();
     const rawText = data.content?.[0]?.text || '';
-    console.log('[Shopping] AI response:', rawText);
     // Zoek JSON in de response (ook als er tekst omheen staat)
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Geen JSON in response');
@@ -11493,8 +11485,6 @@ async function openMealPicker(dateStr, dayIndex, existing) {
       : 'Het menu is al gepubliceerd. Vraag een ouder om het aan te passen.');
     return;
   }
-
-  console.log('[Picker] openMealPicker:', dateStr, dayIndex);
   currentPickDay = {dateStr, dayIndex, existing};
   const d = new Date(dateStr+'T12:00:00');
   const _el_meal_picker_title = document.getElementById('meal-picker-title'); if (_el_meal_picker_title) _el_meal_picker_title.textContent = WEEK_DAYS[dayIndex]+' '+d.getDate();
@@ -11563,8 +11553,7 @@ async function openMealPicker(dateStr, dayIndex, existing) {
 }
 
 async function confirmMealPick() {
-  console.log('[Picker] confirmMealPick, currentPickDay:', currentPickDay);
-  if (!currentPickDay) { console.warn('[Picker] currentPickDay is null!'); return; }
+  if (!currentPickDay) { return; }
   const {dateStr, dayIndex} = currentPickDay;
   const customVal = document.getElementById('meal-picker-custom').value.trim();
   const note = document.getElementById('meal-picker-note').value.trim();
@@ -11657,8 +11646,6 @@ async function confirmMealPick() {
     return member ? member.name : null;
   }).filter(Boolean);
 
-  console.log('[Menu] Opslaan:', dateStr, mealName, 'family:', currentProfile.family_id);
-
   // Bepaal voor wie dit gerecht is
   // Als _secondDishForIds gezet is (2e gerecht flow), gebruik die
   let forWho = getForWhoSelection();
@@ -11708,8 +11695,6 @@ async function confirmMealPick() {
     alert('Menu opslaan mislukt: ' + menuErr.message);
     return;
   }
-
-  console.log('[Menu] Opgeslagen OK');
   await loadData();
 
   // Vanuit cook-scherm: update ook bestaande check-ins van vandaag naar het nieuwe gerecht
@@ -11866,7 +11851,6 @@ function toggleTestMode() {
   // Alleen admin mag testmodus aan/uitzetten
   const ADMIN_ID = '0b34e680-45a6-437b-9dac-d1377dab2fef';
   if (!currentUser || currentUser.id !== ADMIN_ID) {
-    console.warn('[toggleTestMode] geblokkeerd: geen admin');
     return;
   }
   testModeActive = !testModeActive;
@@ -11881,7 +11865,6 @@ function toggleTestMode() {
     const p = TEST_PERSONS.find(x=>x.id===testPersonId);
     // UUID format: 00000000-0000-0000-0000-00000000paul
     currentProfile = {id: testUuid(testPersonId), name:p.name, role:p.role, family_id:TEST_FAMILY_ID};
-    console.log('[Test] Profile:', currentProfile);
     loadData().then(()=>{ refreshHome(); show('home'); });
   } else {
     // Switch naar echte account
@@ -12459,7 +12442,7 @@ async function boot() {
     if (accessToken) {
       try {
         await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
-      } catch(e) { console.warn('setSession recovery error:', e); }
+      } catch(e) { }
     }
     // Hash opschonen pas NA sessie-activering
     history.replaceState(null, '', window.location.pathname);
