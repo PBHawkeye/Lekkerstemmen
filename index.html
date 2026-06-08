@@ -11203,6 +11203,8 @@ async function renderMenuScreen() {
       // Rechter-klik of long-press toont statistieken (hier: apart info knop)
       row.onclick=()=>openMealPicker(dateStr,i,existing);
 
+
+
       // Verplaats-knoppen (swap met vorige/volgende dag)
       const moveWrap = document.createElement('div');
       moveWrap.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex-shrink:0;margin-left:4px';
@@ -11233,7 +11235,72 @@ async function renderMenuScreen() {
         statsBtn.onclick = (e) => { e.stopPropagation(); openMealDetail(existing.meal_id, 'menu'); };
         row.appendChild(statsBtn);
       }
-      daysList.appendChild(row);
+      // Swipe-to-delete wrapper
+      if (existing) {
+        const swipeWrap = document.createElement('div');
+        swipeWrap.style.cssText = 'position:relative;overflow:hidden;border-radius:var(--r);margin-bottom:6px';
+
+        const delAction = document.createElement('div');
+        delAction.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:72px;background:#FF4444;display:flex;align-items:center;justify-content:center;border-radius:0 var(--r) var(--r) 0;cursor:pointer;flex-direction:column;gap:2px';
+        delAction.innerHTML = '<span style="font-size:20px">🗑</span><span style="font-size:10px;color:white;font-weight:700">Verwijder</span>';
+        delAction.onclick = async (e) => {
+          e.stopPropagation();
+          if (!confirm((existing.meal_name||'Gerecht') + ' verwijderen van ' + dateStr + '?')) {
+            row.style.transform = 'translateX(0)';
+            row.style.transition = 'transform 0.3s';
+            return;
+          }
+          await sb.from('weekly_menu').delete()
+            .eq('family_id', currentProfile.family_id)
+            .eq('day_date', dateStr);
+          await renderMenuScreen();
+        };
+
+        row.style.cssText += ';position:relative;z-index:1;background:white;transition:transform 0.3s;touch-action:pan-y;margin-bottom:0;border-radius:var(--r)';
+
+        let startX = 0, startY = 0, swiping = false;
+        row.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          swiping = false;
+        }, {passive:true});
+        row.addEventListener('touchmove', e => {
+          const dx = e.touches[0].clientX - startX;
+          const dy = e.touches[0].clientY - startY;
+          if (!swiping && Math.abs(dy) > Math.abs(dx)) return; // verticaal scrollen
+          swiping = true;
+          if (dx < 0) {
+            row.style.transition = 'none';
+            row.style.transform = 'translateX(' + Math.max(dx, -72) + 'px)';
+          } else if (dx > 0 && row.style.transform !== 'translateX(0px)') {
+            row.style.transition = 'none';
+            row.style.transform = 'translateX(' + Math.min(dx - 72, 0) + 'px)';
+          }
+        }, {passive:true});
+        row.addEventListener('touchend', e => {
+          const dx = e.changedTouches[0].clientX - startX;
+          row.style.transition = 'transform 0.3s';
+          if (dx < -40) {
+            row.style.transform = 'translateX(-72px)';
+          } else {
+            row.style.transform = 'translateX(0)';
+          }
+        });
+
+        // Klik ergens anders → sluit swipe
+        document.addEventListener('touchstart', function closeSwipe(ev) {
+          if (!swipeWrap.contains(ev.target)) {
+            row.style.transition = 'transform 0.3s';
+            row.style.transform = 'translateX(0)';
+          }
+        }, {passive:true, once:false});
+
+        swipeWrap.appendChild(delAction);
+        swipeWrap.appendChild(row);
+        daysList.appendChild(swipeWrap);
+      } else {
+        daysList.appendChild(row);
+      }
 
       // Toon 2e gerecht als dat bestaat
       if (existing2) {
