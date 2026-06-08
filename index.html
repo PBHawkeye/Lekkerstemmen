@@ -4893,14 +4893,23 @@ function refreshHome() {
   } else hide(document.getElementById('insight-block'));
 
   // ── Vanavond kaart ─────────────────────────────────────────
-  // Tonight card alleen voor kinderen tonen (ouders zien menu-preview)
+  // Check of er een gepubliceerd menu-item is voor vandaag specifiek
+  const _todayDate = todayStr();
+  const _todayMenuEntry = weeklyMenu.find(m => m.day_date === _todayDate && m.published);
+
   if (p.role === 'child') {
     renderTonightCard(p);
   } else {
-    // Ouder: verberg tonight-card als er een menu-preview is
+    // Ouder: toon tonight-card altijd als er een menu voor vandaag is
     const tc = document.getElementById('tonight-card');
-    if (tc) tc.style.display = weeklyMenu.some(m=>m.published) ? 'none' : '';
-    if (!weeklyMenu.some(m=>m.published)) renderTonightCard(p);
+    if (_todayMenuEntry) {
+      // Er is een menu voor vandaag — toon de kaart
+      if (tc) tc.style.display = '';
+      renderTonightCard(p);
+    } else {
+      // Geen menu voor vandaag
+      if (tc) tc.style.display = 'none';
+    }
   }
 
   // Stem status voor kinderen op home
