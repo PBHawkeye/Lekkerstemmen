@@ -590,6 +590,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
+  <div id="debug-tonight" style="font-size:10px;color:red;padding:4px 16px"></div>
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op gerecht van ouder...</div>
@@ -1338,6 +1339,18 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div class="stat-card" id="stats-cook-card">
       <div class="stat-card-title">&#x1F373; Mijn kookbeurten</div>
       <div id="stats-cook-sessions"></div>
+    </div>
+
+    <!-- Kook & corvee per gezinslid -->
+    <div class="stat-card" id="stats-household-card">
+      <div class="stat-card-title">&#x1F3E0; Koken &amp; corvee per gezinslid</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button onclick="setHouseholdPeriod('month')" id="hh-btn-month"
+          class="btn" style="flex:1;padding:7px;font-size:12px;font-weight:700;background:var(--green);color:white;border:none">Laatste maand</button>
+        <button onclick="setHouseholdPeriod('all')" id="hh-btn-all"
+          class="btn" style="flex:1;padding:7px;font-size:12px;font-weight:700;background:var(--green-bg);color:var(--green);border:1.5px solid var(--green)">All time</button>
+      </div>
+      <div id="stats-household-table"></div>
     </div>
   </div>
 </div>
@@ -4508,6 +4521,8 @@ function refreshHome() {
 
     // DEBUG: log wat er gevonden wordt
     if (p.role === 'parent') {
+      const debugEl = document.getElementById('debug-tonight');
+      if (debugEl) debugEl.textContent = 'today='+todayDateStr+' menu='+JSON.stringify(weeklyMenu.slice(0,3).map(m=>m.day_date+'|'+m.published));
     }
 
     if (!todayMeal && !todayMenuEntry) {
@@ -5003,16 +5018,21 @@ function refreshHome() {
         (isToday2?'<span style="font-size:10px;background:var(--green);color:white;border-radius:99px;padding:1px 6px;font-weight:700;margin-left:4px">vandaag</span>':'')+
         '</div>';
     }).join('');
-    // Koken knop: alleen tonen als jij vandaag kookt én nog niet ingecheckt hebt
+    // Koken knop: tonen als er een menu is voor vandaag én nog niet ingecheckt
     const todayEntry = previewItems.find(m => m.day_date === today2);
     const kookSection = document.getElementById('tonight-cook-section');
     const kookBtn = document.getElementById('tonight-cook-btn');
     const alreadyCheckedIn = checkins.some(c => c.eaten_at === today2 && c.profile_id === p.id);
-    if (kookSection && todayEntry && todayEntry.cook_name &&
-        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase()) &&
-        !alreadyCheckedIn) {
+    if (kookSection && todayEntry && !alreadyCheckedIn) {
       kookSection.style.display = '';
-      if (kookBtn) kookBtn.onclick = () => openCookScreen(todayEntry);
+      const isMyTurn = todayEntry.cook_name &&
+        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase());
+      if (kookBtn) {
+        kookBtn.innerHTML = isMyTurn
+          ? '\uD83E\uDD73 Vanavond koken'
+          : '\uD83D\uDCCB Recept bekijken';
+        kookBtn.onclick = () => openCookScreen(todayEntry);
+      }
     } else if (kookSection) {
       kookSection.style.display = 'none';
     }
@@ -6594,6 +6614,99 @@ async function doVote() {
   show('success');
 }
 
+
+// ── Kook & corvee statistieken per gezinslid ─────────────────
+let _hhPeriod = 'month';
+let _hhMenuData = null;
+
+function setHouseholdPeriod(period) {
+  _hhPeriod = period;
+  const btnMonth = document.getElementById('hh-btn-month');
+  const btnAll = document.getElementById('hh-btn-all');
+  if (btnMonth) { btnMonth.style.background = period === 'month' ? 'var(--green)' : 'var(--green-bg)'; btnMonth.style.color = period === 'month' ? 'white' : 'var(--green)'; }
+  if (btnAll)   { btnAll.style.background   = period === 'all'   ? 'var(--green)' : 'var(--green-bg)'; btnAll.style.color   = period === 'all'   ? 'white' : 'var(--green)'; }
+  renderHouseholdStats();
+}
+
+async function renderHouseholdStats() {
+  const el = document.getElementById('stats-household-table');
+  if (!el || !currentProfile) return;
+
+  el.innerHTML = '<div style="color:var(--muted);font-size:13px">Laden...</div>';
+
+  const familyId = currentProfile.family_id;
+  const members = getFamilyMembers().filter(m => m.id && m.name);
+
+  // Bepaal datum-filter
+  const since = new Date();
+  if (_hhPeriod === 'month') since.setMonth(since.getMonth() - 1);
+  else since.setFullYear(2000);
+  const sinceStr = since.toISOString().split('T')[0];
+
+  // Haal weekly_menu op voor kook + corvee data
+  if (!_hhMenuData || _hhPeriod !== _hhMenuData.period) {
+    const { data } = await sb.from('weekly_menu')
+      .select('day_date,cook_id,cook_name,corvee_ids,corvee_names,published')
+      .eq('family_id', familyId)
+      .eq('published', true)
+      .gte('day_date', sinceStr)
+      .order('day_date', { ascending: false });
+    _hhMenuData = { data: data || [], period: _hhPeriod };
+  }
+
+  const menuItems = _hhMenuData.data;
+
+  // Tel kookbeurten en corvee per lid
+  const stats = {};
+  members.forEach(m => { stats[m.id] = { name: m.name, emoji: m.emoji || '👤', cook: 0, corvee: 0 }; });
+
+  menuItems.forEach(item => {
+    if (item.cook_id && stats[item.cook_id]) {
+      stats[item.cook_id].cook++;
+    }
+    if (item.corvee_ids) {
+      try {
+        const ids = JSON.parse(item.corvee_ids);
+        ids.forEach(id => { if (stats[id]) stats[id].corvee++; });
+      } catch(e) {}
+    }
+  });
+
+  const rows = Object.values(stats).sort((a,b) => (b.cook + b.corvee) - (a.cook + a.corvee));
+  const totalDays = menuItems.length;
+  const periodLabel = _hhPeriod === 'month' ? 'afgelopen maand' : 'all time';
+
+  if (totalDays === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Nog geen data voor ' + periodLabel + '.</div>';
+    return;
+  }
+
+  el.innerHTML =
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">' + totalDays + ' maaltijden ' + periodLabel + '</div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+    '<thead><tr style="border-bottom:1.5px solid var(--border)">' +
+    '<th style="text-align:left;padding:6px 4px;font-weight:700;color:var(--muted)">Wie</th>' +
+    '<th style="text-align:center;padding:6px 4px;font-weight:700;color:var(--muted)">🍳 Gekookt</th>' +
+    '<th style="text-align:center;padding:6px 4px;font-weight:700;color:var(--muted)">🧹 Corvee</th>' +
+    '<th style="text-align:center;padding:6px 4px;font-weight:700;color:var(--muted)">Totaal</th>' +
+    '</tr></thead><tbody>' +
+    rows.map((r, i) => {
+      const total = r.cook + r.corvee;
+      const pct = totalDays > 0 ? Math.round((r.cook / totalDays) * 100) : 0;
+      const bg = i % 2 === 0 ? 'white' : 'var(--green-bg)';
+      return '<tr style="background:' + bg + ';border-bottom:0.5px solid var(--border)">' +
+        '<td style="padding:8px 4px;font-weight:600">' + r.emoji + ' ' + r.name + '</td>' +
+        '<td style="text-align:center;padding:8px 4px">' +
+          '<div style="font-weight:800;font-size:15px">' + r.cook + '</div>' +
+          (r.cook > 0 ? '<div style="font-size:10px;color:var(--muted)">' + pct + '%</div>' : '') +
+        '</td>' +
+        '<td style="text-align:center;padding:8px 4px;font-weight:700">' + r.corvee + '</td>' +
+        '<td style="text-align:center;padding:8px 4px;color:var(--green);font-weight:800">' + total + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
 async function renderStats() {
   if (!currentProfile) return;
   const familyId = currentProfile.family_id;
@@ -6692,6 +6805,10 @@ async function renderStats() {
       commentsEl.innerHTML += '<div style="padding:8px 0;border-bottom:0.5px solid var(--border)"><div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:2px">'+c.child_name+' · '+c.eaten_at+' · '+getMealDisplay(c.meal_type)+'</div><div style="font-size:14px;color:var(--text)">'+c.comment+'</div></div>';
     });
   }
+
+  // Kook & corvee statistieken per gezinslid
+  _hhMenuData = null; // reset cache bij elke renderStats aanroep
+  renderHouseholdStats();
 
   // Kookbeurten — toon per kookbeurt de scores en opmerkingen
   const cookEl = document.getElementById('stats-cook-sessions');
