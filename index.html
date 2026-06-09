@@ -590,7 +590,6 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
-  <div id="debug-tonight" style="font-size:10px;color:red;padding:4px 16px"></div>
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op gerecht van ouder...</div>
@@ -4521,8 +4520,6 @@ function refreshHome() {
 
     // DEBUG: log wat er gevonden wordt
     if (p.role === 'parent') {
-      const debugEl = document.getElementById('debug-tonight');
-      if (debugEl) debugEl.textContent = 'today='+todayDateStr+' menu='+JSON.stringify(weeklyMenu.slice(0,3).map(m=>m.day_date+'|'+m.published));
     }
 
     if (!todayMeal && !todayMenuEntry) {
