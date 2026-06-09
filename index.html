@@ -590,7 +590,6 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
-  <div id="debug-tonight" style="font-size:10px;color:red;padding:4px 16px"></div>
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op gerecht van ouder...</div>
@@ -907,8 +906,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     <div style="width:38px"></div>
   </div>
   <div style="padding:0 16px 100px">
-    <p style="font-size:13px;color:var(--muted);padding:0 8px 8px" id="meal-picker-sub"></p>
-
+    <p style="font-size:13px;color:var(--muted);padding:0 8px 12px" id="meal-picker-sub"></p>
 
     <div style="position:relative;margin-bottom:10px">
       <input type="text" id="meal-search" placeholder="Zoek of vraag AI: 'iets met kip wat Faas lekker vindt'..."
@@ -961,11 +959,6 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </label>
     </div>
     <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="confirmMealPick()"><span data-i18n="checkin_save">Opslaan ✓</span></button>
-    <div id="meal-picker-delete-wrap" style="display:none;margin-top:8px">
-      <button onclick="deleteMenuDayEntry()" class="btn" style="width:100%;background:#FFF0F0;color:#CC0000;border:1.5px solid #FFAAAA;font-weight:700;padding:12px">
-        🗑 Gerecht verwijderen van dit menu
-      </button>
-    </div>
   </div>
 </div>
 
@@ -4071,12 +4064,11 @@ function goScreen(name) {
           .eq('week_of', thisWeekStart);
         const thisWeekItems = thisWeek || [];
         const futureDays = thisWeekItems.filter(m => m.day_date >= today);
-        // Spring naar volgende week ALLEEN als alle toekomstige dagen al gepubliceerd zijn
-        const allFuturePublished = futureDays.length > 0 && futureDays.every(m => m.published);
-        if (allFuturePublished) {
+        const hasOpenFuture = futureDays.some(m => !m.published);
+        const hasNoFuture = futureDays.length === 0;
+        if (!hasOpenFuture || hasNoFuture) {
           menuWeekOffset = menuBaseOffset + 1;
         }
-        // Anders: blijf op huidige week (leeg, deels ingevuld, of ongepubliceerd)
       }
       window._menuForceCurrentWeek = false;
       renderMenuScreen().then(()=>show('menu'));
@@ -4516,8 +4508,6 @@ function refreshHome() {
 
     // DEBUG: log wat er gevonden wordt
     if (p.role === 'parent') {
-      const debugEl = document.getElementById('debug-tonight');
-      if (debugEl) debugEl.textContent = 'today='+todayDateStr+' menu='+JSON.stringify(weeklyMenu.slice(0,3).map(m=>m.day_date+'|'+m.published));
     }
 
     if (!todayMeal && !todayMenuEntry) {
