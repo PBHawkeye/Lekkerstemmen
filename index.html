@@ -639,6 +639,16 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
+  <!-- Eating out kaart -->
+  <div id="today-eating-out" class="today-card hidden" style="background:linear-gradient(135deg,#FF8C42 0%,#E85D04 100%)">
+    <div class="today-badge" style="background:rgba(255,255,255,0.25);color:white" id="eating-out-badge">Vanavond</div>
+    <div class="today-q" style="color:white;font-size:22px;font-weight:800" id="eating-out-title">🍽 Uit eten!</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px" id="eating-out-sub"></div>
+    <button class="btn-white" onclick="goScreen('checkin')" style="margin-top:12px;border-color:rgba(255,255,255,0.6);color:white;background:rgba(255,255,255,0.15)">
+      Hoe was het? →
+    </button>
+  </div>
+
   <!-- Retrolog: log gerecht voor een dag in het verleden -->
   <div id="today-retro-log" class="today-card hidden" style="background:white;border:2px dashed var(--border)">
     <div class="today-badge" style="background:var(--muted);color:white" id="retro-log-date-label">Gisteren</div>
@@ -710,6 +720,13 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
         <button class="drink-btn" id="drink-soda" onclick="selectDrink('soda')"><span class="drink-emoji">&#x1F964;</span>Frisdrank</button>
       </div>
     </div>
+    <!-- Eating out sectie (alleen bij uit eten/afhaal) -->
+    <div id="eating-out-checkin-section" style="display:none;padding:0 24px 12px">
+      <div class="drink-title" style="margin-bottom:8px">Waar was je? <span class="optional">optioneel</span></div>
+      <input type="text" id="eating-out-restaurant" placeholder="Restaurant of afhaalzaak..."
+        maxlength="60" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;box-sizing:border-box" />
+    </div>
+
     <!-- Comment sectie -->
     <div id="comment-section" class="comment-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -936,14 +953,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
 
     <div class="label" style="margin-bottom:8px">Wie kookt er? &#x1F468;&#x1F373;</div>
     <div class="person-grid" id="cook-person-grid"></div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-      <button class="special-btn" id="cook-afhaal" onclick="selectCook('afhaal')">
-        <span style="font-size:20px">&#x1F6F5;</span><div><div style="font-weight:800">Afhaal</div><div style="font-size:11px;color:var(--muted);font-weight:400">Bezorging of ophalen</div></div>
-      </button>
-      <button class="special-btn" id="cook-uiteten" onclick="selectCook('uiteten')">
-        <span style="font-size:20px">&#x1F37D;</span><div><div style="font-weight:800">Uit eten</div><div style="font-size:11px;color:var(--muted);font-weight:400">Restaurant of bij familie</div></div>
-      </button>
-    </div>
+
 
     <div id="corvee-section">
       <div class="label" style="margin-bottom:6px">Wie heeft corvee? &#x1F9F9; <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(meerdere mogelijk)</span></div>
@@ -2164,7 +2174,7 @@ async function simulateWeek() {
     const dateStr = localDateStr(d);
 
     const cookMember = TEST_PERSONS.find(p=>p.id===m.cook);
-    const cookName = m.cook==='afhaal' ? 'Afhaal' : m.cook==='uiteten' ? 'Uit eten' : (cookMember?.name||m.cook);
+    const cookName = cookMember?.name || m.cook || null;
     const corveeNames = m.corvee.map(id=>TEST_PERSONS.find(p=>p.id===id)?.name).filter(Boolean).join(', ');
     const corveeIds = m.corvee.map(id=>testUuid(id));
 
@@ -4494,7 +4504,7 @@ function refreshHome() {
     document.getElementById('nav-profile-child') && (document.getElementById('nav-profile-child').style.display='');
   }
 
-  ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin','today-retro-log']
+  ['today-child','today-child-done','today-child-wait','today-parent','today-parent-done','today-parent-checkin','today-retro-log','today-eating-out']
     .forEach(id => hide(document.getElementById(id)));
   var after16 = isAfter16();
   var isToday = (homeDayOffset === 0);
@@ -4916,18 +4926,39 @@ function refreshHome() {
   // Check of er een gepubliceerd menu-item is voor vandaag specifiek
   const _todayDate = todayStr();
   const _todayMenuEntry = weeklyMenu.find(m => m.day_date === _todayDate && m.published);
+  const _isEatingOut = _todayMenuEntry && _todayMenuEntry.eating_out;
 
-  if (p.role === 'child') {
+  if (_isEatingOut) {
+    // Eating out kaart tonen voor iedereen
+    const eoCard = document.getElementById('today-eating-out');
+    const eoTitle = document.getElementById('eating-out-title');
+    const eoSub = document.getElementById('eating-out-sub');
+    const eoBadge = document.getElementById('eating-out-badge');
+    if (eoCard) {
+      const isAfhaal = _todayMenuEntry.eating_out_type === 'afhaal';
+      if (eoTitle) eoTitle.textContent = isAfhaal ? '\uD83D\uDED2 Vanavond afhaal!' : '\uD83C\uDF7D Vanavond uit eten!';
+      if (eoBadge) eoBadge.textContent = isToday ? 'Vanavond' : homeDayOffset < 0 ? 'Die avond' : 'Die avond';
+      if (eoSub) eoSub.textContent = isAfhaal ? 'Lekker eten halen!' : 'Genieten van een restaurantje!';
+      // Stijl aanpassen voor afhaal vs uiteten
+      eoCard.style.background = isAfhaal
+        ? 'linear-gradient(135deg,#4466CC 0%,#2244AA 100%)'
+        : 'linear-gradient(135deg,#FF8C42 0%,#E85D04 100%)';
+      unhide(eoCard);
+    }
+    // Geen kookknop
+    const kookSection = document.getElementById('tonight-cook-section');
+    if (kookSection) kookSection.style.display = 'none';
+    const tc = document.getElementById('tonight-card');
+    if (tc) tc.style.display = 'none';
+  } else if (p.role === 'child') {
     renderTonightCard(p);
   } else {
-    // Ouder: toon tonight-card altijd als er een menu voor vandaag is
+    // Ouder: toon tonight-card als er een menu voor vandaag is
     const tc = document.getElementById('tonight-card');
     if (_todayMenuEntry) {
-      // Er is een menu voor vandaag — toon de kaart
       if (tc) tc.style.display = '';
       renderTonightCard(p);
     } else {
-      // Geen menu voor vandaag
       if (tc) tc.style.display = 'none';
     }
   }
@@ -5019,14 +5050,15 @@ function refreshHome() {
         (isToday2?'<span style="font-size:10px;background:var(--green);color:white;border-radius:99px;padding:1px 6px;font-weight:700;margin-left:4px">vandaag</span>':'')+
         '</div>';
     }).join('');
-    // Koken knop: alleen tonen als jij vandaag kookt én nog niet ingecheckt hebt
+    // Koken knop: niet tonen bij eating_out, wel bij eigen kookbeurt
     const todayEntry = previewItems.find(m => m.day_date === today2);
     const kookSection = document.getElementById('tonight-cook-section');
     const kookBtn = document.getElementById('tonight-cook-btn');
     const alreadyCheckedIn = checkins.some(c => c.eaten_at === today2 && c.profile_id === p.id);
-    if (kookSection && todayEntry && todayEntry.cook_name &&
-        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase()) &&
-        !alreadyCheckedIn) {
+    const isEatingOutToday = todayEntry && todayEntry.eating_out;
+    if (kookSection && todayEntry && !isEatingOutToday && !alreadyCheckedIn &&
+        todayEntry.cook_name &&
+        todayEntry.cook_name.toLowerCase().includes(p.name.toLowerCase())) {
       kookSection.style.display = '';
       if (kookBtn) kookBtn.onclick = () => openCookScreen(todayEntry);
     } else if (kookSection) {
@@ -6206,6 +6238,31 @@ function resetCheckin() {
   if(commentEl) commentEl.value='';
   hide(document.getElementById('vote-inline-section'));
   hide(document.getElementById('sport-nutrition-section'));
+
+  // Eating out: toon restaurant-veld, pas titel aan
+  const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayStr() && m.published);
+  const isEatingOut = todayMenuEntry && todayMenuEntry.eating_out;
+  const eoSection = document.getElementById('eating-out-checkin-section');
+  const restInput = document.getElementById('eating-out-restaurant');
+  const checkinHead = document.querySelector('#s-checkin .checkin-head h2');
+  const drinkSection = document.getElementById('drink-section');
+
+  if (isEatingOut) {
+    const label = todayMenuEntry.eating_out_type === 'afhaal' ? 'Afhaal' : 'Uit eten';
+    if (mealNameEl) mealNameEl.textContent = todayMenuEntry.eating_out_type === 'afhaal'
+      ? '🛒 Vanavond afhaal!'
+      : '🍽 Vanavond uit eten!';
+    if (checkinHead) checkinHead.textContent = 'Hoe was het?';
+    if (eoSection) eoSection.style.display = '';
+    if (restInput) restInput.value = '';
+    if (drinkSection) drinkSection.style.display = 'none';
+  } else {
+    if (eoSection) eoSection.style.display = 'none';
+    if (checkinHead) checkinHead.textContent = 'Hoe lekker was het?';
+    if (drinkSection) drinkSection.style.display = '';
+  }
+  window._checkinIsEatingOut = isEatingOut || false;
+  window._checkinEatingOutType = todayMenuEntry?.eating_out_type || null;
 }
 
 function selectSmiley(score) {
@@ -6376,12 +6433,17 @@ async function doCheckin() {
   }
   const _el_checkin_btn = document.getElementById('checkin-btn'); if (_el_checkin_btn) _el_checkin_btn.textContent = 'Opslaan...';
   const commentVal = (document.getElementById('checkin-comment')?.value||'').trim();
+  // Bij eating_out: voeg restaurant-naam toe aan comment
+  const restaurantVal = (document.getElementById('eating-out-restaurant')?.value||'').trim();
+  const finalComment = window._checkinIsEatingOut && restaurantVal
+    ? (restaurantVal + (commentVal ? ' · ' + commentVal : ''))
+    : commentVal;
   // Verwijder bestaande checkin voor dit meal, dan opnieuw invoegen
   await sb.from('checkins').delete().eq('profile_id', currentProfile.id).eq('meal_id', mealId);
   const {error:ciError} = await sb.from('checkins').insert({
     profile_id:currentProfile.id, meal_id:mealId,
     score:selectedScore, drink:selectedDrink,
-    comment: commentVal||null,
+    comment: (window._checkinIsEatingOut ? finalComment : commentVal)||null,
     pre_sport_food: preSportFood||null,
     post_sport_food: postSportFood||null,
     ate_with_family: sportAteTogether||null,
@@ -6857,24 +6919,16 @@ function renderCorveeGrid() {
 
 function selectCook(val) {
   selectedCook = val;
-  // Deselect person btns
   document.querySelectorAll('#cook-person-grid .person-btn').forEach(b=>b.classList.remove('selected'));
-  // Toggle special btns
-  ['cook-afhaal','cook-uiteten'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.classList.toggle('selected', id==='cook-'+val);
-  });
-  // Verberg corvee bij afhaal/uiteten
   const corveeSection = document.getElementById('corvee-section');
-  if(corveeSection) corveeSection.style.display = (val==='afhaal'||val==='uiteten') ? 'none' : '';
+  if(corveeSection) corveeSection.style.display = '';
 }
 
 function selectCookPerson(id, name) {
   selectedCook = id;
   document.querySelectorAll('#cook-person-grid .person-btn').forEach(b=>
     b.classList.toggle('selected', b.dataset.id===id));
-  document.getElementById('cook-afhaal')?.classList.remove('selected');
-  document.getElementById('cook-uiteten')?.classList.remove('selected');
+
   const corveeSection = document.getElementById('corvee-section');
   if(corveeSection) corveeSection.style.display = '';
 }
@@ -8547,13 +8601,9 @@ function renderCookPicker() {
   // Render de kok-kiezer in het meal-picker scherm
   renderPersonGrid('cook-person-grid', selectedCook, selectCookPerson);
   renderCorveeGrid();
-  ['cook-afhaal','cook-uiteten'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('selected', selectedCook === id.replace('cook-',''));
-  });
   const corveeSection = document.getElementById('corvee-section');
   if (corveeSection) corveeSection.style.display =
-    (selectedCook==='afhaal' || selectedCook==='uiteten') ? 'none' : '';
+'';
 }
 
 
@@ -11590,15 +11640,11 @@ async function openMealPicker(dateStr, dayIndex, existing) {
   renderCorveeGrid();
 
   // Zet special buttons
-  ['cook-afhaal','cook-uiteten'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.classList.toggle('selected', selectedCook===id.replace('cook-',''));
-  });
 
   // Verberg corvee bij afhaal/uiteten
   const corveeSection = document.getElementById('corvee-section');
   if(corveeSection) corveeSection.style.display =
-    (selectedCook==='afhaal'||selectedCook==='uiteten') ? 'none' : '';
+'';
 
   // Reset zoekbalk
   const searchEl = document.getElementById('meal-search');
@@ -11693,35 +11739,12 @@ async function confirmMealPick() {
         customMeals.push(saved);
       }
     }
-  } else if (selectedCook === 'uiteten' || selectedCook === 'afhaal') {
-    // Uit eten / afhaal: geen gerecht nodig — gebruik een vaste placeholder UUID
-    // die automatisch aangemaakt wordt als die nog niet bestaat
-    const uitEtenLabel = selectedCook === 'uiteten' ? 'Uit eten' : 'Afhaal';
-    const uitEtenEmoji = selectedCook === 'uiteten' ? '\uD83C\uDF7D' : '\uD83D\uDED2';
-    const existingPlaceholder = customMeals.find(m => m.name === uitEtenLabel);
-    if (existingPlaceholder) {
-      mealId = existingPlaceholder.id;
-    } else {
-      const { data: newPlaceholder } = await sb.from('custom_meals').insert({
-        family_id: currentProfile.family_id,
-        name: uitEtenLabel,
-        emoji: uitEtenEmoji,
-      }).select().maybeSingle();
-      if (newPlaceholder) {
-        mealId = newPlaceholder.id;
-        customMeals.push(newPlaceholder);
-      }
-    }
-    mealName = uitEtenLabel;
-    mealEmoji = uitEtenEmoji;
   } else return;
 
   const weekStart = getMenuWeekStart();
   // Bepaal cook naam
   let cookName = null;
-  if (selectedCook==='afhaal') cookName='Afhaal';
-  else if (selectedCook==='uiteten') cookName='Uit eten';
-  else if (selectedCook) {
+  if (selectedCook) {
     const member = getFamilyMembers().find(m=>m.id===selectedCook);
     cookName = member ? member.name : null;
   }
