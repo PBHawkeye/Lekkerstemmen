@@ -4071,14 +4071,16 @@ function goScreen(name) {
         const thisWeekStart = getMenuWeekStart();
         const today = todayStr();
         const { data: thisWeek } = await sb.from('weekly_menu')
-          .select('day_date,published')
+          .select('day_date,published,meal_id,eating_out')
           .eq('family_id', currentProfile.family_id)
           .eq('week_of', thisWeekStart);
         const thisWeekItems = thisWeek || [];
         const futureDays = thisWeekItems.filter(m => m.day_date >= today);
-        const hasOpenFuture = futureDays.some(m => !m.published);
-        const hasNoFuture = futureDays.length === 0;
-        if (!hasOpenFuture || hasNoFuture) {
+        // Een dag is "gepland" als hij gepubliceerd is én een gerecht of eating_out heeft
+        const futurePlanned = futureDays.filter(m => m.published && (m.meal_id || m.eating_out));
+        const allFuturePlanned = futureDays.length > 0 && futurePlanned.length === futureDays.length;
+        // Spring naar volgende week alleen als alle toekomstige dagen gepland zijn
+        if (allFuturePlanned) {
           menuWeekOffset = menuBaseOffset + 1;
         }
       }
@@ -5231,9 +5233,12 @@ function renderCustomMealsList() {
   });
 
   // Filter
-  let filtered = customMeals.filter(m =>
-    !searchQ || m.name.toLowerCase().includes(searchQ) || (m.note||'').toLowerCase().includes(searchQ)
-  );
+  let filtered = customMeals.filter(m => {
+    // Verberg eating_out gerechten uit de lijst (worden apart afgehandeld)
+    if (m.name === 'Uit eten' || m.name === 'Afhaal') return false;
+    if (!searchQ) return true;
+    return m.name.toLowerCase().includes(searchQ) || (m.note||'').toLowerCase().includes(searchQ);
+  });
 
   // Sorteer
   if (sortBy === 'eaten') filtered.sort((a,b) => (mealStats[b.id]?.count||0) - (mealStats[a.id]?.count||0));
