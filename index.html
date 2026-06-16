@@ -897,8 +897,7 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
       </div>
       <div id="menu-analyse-text" style="font-size:14px;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
     </div>
-    <button class="btn btn-primary" id="menu-publish-btn" onclick="publishMenu()"><span data-i18n="menu_publish">Menu publiceren voor kinderen →</span></button>
-      <button class="btn" style="background:var(--teal-light);color:#0F6E56" id="menu-update-btn" onclick="publishMenu()" style="display:none"><span data-i18n="menu_update">Menu bijwerken ✓</span></button>
+
       <button class="btn btn-ghost" onclick="goScreen('home')"><span data-i18n="btn_cancel">Annuleren</span></button>
     </div>
   </div>
@@ -4087,7 +4086,7 @@ function goScreen(name) {
         const thisWeekItems = thisWeek || [];
         const futureDays = thisWeekItems.filter(m => m.day_date >= today);
         // Een dag is "gepland" als hij gepubliceerd is én een gerecht of eating_out heeft
-        const futurePlanned = futureDays.filter(m => m.published && (m.meal_id || m.eating_out));
+        const futurePlanned = futureDays.filter(m => (m.meal_id || m.eating_out));
         const allFuturePlanned = futureDays.length > 0 && futurePlanned.length === futureDays.length;
         // Spring naar volgende week alleen als alle toekomstige dagen gepland zijn
         if (allFuturePlanned) {
@@ -4521,14 +4520,14 @@ function refreshHome() {
     // Voor 16:00: geen check-in prompt tonen
     // Wel de wacht-card voor kinderen als er geen menu is
     if (p.role === 'child') {
-      var te = weeklyMenu.find(function(m){ return m.day_date === todayDateStr && m.published; });
+      var te = weeklyMenu.find(function(m){ return m.day_date === todayDateStr; });
       if (!todayMeal && !te) unhide(document.getElementById('today-child-wait'));
     }
     // Ga door naar ouder-koken logica maar skip check-in prompt
   }
 
   if (p.role === 'child' || (p.role === 'parent' && (after16 || !isToday))) {
-    const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+    const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr);
 
     // DEBUG: log wat er gevonden wordt
     if (p.role === 'parent') {
@@ -4572,7 +4571,7 @@ function refreshHome() {
       const doneScoreEl = document.getElementById('done-score-display');
       const doneCommentEl = document.getElementById('done-comment-display');
       // Toon weekmenu-naam als die beschikbaar is, anders de check-in naam
-      const todayMenuForDone = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+      const todayMenuForDone = weeklyMenu.find(m => m.day_date === todayDateStr);
       if (doneNameEl) {
         doneNameEl.textContent = todayMenuForDone
           ? (todayMenuForDone.meal_emoji + ' ' + todayMenuForDone.meal_name)
@@ -4589,7 +4588,7 @@ function refreshHome() {
     }
   } else {
     // Ouder: check ook weekmenu voor vandaag
-    const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr && m.published);
+    const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr);
 
     // Ouder: als er een gepubliceerd menu is, toon alleen "Log gerecht" als er nog niets gelogd is
     // Anders alles verbergen - menu-preview blok bevat alle info
@@ -4633,7 +4632,7 @@ function refreshHome() {
     // Toon banner als ouder én er geen enkel gepubliceerd item is voor de huidige of komende week
     if (p.role === 'parent') {
       const today = todayStr();
-      const hasPublished = weeklyMenu.some(m => m.published && m.day_date >= today);
+      const hasPublished = weeklyMenu.some(m => m.day_date >= today);
       if (hasPublished) {
         noMenuBanner.classList.add('hidden');
       } else {
@@ -4674,7 +4673,7 @@ function refreshHome() {
     const isToday = ds === todayStr();
     const isPast = ds < todayStr();
     const isFuture = ds > todayStr();
-    const dayMenuEntries = weeklyMenu.filter(m=>m.day_date===ds&&m.published);
+    const dayMenuEntries = weeklyMenu.filter(m=>m.day_date===ds);
     const menuEntry = dayMenuEntries[0] || null;
     const menuEntry2 = dayMenuEntries[1] || null;
     const ci = checkins.find(c=>c.eaten_at===ds && c.profile_id===currentProfile.id);
@@ -4925,7 +4924,7 @@ function refreshHome() {
   // ── Vanavond kaart ─────────────────────────────────────────
   // Check of er een gepubliceerd menu-item is voor vandaag specifiek
   const _todayDate = todayStr();
-  const _todayMenuEntry = weeklyMenu.find(m => m.day_date === _todayDate && m.published);
+  const _todayMenuEntry = weeklyMenu.find(m => m.day_date === _todayDate);
   const _isEatingOut = _todayMenuEntry && _todayMenuEntry.eating_out;
 
   if (_isEatingOut) {
@@ -4966,7 +4965,7 @@ function refreshHome() {
   // Stem status voor kinderen op home
   if (p.role === 'child' && availableMeals.length > 0) {
     const weekStart = testMondayOfWeek();
-    const menuPublished = weeklyMenu.some(m=>m.published);
+    const menuPublished = weeklyMenu.length > 0;
     sb.from('votes').select('meal_choice_1,meal_choice_2,suggestion')
       .eq('profile_id', p.id).eq('week_of', weekStart).maybeSingle()
       .then(({data:myVote}) => {
@@ -5000,10 +4999,10 @@ function refreshHome() {
   const menuPreview = document.getElementById('today-menu-preview');
   const previewList = document.getElementById('today-menu-preview-list');
   // Toon menu preview voor iedereen als er een gepubliceerd menu is
-  if (weeklyMenu.length>0 && weeklyMenu.some(m=>m.published)) {
+  if (weeklyMenu.length>0) {
     const today2 = todayStr();
     const published = weeklyMenu
-      .filter(m=>m.published && m.day_date >= today2)
+      .filter(m=>m.day_date >= today2)
       .sort((a,b)=>a.day_date>b.day_date?1:-1);
     // Groepeer per dag (max 3 dagen, per dag max 2 gerechten)
     if (published.length === 0) {
@@ -5012,7 +5011,7 @@ function refreshHome() {
       // Probeer alsnog te laden met bredere range
       sb.from('weekly_menu')
         .select('*').eq('family_id', currentProfile.family_id)
-        .eq('published', true).gte('day_date', today2)
+        .gte('day_date', today2)
         .order('day_date').limit(21)
         .then(({data: futureMenu}) => {
           if (futureMenu && futureMenu.length > 0) {
@@ -5087,7 +5086,7 @@ function refreshHome() {
 
   // Menu klaar melding voor ouder (als er al een menu is)
   const nextWeekStart = testMondayOfWeek();
-  const hasPublishedMenu = weeklyMenu.some(m=>m.published&&m.week_of===nextWeekStart);
+  const hasPublishedMenu = weeklyMenu.some(m=>m.week_of===nextWeekStart);
   if (p.role==='parent') {
     const parentDoneEl = document.getElementById('today-parent-done');
     const existingText = document.getElementById('today-parent-meal');
@@ -5855,8 +5854,8 @@ function renderMenuDateOptions() {
   const today = todayStr();
   const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return localDateStr(d); })();
 
-  const todayEntry = weeklyMenu.find(m => m.day_date === today && m.published);
-  const tomorrowEntry = weeklyMenu.find(m => m.day_date === tomorrow && m.published);
+  const todayEntry = weeklyMenu.find(m => m.day_date === today);
+  const tomorrowEntry = weeklyMenu.find(m => m.day_date === tomorrow);
 
   const DAYS_NL = ['zo','ma','di','wo','do','vr','za'];
   const tomorrowDay = DAYS_NL[new Date(tomorrow + 'T12:00:00').getDay()];
@@ -6103,7 +6102,6 @@ function openTodayMealPicker() {
   // Bereken dayIndex (0=ma ... 6=zo)
   const d = new Date(todayDate + 'T12:00:00');
   const dayIndex = (d.getDay() + 6) % 7; // ma=0, zo=6
-  // Open de meal-picker met published=true flag
   window._todayPickerPublish = true;
   openMealPicker(todayDate, dayIndex, null);
 }
@@ -6207,7 +6205,7 @@ function resetCheckin() {
   // Reset gerecht selectie
   window._selectedCheckinEntry = null;
   const ciDateStr = todayStr();
-  const ciEntries = weeklyMenu.filter(m => m.day_date === ciDateStr && m.published);
+  const ciEntries = weeklyMenu.filter(m => m.day_date === ciDateStr);
   // Bepaal standaard gerecht voor deze persoon
   let defaultEntry = null;
   if (ciEntries.length === 1) defaultEntry = ciEntries[0];
@@ -6240,7 +6238,7 @@ function resetCheckin() {
   hide(document.getElementById('sport-nutrition-section'));
 
   // Eating out: toon restaurant-veld, pas titel aan
-  const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayStr() && m.published);
+  const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayStr());
   const isEatingOut = todayMenuEntry && todayMenuEntry.eating_out;
   const eoSection = document.getElementById('eating-out-checkin-section');
   const restInput = document.getElementById('eating-out-restaurant');
@@ -6388,7 +6386,7 @@ async function doCheckin() {
 
   const todayDateStr2 = todayStr();
   // Vind het gerecht dat voor deze persoon gepland is
-  const todayEntries = weeklyMenu.filter(m => m.day_date === todayDateStr2 && m.published);
+  const todayEntries = weeklyMenu.filter(m => m.day_date === todayDateStr2);
   let menuEntry = null;
   if (todayEntries.length === 1) {
     menuEntry = todayEntries[0];
@@ -6523,7 +6521,7 @@ function getVoteWeekStart() {
 async function openVoteScreen() {
   const familyId = currentProfile.family_id;
   const weekStart = testMondayOfWeek();
-  const menuPublished = weeklyMenu.some(m=>m.published);
+  const menuPublished = weeklyMenu.length > 0;
 
   // Haal bestaande stem op
   const {data:existingVote} = await sb.from('votes')
@@ -6783,7 +6781,7 @@ async function renderStats() {
       .select('day_date,meal_name,meal_emoji,cook_id,cook_name')
       .eq('family_id', familyId)
       .eq('cook_id', currentProfile.id)
-      .eq('published', true)
+      
       .order('day_date', { ascending: false })
       .limit(20);
 
@@ -7026,7 +7024,7 @@ async function renderStatus() {
   const menu = menuRes.data||[];
   const avail = availRes.data||[];
   const cis = cisRes.data||[];
-  const menuPublished = menu.some(m=>m.published);
+  const menuPublished = menu.length > 0;
   const kieslijstKlaar = avail.length > 0;
 
   const container = document.getElementById('status-items');
@@ -7083,7 +7081,7 @@ async function renderStatus() {
 
   // ── 4. CHECK-INS VANDAAG ───────────────────────────────────
   if (isCurrentWeek && menuPublished) {
-    const todayMenu = menu.find(m=>m.day_date===today&&m.published);
+    const todayMenu = menu.find(m=>m.day_date===today);
     if (todayMenu) {
       const missing = kids.filter(k=>!cis.find(c=>c.eaten_at===today&&c.profile_id===k.id));
       if (missing.length > 0) {
@@ -7100,7 +7098,7 @@ async function renderStatus() {
     const pastDays = weekDates.filter(d=>d<today);
     let missed = [];
     pastDays.forEach(d=>{
-      if (!menu.find(m=>m.day_date===d&&m.published)) return;
+      if (!menu.find(m=>m.day_date===d)) return;
       kids.forEach(k=>{
         if (!cis.find(c=>c.eaten_at===d&&c.profile_id===k.id)) {
           missed.push({kid:k, date:d, dayName:new Date(d+'T12:00:00').toLocaleDateString('nl-NL',{weekday:'long'})});
@@ -7135,7 +7133,7 @@ async function renderStatus() {
       const dots = weekDates.map(d=>{
         const ci = kidCis.find(c=>c.eaten_at===d);
         const past = d<=today;
-        const hasM = menu.find(m=>m.day_date===d&&m.published);
+        const hasM = menu.find(m=>m.day_date===d);
         const s = ci?.score;
         const bg = s===3?'#22C9A0':s===2?'#FFB830':s===1?'var(--coral)':past&&hasM?'#FFEEEE':'var(--bg)';
         const awayEv = sportScheduleData?.[d]?.[kid.id]; const kidAway = awayEv && EVENT_TYPES[awayEv]?.eetsNiet;
@@ -7932,7 +7930,7 @@ async function applyProposalDay(dateStr, mealId, mealName, mealEmoji) {
     family_id: currentProfile.family_id,
     week_of: weekStart, day_date: dateStr,
     meal_id: mealId, meal_name: mealName, meal_emoji: mealEmoji,
-    published: false,
+    published: true,
   },{onConflict:'family_id,day_date'});
   await loadData();
 
@@ -7957,7 +7955,7 @@ async function applyAllProposal() {
       family_id: currentProfile.family_id,
       week_of: weekStart, day_date: item.date,
       meal_id: item.meal_id, meal_name: item.meal_name,
-      meal_emoji: item.meal_emoji, published: false,
+      meal_emoji: item.meal_emoji, published: true,
     },{onConflict:'family_id,day_date'});
   }
   await loadData();
@@ -8752,7 +8750,7 @@ function toggleSecondDish(checked) {
 
 function switchCheckinDish() {
   const ciDateStr = todayStr();
-  const ciEntries = weeklyMenu.filter(m => m.day_date === ciDateStr && m.published);
+  const ciEntries = weeklyMenu.filter(m => m.day_date === ciDateStr);
   if (ciEntries.length < 2) return;
   const current = window._selectedCheckinEntry;
   const other = ciEntries.find(m => m.id !== current?.id);
@@ -9867,7 +9865,7 @@ async function renderShoppingDayPicker() {
   const {data:allMenuDays} = await sb.from('weekly_menu')
     .select('*')
     .eq('family_id', familyId)
-    .eq('published', true)
+    
     .order('day_date', {ascending:true});
 
   // Alleen vandaag en toekomstige dagen tonen
@@ -10175,7 +10173,7 @@ function openAddMealToMenuPicker(meal) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const dateStr = localDateStr(d);
-    const hasEntry = weeklyMenu.some(m => m.day_date === dateStr && m.published);
+    const hasEntry = weeklyMenu.some(m => m.day_date === dateStr);
     if (!hasEntry) {
       days.push({
         dateStr,
@@ -10866,7 +10864,7 @@ function renderTonightCard(profile) {
 
   // Zoek vandaag in weekmenu
   const todayDate = todayStr(); // bevat homeDayOffset
-  const menuEntry = weeklyMenu.find(m => m.day_date === todayDate && m.published);
+  const menuEntry = weeklyMenu.find(m => m.day_date === todayDate);
 
   if (!menuEntry) {
     hide(tonight);
@@ -10973,7 +10971,7 @@ function renderTomorrowCard(profile) {
   const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
 
   // Zoek morgen in weekmenu
-  const tomorrowEntry = weeklyMenu.find(m => m.day_date === tomorrowStr && m.published);
+  const tomorrowEntry = weeklyMenu.find(m => m.day_date === tomorrowStr);
 
   if (!tomorrowEntry) {
     hide(tomorrowCard);
@@ -11067,7 +11065,7 @@ async function renderMenuScreen() {
   const {data:wm} = await sb.from('weekly_menu')
     .select('*').eq('family_id',p.family_id).eq('week_of',weekStart);
   weeklyMenu = wm||[];
-  const published = weeklyMenu.some(m=>m.published);
+  const published = weeklyMenu.length > 0;
 
   // Haal stemmen, scores en recent menu op
   const [votesRes, recentMenuRes, cisRes] = await Promise.all([
@@ -11216,7 +11214,7 @@ async function renderMenuScreen() {
     daysList.innerHTML='';
     dates.forEach((dateStr,i)=>{
       const dayEntries = weeklyMenu.filter(m=>m.day_date===dateStr);
-      const existing = dayEntries.find(m=>!m.published) || dayEntries[0] || null;
+      const existing = dayEntries[0] || null;
       const existing2 = dayEntries.length > 1 ? dayEntries[1] : null;
       const d = new Date(dateStr+'T12:00:00');
       const dayNum = d.getDate();
@@ -11270,7 +11268,7 @@ async function renderMenuScreen() {
         (detailHtml?'<div class="menu-day-detail">'+detailHtml+'</div>':'')+
         '</div>'+
         (voteCount>0?'<span class="menu-day-badge badge-votes" title="'+voteCount+' kinderen stemden hierop">\uD83D\uDCE5 '+voteCount+'x gestemd</span>':'')+
-        (existing&&existing.published?'<span class="menu-day-badge badge-published" style="margin-left:4px" title="Zichtbaar voor kinderen">✓ gepubliceerd</span>':'');
+        '';
       // Eating out weergave
       if (existing && existing.eating_out) {
         const eoEmoji = existing.eating_out_type === 'afhaal' ? '\uD83D\uDED2' : '\uD83C\uDF7D';
@@ -11369,8 +11367,6 @@ async function renderMenuScreen() {
     // Publish knop
     const publishBtn = document.getElementById('menu-publish-btn');
     const updateBtn = document.getElementById('menu-update-btn');
-    if (publishBtn) publishBtn.style.display = published ? 'none' : '';
-    if (updateBtn) updateBtn.style.display = published ? '' : 'none';
 
   } else {
     // Kind view
@@ -11378,7 +11374,7 @@ async function renderMenuScreen() {
     const childView = menuChildView;
     const emptyView = menuEmptyView;
 
-    const publishedMenu = weeklyMenu.filter(m=>m.published);
+    const publishedMenu = weeklyMenu;
     if (publishedMenu.length===0) {
       childView.classList.add('hidden');
       emptyView.classList.remove('hidden');
@@ -11394,7 +11390,7 @@ async function renderMenuScreen() {
     const childDays = document.getElementById('menu-child-days');
     childDays.innerHTML='';
     dates.forEach((dateStr,i)=>{
-      const entry = weeklyMenu.find(m=>m.day_date===dateStr&&m.published);
+      const entry = weeklyMenu.find(m=>m.day_date===dateStr);
       const d = new Date(dateStr+'T12:00:00');
       const dayNum = d.getDate();
       const monthName = d.toLocaleDateString('nl-NL',{month:'short'});
@@ -11614,7 +11610,7 @@ async function saveEatingOut(type) {
 
 async function openMealPicker(dateStr, dayIndex, existing) {
   // Blokkeer bewoners om gepubliceerd menu te wijzigen
-  if (currentProfile.role !== 'parent' && existing && existing.published) {
+  if (currentProfile.role !== 'parent' && existing) {
     const isHouse = getHouseType() === 'house';
     alert(isHouse
       ? 'Het menu is al vastgesteld door de beheerder. Je kunt het niet wijzigen.'
@@ -11792,9 +11788,8 @@ async function confirmMealPick() {
     cook_name: cookName,
     corvee_ids: selectedCorvee.length ? JSON.stringify(selectedCorvee) : null,
     corvee_names: corveeNames.length ? corveeNames.join(', ') : null,
-    // Bij "toch iets anders" de published-status van het origineel overnemen
-    // Bij kiezen vanuit home (geen menu) direct als gepubliceerd opslaan
-    published: (window._afterChangeMeal && currentPickDay?.existing?.published) || window._todayPickerPublish ? true : false,
+      // Bij kiezen vanuit home (geen menu) direct als gepubliceerd opslaan
+    published: true,
     variant: variant,
     for_profile_ids: forProfileIds,
   });
@@ -11830,8 +11825,7 @@ async function confirmMealPick() {
   if (window._afterChangeMeal) {
     window._afterChangeMeal = false;
     window._todayPickerPublish = false;
-    const newEntry = weeklyMenu.find(m => m.day_date === dateStr && m.published !== false);
-    // published kan false zijn na wijziging - pak gewoon de entry voor die dag
+    const newEntry = weeklyMenu.find(m => m.day_date === dateStr !== false);
     const anyEntry = weeklyMenu.find(m => m.day_date === dateStr);
     if (anyEntry) openCookScreen(anyEntry);
     else { refreshHome(); show('home'); }
@@ -11850,7 +11844,7 @@ async function analyseWeekMenu() {
 
   // Verzamel het weekmenu
   const weekStart = getMenuWeekStart();
-  const published = weeklyMenu.filter(m => m.week_of === weekStart);
+  const published = weeklyMenu.filter(m => m.week_of === weekStart); // published veld niet meer relevant
   const all = weeklyMenu; // alle items van deze week
 
   if (all.length === 0) {
