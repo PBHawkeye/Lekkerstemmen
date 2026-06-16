@@ -590,7 +590,6 @@ body:has(#s-onboarding.active) .bottom-nav { display: none !important; }
     </div>
   </div>
 
-  <div id="debug-tonight" style="font-size:10px;color:red;padding:4px 16px"></div>
   <div id="today-child-wait" class="today-card hidden">
     <div class="today-badge">Vanavond</div>
     <div class="today-q" style="margin-bottom:0">Wacht op gerecht van ouder...</div>
@@ -4074,22 +4073,39 @@ function goScreen(name) {
   else if (name==='menu') {
     menuBaseOffset = getRealWeekOffset();
     menuWeekOffset = menuBaseOffset;
-    // Slimme startweek: alleen als niet geforceerd naar huidige week
+    // Slimme startweek: ga naar de week met de eerste lege dag na vandaag
     (async () => {
       if (!window._menuForceCurrentWeek) {
-        const thisWeekStart = getMenuWeekStart();
         const today = todayStr();
-        const { data: thisWeek } = await sb.from('weekly_menu')
-          .select('day_date,published,meal_id,eating_out')
+        // Haal de komende 14 dagen op (deze week + volgende week)
+        const twoWeeksOut = localDateStr((() => { const d = new Date(); d.setDate(d.getDate() + testDayOffset + 14); return d; })());
+        const { data: upcoming } = await sb.from('weekly_menu')
+          .select('day_date,meal_id,eating_out')
           .eq('family_id', currentProfile.family_id)
-          .eq('week_of', thisWeekStart);
-        const thisWeekItems = thisWeek || [];
-        const futureDays = thisWeekItems.filter(m => m.day_date >= today);
-        // Een dag is "gepland" als hij gepubliceerd is én een gerecht of eating_out heeft
-        const futurePlanned = futureDays.filter(m => (m.meal_id || m.eating_out));
-        const allFuturePlanned = futureDays.length > 0 && futurePlanned.length === futureDays.length;
-        // Spring naar volgende week alleen als alle toekomstige dagen gepland zijn
-        if (allFuturePlanned) {
+          .gte('day_date', today)
+          .lte('day_date', twoWeeksOut);
+        const filledDays = new Set((upcoming || []).filter(m => m.meal_id || m.eating_out).map(m => m.day_date));
+        // Loop dag voor dag, vind de eerste lege dag
+        let firstEmptyDate = null;
+        for (let i = 0; i <= 14; i++) {
+          const d = new Date();
+          d.setDate(d.getDate() + testDayOffset + i);
+          const ds = localDateStr(d);
+          if (!filledDays.has(ds)) { firstEmptyDate = d; break; }
+        }
+        if (firstEmptyDate) {
+          // Bereken welke weekoffset bij die dag hoort
+          const targetMonday = new Date(firstEmptyDate);
+          const day = targetMonday.getDay();
+          targetMonday.setDate(targetMonday.getDate() - day + (day === 0 ? -6 : 1));
+          const thisMonday = new Date();
+          thisMonday.setDate(thisMonday.getDate() + testDayOffset);
+          const thisMondayDay = thisMonday.getDay();
+          thisMonday.setDate(thisMonday.getDate() - thisMondayDay + (thisMondayDay === 0 ? -6 : 1));
+          const weekDiff = Math.round((targetMonday - thisMonday) / (7 * 24 * 60 * 60 * 1000));
+          menuWeekOffset = menuBaseOffset + weekDiff;
+        } else {
+          // Alles vol voor 2 weken, ga naar volgende week
           menuWeekOffset = menuBaseOffset + 1;
         }
       }
@@ -4529,11 +4545,6 @@ function refreshHome() {
   if (p.role === 'child' || (p.role === 'parent' && (after16 || !isToday))) {
     const todayMenuEntry = weeklyMenu.find(m => m.day_date === todayDateStr);
 
-    // DEBUG: log wat er gevonden wordt
-    if (p.role === 'parent') {
-      const debugEl = document.getElementById('debug-tonight');
-      if (debugEl) debugEl.textContent = 'today='+todayDateStr+' menu='+JSON.stringify(weeklyMenu.slice(0,3).map(m=>m.day_date+'|'+m.published));
-    }
 
     if (!todayMeal && !todayMenuEntry) {
       // Geen menu voor vandaag/geselecteerde dag
